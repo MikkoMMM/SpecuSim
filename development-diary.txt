@@ -1,0 +1,4 @@
+1.1.2021 Development was started. Contrary to previous plans, Java probably isn't going to be used (unless I make optional modules). A preliminary requirements.txt was created.
+4.1.2021 Tested out the Ursina and Panda3D engines somewhat
+5.1.2021 Looked at various Wii Remote libraries. Studied about the Boost library. Formulated a plan to later on relicense by moving on to OpenVR, but for now have the license be GPL. Some learning about using the Cwiid library.
+7.1.2021 Made a test about the interoperability between Panda3D and Cwiid
