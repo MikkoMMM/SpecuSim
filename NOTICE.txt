@@ -1,0 +1,5 @@
+This project contains code from (note that GPL supercedes the original licenses):
+
+https://github.com/micropython-IMU/micropython-fusion/
+Copyright (c) 2015 Peter Hinch
+The MIT License (MIT)
