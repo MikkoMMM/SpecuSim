@@ -5,16 +5,18 @@
 # V0.8 14th May 2017 Option for external switch for cal test. Make platform independent.
 # V0.7 25th June 2015 Adapted for new MPU9x50 interface
 
-from datetime import datetime
 from fusion import Fusion
 import cwiid
 import time
+from deltat import DeltaT
+from math import cos, degrees, radians
 
 def timediff(time1, time2):
     return (time1-time2)
 
 
 # This part is for connecting the Wii Remote.
+print("Press 1+2 on your Wiimote now...")
 wiimote = cwiid.Wiimote()
 time.sleep(1)
 wiimote.rpt_mode = cwiid.RPT_BTN | cwiid.RPT_ACC | cwiid.RPT_MOTIONPLUS | cwiid.RPT_IR
@@ -23,7 +25,9 @@ time.sleep(1)
 
 fuse = Fusion(timediff)
 
+deltat = DeltaT(timediff)
 count = 0
+heading = 0
 while True:
     # This ordering of values seems to correspond most closely to the order yaw, pitch, and then roll. Though, the "yaw" doesn't give intuitive values.
     # Tilting the Wiimote upward in pitch, the ['acc'][1] gets lower. Tilting it down, the ['acc'][1] gets higher.
@@ -49,7 +53,21 @@ while True:
         (angle_rates[2]-7964)/(4.0+wiimote.state['motionplus']['low_speed'][2]*16),
     )
     fuse.update_nomag(accel, gyro, time.time())
+    deltag2 = deltat(time.time()) * radians(gyro[2])
+    heading += deltag2
+    
     if count % 50 == 0:
-        print(accel, gyro)
-        print("Heading, Pitch, Roll: {:7.3f} {:7.3f} {:7.3f}".format(fuse.heading, fuse.pitch, fuse.roll))
+        print()
+        print("Raw accelerometer values: ", accel, ". Raw gyro values: ", gyro)
+        if 'ir_src' in wiimote.state:
+            ir1 = wiimote.state['ir_src'][0]
+            ir2 = wiimote.state['ir_src'][1]
+            # Range: X 0-1023, Y 0-767
+            if wiimote.state['ir_src'][0]:
+                print("IR 1: ", ir1)
+            if wiimote.state['ir_src'][1]:
+                print("IR 2: ", ir2)
+            if wiimote.state['ir_src'][0] and wiimote.state['ir_src'][1]:
+                heading = 0
+        print("Heading, Roll, Pitch: ", degrees(heading), "{:7.3f} {:7.3f}".format(fuse.pitch, fuse.roll))
     count += 1
