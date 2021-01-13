@@ -6,10 +6,12 @@ from math import pi, sin, cos, radians
 from direct.gui.DirectGui import DirectFrame
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
-from panda3d.core import ShaderTerrainMesh, Shader, load_prc_file_data
-from panda3d.core import SamplerState, TextNode
+from panda3d.core import Vec3, ShaderTerrainMesh, Shader, load_prc_file_data
+from panda3d.core import SamplerState, TextNode, TextureStage, TP_normal
 from direct.task import Task
 from direct.stdpy import thread
+
+from rpcore import RenderPipeline
 
 
 def timediff(time1, time2):
@@ -39,9 +41,14 @@ class MyApp(ShowBase):
             # Further optimize the performance by reducing this to the max
             # number of chunks that will be visible at any given time.
             stm-max-chunk-count 2048
+
         """)
 
-        ShowBase.__init__(self)
+        self.render_pipeline = RenderPipeline()
+        self.render_pipeline.create(self)
+
+        # Set time of day
+        self.render_pipeline.daytime_mgr.time = "16:25"
 
         # This is used to store which keys are currently pressed.
         self.keyMap = {
@@ -50,16 +57,12 @@ class MyApp(ShowBase):
             "cam-left": 0,
             "cam-right": 0,
         }
+        self.motionControllerConnected = False
         self.disableMouse()
 
-        connectWiiText = DirectFrame(frameColor=(100, 100, 100, 1),
-                            frameSize=(-1, 1, -0.1, 0.1),
-                            pos=(0, 0, 0),
-                            text="Press 1+2 on your Wiimote now...",
-                            text_scale=(0.1,0.1))
         # Increase camera FOV as well as the far plane
-        self.camLens.set_fov(90)
-        self.camLens.set_near_far(0.1, 50000)
+#        self.camLens.set_fov(90)
+#        self.camLens.set_near_far(0.1, 50000)
 
         # Construct the terrain
         self.terrain_node = ShaderTerrainMesh()
@@ -81,8 +84,8 @@ class MyApp(ShowBase):
         # Attach the terrain to the main scene and set its scale. With no scale
         # set, the terrain ranges from (0, 0, 0) to (1, 1, 1)
         self.terrain = self.render.attach_new_node(self.terrain_node)
-        self.terrain.set_scale(4096, 4096, 50)
-        self.terrain.set_pos(-2048, -2048, -10.0)
+        self.terrain.set_scale(8192, 8192, 50)
+        self.terrain.set_pos(-4096, -4096, -10.0)
 
         # Set a shader on the terrain. The ShaderTerrainMesh only works with
         # an applied shader. You can use the shaders used here in your own application
@@ -94,9 +97,9 @@ class MyApp(ShowBase):
         self.accept("f3", self.toggleWireframe)
 
         # Set some texture on the terrain
-        grass_tex = self.loader.loadTexture("worldmaps/seed_16783_satellite.png")
-#        grass_tex.set_minfilter(SamplerState.FT_linear_mipmap_linear)
-#        grass_tex.set_anisotropic_degree(16)
+        grass_tex = self.loader.loadTexture("textures/grass.png")
+        grass_tex.set_minfilter(SamplerState.FT_linear_mipmap_linear)
+        grass_tex.set_anisotropic_degree(16)
         self.terrain.set_texture(grass_tex)
 
         # Load a skybox - you can safely ignore this code
@@ -114,60 +117,12 @@ class MyApp(ShowBase):
 
         skybox_shader = Shader.load(Shader.SL_GLSL, "shaders/skybox.vert.glsl", "shaders/skybox.frag.glsl")
         skybox.set_shader(skybox_shader)
-        
+
         # For calculating motion controller orientation
         self.heading = 0
         self.deltat = DeltaT(timediff)
         self.fuse = Fusion(timediff)
 
-        # Render the very first frame
-        base.graphicsEngine.renderFrame()
-        base.graphicsEngine.renderFrame()
-        base.graphicsEngine.syncFrame()
-
-        self.wiimote = cwiid.Wiimote()
-        time.sleep(1)
-        self.wiimote.rpt_mode = cwiid.RPT_BTN | cwiid.RPT_ACC | cwiid.RPT_MOTIONPLUS | cwiid.RPT_IR
-        self.wiimote.enable(cwiid.FLAG_MOTIONPLUS)
-        self.wiimote.led = 1
-        print("Wiimote connected")
-
-        connectWiiText['text'] = "Place the Wiimote on a flat surface."
-        base.graphicsEngine.renderFrame()
-        base.graphicsEngine.renderFrame()
-        base.graphicsEngine.syncFrame()
-
-        print()
-        print("Starting calibration")
-        while True:
-            time.sleep(0.01)
-            self.gyrobias = [0,0,0]
-            self.accbias = [0,0,0]
-            if 'motionplus' not in self.wiimote.state:
-                continue
-            def inner():
-                for i in range(100):
-                    for j in range(0,3):
-                        self.gyrobias[j] = (self.gyrobias[j]*i + self.wiimote.state['motionplus']['angle_rate'][j]) / (i+1)
-                        self.accbias[j] = (self.accbias[j]*i + self.wiimote.state['acc'][j]) / (i+1)
-                        if abs(self.gyrobias[j] - self.wiimote.state['motionplus']['angle_rate'][j]) >= 20.0:
-                            print("Retrying. Reason: gyro ", j, ". ", i, " iterations.")
-                            return
-                        if abs(self.accbias[j] - self.wiimote.state['acc'][j]) > 1:
-                            print("Retrying. Reason: accelerometer ", j, ". ", i, " iterations.")
-                            return False
-                    time.sleep(0.01)
-                print("Successful calibration")
-                return True
-            if inner():
-                break
-
-        self.accbias[2] = (self.accbias[0] + self.accbias[1]) / 2 # It's difficult to subtract gravity, so let's just assume a bias
-        self.accbias[0] += 0.005 # To avoid a potential division by zero
-        print("Gyro biases: ", self.gyrobias)
-        print("Accelerometer biases: ", self.accbias)
-        connectWiiText.destroy()
-        
         self.inst1 = addInstructions(0.06, "[W]: Move Camera Forward")
         self.inst2 = addInstructions(0.12, "[A]: Move Camera Left")
         self.inst3 = addInstructions(0.18, "[S]: Move Camera Right")
@@ -182,10 +137,13 @@ class MyApp(ShowBase):
         self.accept("a-up", self.setKey, ["cam-left", False])
         self.accept("d-up", self.setKey, ["cam-right", False])
 
+        wiimoteThread = thread.start_new_thread(self.connectWiimote, args=())
+
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.move, "moveTask")
         taskMgr.add(self.calculateHpr, "CalculateHpr")
         taskMgr.add(self.spinCameraTask, "SpinCameraTask")
+
 
     # Records the state of the arrow keys
     def setKey(self, key, value):
@@ -204,18 +162,79 @@ class MyApp(ShowBase):
         # If the camera-right key is pressed, move camera right.
 
         if self.keyMap["cam-forward"]:
-            self.camera.setY(self.camera, +20 * dt)
+            self.camera.setY(self.camera, +80 * dt)
         if self.keyMap["cam-backward"]:
-            self.camera.setY(self.camera, -20 * dt)
+            self.camera.setY(self.camera, -80 * dt)
         if self.keyMap["cam-left"]:
-            self.camera.setX(self.camera, -20 * dt)
+            self.camera.setX(self.camera, -80 * dt)
         if self.keyMap["cam-right"]:
-            self.camera.setX(self.camera, +20 * dt)
+            self.camera.setX(self.camera, +80 * dt)
 
         return task.cont
 
+    # This:
+    # - connects a motion controller
+    def connectWiimote(self):
+        connectWiiText = DirectFrame(frameColor=(100, 100, 100, 1),
+                            frameSize=(-1, 1, -0.1, 0.1),
+                            pos=(0, 0, 0),
+                            text="Press 1+2 on your Wiimote now...",
+                            text_scale=(0.1,0.1))
+        unconnected = True
+        while unconnected:
+            try:
+                connectWiiText['text'] = "Press 1+2 on your Wiimote now..."
+                self.wiimote = cwiid.Wiimote()
+                unconnected = False
+            except RuntimeError:
+                connectWiiText['text'] = "Couldn't connect Wiimote.\nIs Bluetooth enabled?"
+                time.sleep(2)
+        time.sleep(1)
+        self.wiimote.rpt_mode = cwiid.RPT_BTN | cwiid.RPT_ACC | cwiid.RPT_MOTIONPLUS | cwiid.RPT_IR
+        self.wiimote.enable(cwiid.FLAG_MOTIONPLUS)
+        self.wiimote.led = 1
+        print("Wiimote connected")
+
+        connectWiiText['text'] = "Place the Wiimote on a flat surface."
+
+        print()
+        print("Starting calibration")
+        while True:
+            time.sleep(0.01)
+            self.gyrobias = [0,0,0]
+            self.accbias = [0,0,0]
+            if 'motionplus' not in self.wiimote.state:
+                continue
+            def inner():
+                for i in range(100):
+                    for j in range(0,3):
+                        self.gyrobias[j] = (self.gyrobias[j]*i + self.wiimote.state['motionplus']['angle_rate'][j]) / (i+1)
+                        self.accbias[j] = (self.accbias[j]*i + self.wiimote.state['acc'][j]) / (i+1)
+                        if abs(self.gyrobias[j] - self.wiimote.state['motionplus']['angle_rate'][j]) >= 20.0:
+#                            print("Retrying. Reason: gyro ", j, ". ", i, " iterations.")
+                            return
+                        if abs(self.accbias[j] - self.wiimote.state['acc'][j]) > 1:
+#                            print("Retrying. Reason: accelerometer ", j, ". ", i, " iterations.")
+                            return False
+                    time.sleep(0.01)
+                print("Successful calibration")
+                return True
+            if inner():
+                break
+
+        self.accbias[2] = (self.accbias[0] + self.accbias[1]) / 2 # It's difficult to subtract gravity, so let's just assume a bias
+        self.accbias[0] += 0.005 # To avoid a potential division by zero
+        print("Gyro biases: ", self.gyrobias)
+        print("Accelerometer biases: ", self.accbias)
+        connectWiiText.destroy()
+        self.motionControllerConnected = True
+
+
     # This calculates the likely orientation of the motion controller
     def calculateHpr(self, task):
+        if not self.motionControllerConnected:
+            return Task.cont
+
         accel = (self.wiimote.state['acc'][0]-122, self.wiimote.state['acc'][1]-122.9, self.wiimote.state['acc'][2]-122.5)
         if 'motionplus' in self.wiimote.state:
             angle_rates = self.wiimote.state['motionplus']['angle_rate']
@@ -240,9 +259,11 @@ class MyApp(ShowBase):
 
     # Define a procedure to rotate the camera with a motion controller.
     def spinCameraTask(self, task):
+        if not self.motionControllerConnected:
+            return Task.cont
+
         self.camera.setHpr(self.heading, -self.fuse.roll, self.fuse.pitch)
         return Task.cont
-
 
 app = MyApp()
 app.run()

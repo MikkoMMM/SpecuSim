@@ -6,4 +6,5 @@
 9.1.2021 More research on how to get orientation and positional information from the Wiimote. Trying to calibrate the Wii Remote for the micropython-fusion library. Studied the Attitude-Estimation library.
 10.1.2021 A breakthrough: accurate orientation measurements with micropython-fusion (no yaw, of course, though).
 11.1.2021 Calculating the heading information for a Wiimote. The orientation measurements now control the camera in test.py. Also, there's now a Wiimote calibration phase.
-12.1.2021 Reading up on the terrain capabilities of Panda3D and implementing some traversable terrain. Reorganizing the directory structure.
+12.1.2021 Reading up on the terrain capabilities of Panda3D and implementing some traversable terrain. Reorganizing the directory structure. Trying out the Render Pipeline and learning about its terrain capabilities.
+13.1.2021 Started the work on including Render Pipeline. The Wiimote connection is now done asynchronously, too. README was also updated somewhat.
