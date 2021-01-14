@@ -34,7 +34,7 @@ class MyApp(ShowBase):
 
             # As an optimization, set this to the maximum number of cameras
             # or lights that will be rendering the terrain at any given time.
-            stm-max-views 8
+            stm-max-views 20
 
             # Further optimize the performance by reducing this to the max
             # number of chunks that will be visible at any given time.
@@ -85,37 +85,6 @@ class MyApp(ShowBase):
         self.terrain.set_scale(8192, 8192, 50)
         self.terrain.set_pos(-4096, -4096, -10.0)
 
-        # Set a shader on the terrain. The ShaderTerrainMesh only works with
-        # an applied shader. You can use the shaders used here in your own application
-        terrain_shader = Shader.load(Shader.SL_GLSL, "shaders/terrain.vert.glsl", "shaders/terrain.frag.glsl")
-        self.terrain.set_shader(terrain_shader)
-        self.terrain.set_shader_input("camera", self.camera)
-
-        # Shortcut to view the wireframe mesh
-        self.accept("f3", self.toggleWireframe)
-
-        # Set some texture on the terrain
-        grass_tex = self.loader.loadTexture("textures/grass.png")
-        grass_tex.set_minfilter(SamplerState.FT_linear_mipmap_linear)
-        grass_tex.set_anisotropic_degree(16)
-        self.terrain.set_texture(grass_tex)
-
-        # Load a skybox - you can safely ignore this code
-        skybox = self.loader.loadModel("models/skybox.bam")
-        skybox.reparent_to(self.render)
-        skybox.set_scale(20000)
-
-        skybox_texture = self.loader.loadTexture("textures/skybox.jpg")
-        skybox_texture.set_minfilter(SamplerState.FT_linear)
-        skybox_texture.set_magfilter(SamplerState.FT_linear)
-        skybox_texture.set_wrap_u(SamplerState.WM_repeat)
-        skybox_texture.set_wrap_v(SamplerState.WM_mirror)
-        skybox_texture.set_anisotropic_degree(16)
-        skybox.set_texture(skybox_texture)
-
-        skybox_shader = Shader.load(Shader.SL_GLSL, "shaders/skybox.vert.glsl", "shaders/skybox.frag.glsl")
-        skybox.set_shader(skybox_shader)
-
         # For calculating motion controller orientation
         self.heading = 0
         self.deltat = DeltaT(timediff)
@@ -141,6 +110,7 @@ class MyApp(ShowBase):
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.move, "moveTask")
         taskMgr.add(self.spinCameraTask, "SpinCameraTask")
+        self.reload_shaders()
 
 
     # Records the state of the arrow keys
@@ -169,6 +139,12 @@ class MyApp(ShowBase):
             self.camera.setX(self.camera, +80 * dt)
 
         return task.cont
+
+    def reload_shaders(self):
+        self.render_pipeline.reload_shaders()
+
+        # Set the terrain effect
+        self.render_pipeline.set_effect(self.terrain, "effects/terrain-effect.yaml", {}, 100)
 
     # Define a procedure to rotate the camera with a motion controller.
     def spinCameraTask(self, task):
