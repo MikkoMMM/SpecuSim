@@ -45,6 +45,9 @@ class MyApp(ShowBase):
         self.render_pipeline = RenderPipeline()
         self.render_pipeline.create(self)
 
+        # The motion controller's orientation is to be updated 100 times this number per second
+        self.motionControllerAccuracy = 40
+
         # Set time of day
         self.render_pipeline.daytime_mgr.time = "16:25"
 
@@ -87,8 +90,10 @@ class MyApp(ShowBase):
 
         # For calculating motion controller orientation
         self.heading = 0
+        self.pitch = 0
+        self.roll = 0
         self.deltat = DeltaT(timediff)
-        self.fuse = Fusion(timediff)
+        self.fuse = Fusion(1.5, timediff)
 
         self.inst1 = addInstructions(0.06, "[W]: Move Camera Forward")
         self.inst2 = addInstructions(0.12, "[A]: Move Camera Left")
@@ -151,7 +156,7 @@ class MyApp(ShowBase):
         if not self.motionControllerConnected:
             return Task.cont
 
-        self.camera.setHpr(self.heading, -self.fuse.roll, self.fuse.pitch)
+        self.camera.setHpr(self.heading, self.pitch, self.roll)
         return Task.cont
 
 app = MyApp()

@@ -27,14 +27,14 @@ class Fusion(object):
     '''
     Class provides sensor fusion allowing heading, pitch and roll to be extracted. This uses the Madgwick algorithm.
     The update method must be called peiodically. The calculations take 1.6mS on the Pyboard.
+    A lower GyroMeansError means higher accuracy but longer time to converge to a solution
     '''
     declination = 0                         # Optional offset for true north. A +ve value adds to heading
-    def __init__(self, timediff=None):
+    def __init__(self, GyroMeasError, timediff=None):
         self.magbias = (0, 0, 0)            # local magnetic bias factors: set from calibration
         self.deltat = DeltaT(timediff)      # Time between updates
         self.q = [1.0, 0.0, 0.0, 0.0]       # vector to hold quaternion
-        GyroMeasError = radians(40)         # Original code indicates this leads to a 2 sec response time
-        self.beta = sqrt(3.0 / 4.0) * GyroMeasError  # compute beta (see README)
+        self.beta = sqrt(3.0 / 4.0) * radians(GyroMeasError)  # compute beta (see README)
         self.pitch = 0
         self.heading = 0
         self.roll = 0

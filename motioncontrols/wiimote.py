@@ -3,12 +3,13 @@ import cwiid
 from direct.task import Task
 from direct.stdpy import thread
 import time
+import math
 
 class Wiimote(object):
     def __init__(self, showbase):
         self.showbase = showbase
         wiimoteThread = thread.start_new_thread(self.connectController, args=())
-        showbase.taskMgr.add(self.calculateHpr, "CalculateHpr")
+        hprThread = thread.start_new_thread(self.calculateHpr, args=())
 
     # This connects and calibrates a Wiimote
     def connectController(self):
@@ -68,28 +69,37 @@ class Wiimote(object):
 
 
     # This calculates the likely orientation of the motion controller
-    def calculateHpr(self, task):
-        if not self.showbase.motionControllerConnected:
-            return Task.cont
+    def calculateHpr(self):
+        heading = self.showbase.heading
 
-        accel = (self.wiimote.state['acc'][0]-122, self.wiimote.state['acc'][1]-122.9, self.wiimote.state['acc'][2]-122.5)
-        if 'motionplus' in self.wiimote.state:
-            angle_rates = self.wiimote.state['motionplus']['angle_rate']
-            gyro = (
-                (angle_rates[0]-self.gyrobias[0])/(4.0+self.wiimote.state['motionplus']['low_speed'][0]*16),
-                (angle_rates[1]-self.gyrobias[1])/(4.0+self.wiimote.state['motionplus']['low_speed'][1]*16),
-                (angle_rates[2]-self.gyrobias[2])/(4.0+self.wiimote.state['motionplus']['low_speed'][2]*16),
-            )
-        else:
-            gyro = (0,0,0)
-        self.showbase.fuse.update_nomag(accel, gyro, time.time())
-        deltag2 = self.showbase.deltat(time.time()) * gyro[2]
-        self.showbase.heading += deltag2
+        while True:
+            time.sleep(1/(100*self.showbase.motionControllerAccuracy)) # Having less time between updates increases accuracy but is obviously also computationally expensive
+            if not self.showbase.motionControllerConnected:
+                time.sleep(0.005)
+                continue
 
-        if 'ir_src' in self.wiimote.state:
-            ir1 = self.wiimote.state['ir_src'][0]
-            ir2 = self.wiimote.state['ir_src'][1]
-            # Range: X 0-1023, Y 0-767
-            if self.wiimote.state['ir_src'][0] and self.wiimote.state['ir_src'][1]:
-                self.showbase.heading = 0
-        return Task.cont
+            accel = (self.wiimote.state['acc'][0]-122, self.wiimote.state['acc'][1]-122.9, self.wiimote.state['acc'][2]-122.5)
+            if 'motionplus' in self.wiimote.state:
+                angle_rates = self.wiimote.state['motionplus']['angle_rate']
+                gyro = (
+                    (angle_rates[0]-self.gyrobias[0])/(4.0+self.wiimote.state['motionplus']['low_speed'][0]*16),
+                    (angle_rates[1]-self.gyrobias[1])/(4.0+self.wiimote.state['motionplus']['low_speed'][1]*16),
+                    (angle_rates[2]-self.gyrobias[2])/(4.0+self.wiimote.state['motionplus']['low_speed'][2]*16),
+                )
+            else:
+                gyro = (0,0,0)
+            self.showbase.fuse.update_nomag(accel, gyro, time.time())
+            deltag2 = self.showbase.deltat(time.time()) * gyro[2]
+            heading += deltag2
+
+            # Reset the heading if pointed at an IR source
+            if 'ir_src' in self.wiimote.state:
+                ir1 = self.wiimote.state['ir_src'][0]
+                ir2 = self.wiimote.state['ir_src'][1]
+                # Range: X 0-1023, Y 0-767
+                if self.wiimote.state['ir_src'][0] and self.wiimote.state['ir_src'][1]:
+                    heading = 0
+
+            self.showbase.pitch = -self.showbase.fuse.roll
+            self.showbase.heading = heading
+            self.showbase.roll = self.showbase.fuse.pitch

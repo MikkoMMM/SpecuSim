@@ -1,9 +1,8 @@
 # This is a simple command line utility to test out the orientation estimation for a Wiimote
 
-from fusion import Fusion
+from fusion import Fusion, DeltaT
 import cwiid
 import time
-from deltat import DeltaT
 from math import cos, degrees, radians
 
 def timediff(time1, time2):
@@ -18,7 +17,7 @@ wiimote.rpt_mode = cwiid.RPT_BTN | cwiid.RPT_ACC | cwiid.RPT_MOTIONPLUS | cwiid.
 wiimote.enable(cwiid.FLAG_MOTIONPLUS)
 time.sleep(1)
 
-fuse = Fusion(timediff)
+fuse = Fusion(1.5, timediff)
 
 deltat = DeltaT(timediff)
 count = 0
@@ -50,7 +49,7 @@ while True:
     fuse.update_nomag(accel, gyro, time.time())
     deltag2 = deltat(time.time()) * radians(gyro[2])
     heading += deltag2
-    
+
     if count % 50 == 0:
         print()
         print("Raw accelerometer values: ", accel, ". Raw gyro values: ", gyro)
