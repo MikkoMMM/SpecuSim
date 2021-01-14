@@ -149,7 +149,7 @@ class MyApp(ShowBase):
         self.render_pipeline.reload_shaders()
 
         # Set the terrain effect
-        self.render_pipeline.set_effect(self.terrain, "effects/terrain-effect.yaml", {}, 100)
+        self.render_pipeline.set_effect(self.terrain, "effects/terrain.yaml", {}, 100)
 
     # Define a procedure to rotate the camera with a motion controller.
     def spinCameraTask(self, task):

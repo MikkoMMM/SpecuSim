@@ -32,8 +32,9 @@ class Wiimote(object):
         self.wiimote.enable(cwiid.FLAG_MOTIONPLUS)
         self.wiimote.led = 1
         print("Wiimote connected")
+        flatSurfaceText = "Place the Wiimote on a flat surface."
 
-        connectWiiText['text'] = "Place the Wiimote on a flat surface."
+        connectWiiText['text'] = flatSurfaceText
 
         print()
         print("Starting calibration")
@@ -49,12 +50,15 @@ class Wiimote(object):
                         self.gyrobias[j] = (self.gyrobias[j]*i + self.wiimote.state['motionplus']['angle_rate'][j]) / (i+1)
                         self.accbias[j] = (self.accbias[j]*i + self.wiimote.state['acc'][j]) / (i+1)
                         if abs(self.gyrobias[j] - self.wiimote.state['motionplus']['angle_rate'][j]) >= 20.0:
-#                            print("Retrying. Reason: gyro ", j, ". ", i, " iterations.")
+                            connectWiiText['text'] = flatSurfaceText
                             return
                         if abs(self.accbias[j] - self.wiimote.state['acc'][j]) > 1:
-#                            print("Retrying. Reason: accelerometer ", j, ". ", i, " iterations.")
+                            connectWiiText['text'] = flatSurfaceText
                             return False
                     time.sleep(0.01)
+                if abs(self.accbias[1] - self.accbias[0]) > 1.5 or self.accbias[2] < self.accbias[1]:
+                    connectWiiText['text'] = "The Wiimote must be face up."
+                    return False
                 print("Successful calibration")
                 return True
             if inner():
@@ -78,7 +82,7 @@ class Wiimote(object):
                 time.sleep(0.005)
                 continue
 
-            accel = (self.wiimote.state['acc'][0]-122, self.wiimote.state['acc'][1]-122.9, self.wiimote.state['acc'][2]-122.5)
+            accel = (self.wiimote.state['acc'][0]-self.accbias[0], self.wiimote.state['acc'][1]-self.accbias[1], self.wiimote.state['acc'][2]-self.accbias[2])
             if 'motionplus' in self.wiimote.state:
                 angle_rates = self.wiimote.state['motionplus']['angle_rate']
                 gyro = (
