@@ -1,9 +1,4 @@
-# fusiontest6.py Simple test program for 6DOF sensor fusion on Pyboard
-# Author Peter Hinch
-# Released under the MIT License (MIT)
-# Copyright (c) 2017 Peter Hinch
-# V0.8 14th May 2017 Option for external switch for cal test. Make platform independent.
-# V0.7 25th June 2015 Adapted for new MPU9x50 interface
+# This is a simple command line utility to test out the orientation estimation for a Wiimote
 
 from fusion import Fusion
 import cwiid
