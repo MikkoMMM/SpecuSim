@@ -17,7 +17,7 @@ wiimote.rpt_mode = cwiid.RPT_BTN | cwiid.RPT_ACC | cwiid.RPT_MOTIONPLUS | cwiid.
 wiimote.enable(cwiid.FLAG_MOTIONPLUS)
 time.sleep(1)
 
-fuse = Fusion(1.5, timediff)
+fuse = Fusion(2, timediff)
 
 deltat = DeltaT(timediff)
 count = 0

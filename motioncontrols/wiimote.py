@@ -101,8 +101,13 @@ class Wiimote(object):
                 ir1 = self.wiimote.state['ir_src'][0]
                 ir2 = self.wiimote.state['ir_src'][1]
                 # Range: X 0-1023, Y 0-767
-                if self.wiimote.state['ir_src'][0] and self.wiimote.state['ir_src'][1]:
-                    heading = 0
+                if self.wiimote.state['ir_src'][0]:
+                    try:
+                        x = (self.wiimote.state['ir_src'][0]['pos'][0] + self.wiimote.state['ir_src'][1]['pos'][0]) / 2
+                        if 0.45*1024 < x and x < 0.55*1024:
+                            heading = 0
+                    except:
+                        pass # Due to asynchronous nature, a try-except was possibly necessary in any case
 
             self.showbase.pitch = -self.showbase.fuse.roll
             self.showbase.heading = heading
