@@ -10,3 +10,6 @@
 13.1.2021 Started the work on including Render Pipeline. The Wiimote connection is now done asynchronously, too. README was also updated somewhat.
 14.1.2021 Moved the Wiimote code to its own file. The Render Pipeline is now used for showing the terrain. The motion controls are now much more accurate as well, due to them being handled asynchronously and the GyroMeansError having been lowered. An additional instruction that the Wiimote must be face up during calibration was added.
 15.1.2021 Looking into how one would add water to the scene and trying to do it. Made the heading resetting less aggressive.
+16.1.2021 Looking into how to change textures programmatically in Render Pipeline.
+17.1.2021 Attempting to implement the oceans once more
+19.1.2021 Made unit models of basic geometric shapes

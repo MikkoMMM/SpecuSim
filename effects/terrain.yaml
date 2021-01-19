@@ -121,11 +121,6 @@ fragment:
         rock_mat.roughness = 0.8;
         rock_mat.specular_ior = 1.4;
 
-        MaterialShaderOutput water_mat = make_default_material_output();
-        water_mat.basecolor = vec3(0.0, 0.0, 0.2);
-        water_mat.roughness = 0.5;
-        water_mat.specular_ior = 1.7;
-
         MaterialShaderOutput snow_mat = make_default_material_output();
         snow_mat.basecolor = vec3(0.6, 0.6, 0.9);
         snow_mat.roughness = 0.5;

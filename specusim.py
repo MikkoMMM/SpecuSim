@@ -5,9 +5,12 @@ from math import pi, sin, cos, radians
 from direct.gui.DirectGui import DirectFrame
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
-from panda3d.core import Vec3, ShaderTerrainMesh, Shader, load_prc_file_data
+from panda3d.core import Vec3, Vec4, ShaderTerrainMesh, Shader, load_prc_file_data
 from panda3d.core import SamplerState, TextNode, TextureStage, TP_normal
+from panda3d.core import CardMaker, Texture, PerlinNoise3, PNMImage
+from panda3d.core import Material
 from direct.task import Task
+from rpcore.loader import RPLoader
 
 from rpcore import RenderPipeline
 
@@ -88,12 +91,33 @@ class MyApp(ShowBase):
         self.terrain.set_scale(8192, 8192, 50)
         self.terrain.set_pos(-4096, -4096, -10.0)
 
+#        plane_maker = CardMaker("Ocean")
+#        plane_maker.set_frame(-8, 8, -8, 8)
+#        self.ocean  = self.render.attach_new_node(plane_maker.generate())
+        self.ocean = loader.loadModel("models/unit_cube.bam")
+        self.ocean.reparentTo(self.render)
+        self.ocean.set_scale(8, 8, 11.1)
+        self.ocean.set_pos(0, 1, -1.0)
+        waterMat = Material()
+        waterMat.set_base_color(Vec3(1.0, 1.0, 1.0))
+        waterMat.set_roughness(0.9)
+        waterMat.set_refractive_index(1.51)
+        waterMat.set_metallic(0)
+        waterMat.set_emission(Vec4(0.5,0.5,0.5,0.5))
+        self.ocean.setMaterial(waterMat) #Apply the material to this nodePath
+
+        basecolor = self.loader.loadTexture('worldmaps/seed_16783_satellite.png')
+        basecolor.set_format(Texture.F_srgb_alpha)
+        basecolorts = TextureStage('basecolorts')
+        self.ocean.set_texture(basecolorts, basecolor)
+
+
         # For calculating motion controller orientation
         self.heading = 0
         self.pitch = 0
         self.roll = 0
         self.deltat = DeltaT(timediff)
-        self.fuse = Fusion(1.5, timediff)
+        self.fuse = Fusion(2, timediff)
 
         self.inst1 = addInstructions(0.06, "[W]: Move Camera Forward")
         self.inst2 = addInstructions(0.12, "[A]: Move Camera Left")
@@ -147,9 +171,11 @@ class MyApp(ShowBase):
 
     def reload_shaders(self):
         self.render_pipeline.reload_shaders()
+        self.render_pipeline.prepare_scene(render)
 
         # Set the terrain effect
         self.render_pipeline.set_effect(self.terrain, "effects/terrain.yaml", {}, 100)
+#        self.render_pipeline.set_effect(self.ocean, "effects/scene-effect.yaml", {}, sort=250)
 
     # Define a procedure to rotate the camera with a motion controller.
     def spinCameraTask(self, task):
