@@ -10,9 +10,9 @@ from panda3d.core import SamplerState, TextNode, TextureStage, TP_normal
 from panda3d.core import CardMaker, Texture, PerlinNoise3, PNMImage
 from panda3d.core import Material
 from direct.task import Task
-from rpcore.loader import RPLoader
+#from rpcore.loader import RPLoader
 
-from rpcore import RenderPipeline
+#from rpcore import RenderPipeline
 
 
 def timediff(time1, time2):
@@ -45,14 +45,15 @@ class MyApp(ShowBase):
 
         """)
 
-        self.render_pipeline = RenderPipeline()
-        self.render_pipeline.create(self)
+        # Initialize the showbase
+        ShowBase.__init__(self)
+
+        # Increase camera FOV as well as the far plane
+        self.camLens.set_fov(90)
+        self.camLens.set_near_far(0.1, 50000)
 
         # The motion controller's orientation is to be updated 100 times this number per second
         self.motionControllerAccuracy = 40
-
-        # Set time of day
-        self.render_pipeline.daytime_mgr.time = "16:25"
 
         # This is used to store which keys are currently pressed.
         self.keyMap = {
@@ -91,26 +92,17 @@ class MyApp(ShowBase):
         self.terrain.set_scale(8192, 8192, 50)
         self.terrain.set_pos(-4096, -4096, -10.0)
 
-#        plane_maker = CardMaker("Ocean")
-#        plane_maker.set_frame(-8, 8, -8, 8)
-#        self.ocean  = self.render.attach_new_node(plane_maker.generate())
-        self.ocean = loader.loadModel("models/unit_cube.bam")
-        self.ocean.reparentTo(self.render)
-        self.ocean.set_scale(8, 8, 11.1)
-        self.ocean.set_pos(0, 1, -1.0)
-        waterMat = Material()
-        waterMat.set_base_color(Vec3(1.0, 1.0, 1.0))
-        waterMat.set_roughness(0.9)
-        waterMat.set_refractive_index(1.51)
-        waterMat.set_metallic(0)
-        waterMat.set_emission(Vec4(0.5,0.5,0.5,0.5))
-        self.ocean.setMaterial(waterMat) #Apply the material to this nodePath
+        # Set a shader on the terrain. The ShaderTerrainMesh only works with
+        # an applied shader. You can use the shaders used here in your own application
+        terrain_shader = Shader.load(Shader.SL_GLSL, "shaders/terrain.vert.glsl", "shaders/terrain.frag.glsl")
+        self.terrain.set_shader(terrain_shader)
+        self.terrain.set_shader_input("camera", self.camera)
 
-        basecolor = self.loader.loadTexture('worldmaps/seed_16783_satellite.png')
-        basecolor.set_format(Texture.F_srgb_alpha)
-        basecolorts = TextureStage('basecolorts')
-        self.ocean.set_texture(basecolorts, basecolor)
-
+        # Set some texture on the terrain
+        grass_tex = self.loader.loadTexture("worldmaps/seed_16783_satellite.png")
+        grass_tex.set_minfilter(SamplerState.FT_linear_mipmap_linear)
+        grass_tex.set_anisotropic_degree(16)
+        self.terrain.set_texture(grass_tex)
 
         # For calculating motion controller orientation
         self.heading = 0
@@ -139,7 +131,6 @@ class MyApp(ShowBase):
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.move, "moveTask")
         taskMgr.add(self.spinCameraTask, "SpinCameraTask")
-        self.reload_shaders()
 
 
     # Records the state of the arrow keys
@@ -168,14 +159,6 @@ class MyApp(ShowBase):
             self.camera.setX(self.camera, +80 * dt)
 
         return task.cont
-
-    def reload_shaders(self):
-        self.render_pipeline.reload_shaders()
-        self.render_pipeline.prepare_scene(render)
-
-        # Set the terrain effect
-        self.render_pipeline.set_effect(self.terrain, "effects/terrain.yaml", {}, 100)
-#        self.render_pipeline.set_effect(self.ocean, "effects/scene-effect.yaml", {}, sort=250)
 
     # Define a procedure to rotate the camera with a motion controller.
     def spinCameraTask(self, task):

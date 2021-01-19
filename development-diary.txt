@@ -12,4 +12,4 @@
 15.1.2021 Looking into how one would add water to the scene and trying to do it. Made the heading resetting less aggressive.
 16.1.2021 Looking into how to change textures programmatically in Render Pipeline.
 17.1.2021 Attempting to implement the oceans once more
-19.1.2021 Made unit models of basic geometric shapes
+19.1.2021 Made unit models of basic geometric shapes. Also more attempts at texturing. Found out that Render Pipeline was perhaps even a mistake; it was a matter of changing one number in a shader to get the terrain texturing to work properly in regular Panda3D.
