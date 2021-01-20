@@ -9,7 +9,7 @@ Currently these options are supported:
 * Wii Remote with a MotionPlus attachment. A sensor bar is also strongly recommended (the game will run without but there will be severe gyroscopic yaw drift).
 
 ## Software
-* Currently Python 3.8 or later is required. (Python 3.6 and 3.7 support is planned)
+* Python 3.6 or later
 
 # Installation
 * pip install -r requirements.txt 

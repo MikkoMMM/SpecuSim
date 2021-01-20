@@ -13,3 +13,4 @@
 16.1.2021 Looking into how to change textures programmatically in Render Pipeline.
 17.1.2021 Attempting to implement the oceans once more
 19.1.2021 Made unit models of basic geometric shapes. Also more attempts at texturing. Found out that Render Pipeline was perhaps even a mistake; it was a matter of changing one number in a shader to get the terrain texturing to work properly in regular Panda3D.
+20.1.2021 Reading up on models and actors for Panda3D. Trying out the basics of the Bullet physics engine. Resized the unit models.
