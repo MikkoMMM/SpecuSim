@@ -2,6 +2,7 @@ from motioncontrols.fusion import Fusion, DeltaT
 from motioncontrols.wiimote import Wiimote
 from math import pi, sin, cos, radians
 
+from direct.showbase.InputStateGlobal import inputState
 from direct.gui.DirectGui import DirectFrame
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
@@ -12,6 +13,8 @@ from panda3d.core import PNMImage, Filename
 from direct.task import Task
 from panda3d.bullet import BulletWorld
 from panda3d.bullet import BulletRigidBodyNode
+from panda3d.bullet import BulletDebugNode
+from panda3d.core import BitMask32
 from panda3d.bullet import BulletBoxShape
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import ZUp
@@ -49,10 +52,14 @@ class MyApp(ShowBase):
 
         # Initialize the showbase
         ShowBase.__init__(self)
+        base.setFrameRateMeter(True)
 
         # Increase camera FOV as well as the far plane
         self.camLens.set_fov(90)
         self.camLens.set_near_far(0.1, 50000)
+        
+        #Heightfield's height
+        self.height = 50.0
 
         # The motion controller's orientation is to be updated 100 times this number per second
         self.motionControllerAccuracy = 40
@@ -60,16 +67,13 @@ class MyApp(ShowBase):
         # Physics setup
         self.world = BulletWorld()
         self.world.setGravity(Vec3(0, 0, -9.81))
-
-        # This is used to store which keys are currently pressed.
-        self.keyMap = {
-            "cam-forward": 0,
-            "cam-backward": 0,
-            "cam-left": 0,
-            "cam-right": 0,
-            "cam-turnleft": 0,
-            "cam-turnright": 0,
-        }
+        '''
+        self.worldNP = render.attachNewNode('World')
+        self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
+        self.debugNP.show()
+        self.debugNP.node().showNormals(True)
+        self.world.setDebugNode(self.debugNP.node())
+        '''
         self.motionControllerConnected = False
         self.disableMouse()
 
@@ -94,11 +98,11 @@ class MyApp(ShowBase):
 
         # Attach the terrain to the main scene and set its scale. With no scale
         # set, the terrain ranges from (0, 0, 0) to (1, 1, 1)
-        self.terrain = self.render.attach_new_node(self.terrain_node)
-#        self.terrain.set_scale(8192, 8192, 50)
-#        self.terrain.set_pos(-4096, -4096, -10.0)
-        self.terrain.set_scale(8192, 8192, 50)
-        self.terrain.set_pos(-4096, -4096, -10.0)
+        self.terrain = render.attach_new_node(self.terrain_node)
+        self.terrain.set_scale(8192, 8192, self.height)
+        self.terrain.set_pos(-4096, -4096, -self.height/2)
+#        self.terrain.set_scale(1024, 1024, 50)
+#        self.terrain.set_pos(-512, -512, -25.0)
 
         # Set a shader on the terrain. The ShaderTerrainMesh only works with
         # an applied shader. You can use the shaders used here in your own application
@@ -114,27 +118,28 @@ class MyApp(ShowBase):
 
         # Collision detection for the terrain
         terrainBulletNode = BulletRigidBodyNode("terrainBodyNode")
-        terrain_colshape = BulletHeightfieldShape(elevation_img, 1.0, ZUp)
+        terrain_colshape = BulletHeightfieldShape(elevation_img, self.height, ZUp)
+        terrain_colshape.setUseDiamondSubdivision(True)
         terrainBulletNode.addShape(terrain_colshape)
         np = render.attachNewNode(terrainBulletNode)
+        np.setCollideMask(BitMask32.allOn())
         self.world.attachRigidBody(terrainBulletNode)
 #        self.terrain.reparentTo(np)
-        np.setScale(Vec3(8192, 8192, 50))
-        np.setPos(-4096, -4096, 10)
+        np.setScale(Vec3(1, 1, 1))
+        np.setPos(0, 0, 0)
 
         # Player character's shape and collision boxes
         shape = BulletBoxShape(Vec3(0.5, 0.5, 0.5))
-        node = BulletRigidBodyNode('Box')
-        node.setMass(1.0)
-        node.addShape(shape)
-        np = render.attachNewNode(node)
-        np.setPos(0, 0, 2)
-        self.world.attachRigidBody(node)
-        self.player = loader.loadModel("models/unit_cube.bam")
-        self.player.flattenLight()
-        self.player.reparentTo(np)
-        self.player.setScale(1)
-        self.player.setPos(0, 2, 5)
+        self.player = self.render.attachNewNode(BulletRigidBodyNode('Box'))
+        self.player.node().setMass(1.0)
+        self.player.node().addShape(shape)
+        self.player.setPos(0, 0, 4)
+        self.world.attachRigidBody(self.player.node())
+        playerVisual = loader.loadModel("models/unit_cube.bam")
+#        playerVisual.flattenLight()
+        playerVisual.reparentTo(self.player)
+        playerVisual.setScale(1)
+        playerVisual.setPos(0, 0, 0)
 
         self.camera.setPos(0, 0, 5)
 
@@ -148,21 +153,17 @@ class MyApp(ShowBase):
         self.inst1 = addInstructions(0.06, "[WASD]: Translate Camera")
         self.inst2 = addInstructions(0.12, "[QE]: Rotate Camera")
 
-        self.accept("w", self.setKey, ["cam-forward", True])
-        self.accept("s", self.setKey, ["cam-backward", True])
-        self.accept("w-up", self.setKey, ["cam-forward", False])
-        self.accept("s-up", self.setKey, ["cam-backward", False])
-        self.accept("a", self.setKey, ["cam-left", True])
-        self.accept("d", self.setKey, ["cam-right", True])
-        self.accept("a-up", self.setKey, ["cam-left", False])
-        self.accept("d-up", self.setKey, ["cam-right", False])
-        self.accept("q", self.setKey, ["cam-turnleft", True])
-        self.accept("e", self.setKey, ["cam-turnright", True])
-        self.accept("q-up", self.setKey, ["cam-turnleft", False])
-        self.accept("e-up", self.setKey, ["cam-turnright", False])
+        self.accept('f1', self.toggleWireframe)
+        self.accept('f2', self.toggleTexture)
+        inputState.watchWithModifiers('cam-forward', 'w')
+        inputState.watchWithModifiers('cam-left', 'a')
+        inputState.watchWithModifiers('cam-backward', 's')
+        inputState.watchWithModifiers('cam-right', 'd')
+        inputState.watchWithModifiers('cam-turnleft', 'q')
+        inputState.watchWithModifiers('cam-turnright', 'e')
 
         # Connect, calibrate and start reading information from a motion controller
-        self.motionController = Wiimote(self)
+#        self.motionController = Wiimote(self)
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.move, "moveTask")
@@ -177,10 +178,6 @@ class MyApp(ShowBase):
         self.world.doPhysics(dt, 30, 1.0/540.0)
         return task.cont
 
-    # Records the state of the arrow keys
-    def setKey(self, key, value):
-        self.keyMap[key] = value
-
     # Moves the camera with key presses
     # Also deals with grid checking and collision detection
     def move(self, task):
@@ -189,22 +186,37 @@ class MyApp(ShowBase):
         # the desired speed in order to find out with which distance to move
         # in order to achieve that desired speed.
         dt = globalClock.getDt()
+        
+        force = Vec3(0, 0, 0)
 
         # If the camera-left key is pressed, move camera left.
         # If the camera-right key is pressed, move camera right.
 
-        if self.keyMap["cam-forward"]:
-            self.camera.setY(self.camera, +80 * dt)
-        if self.keyMap["cam-backward"]:
-            self.camera.setY(self.camera, -80 * dt)
-        if self.keyMap["cam-left"]:
-            self.camera.setX(self.camera, -80 * dt)
-        if self.keyMap["cam-right"]:
-            self.camera.setX(self.camera, +80 * dt)
-        if self.keyMap["cam-turnleft"]:
-            self.camera.setH(self.camera, +80 * dt)
-        if self.keyMap["cam-turnright"]:
-            self.camera.setH(self.camera, -80 * dt)
+        if inputState.isSet('cam-forward'):  force.setY( 1.0)
+        if inputState.isSet('cam-backward'): force.setY(-1.0)
+        if inputState.isSet('cam-left'):     force.setX(-1.0)
+        if inputState.isSet('cam-right'):    force.setX( 1.0)
+        if inputState.isSet('cam-turnleft'):  self.camera.setH(self.camera, +80 * dt)
+        if inputState.isSet('cam-turnright'): self.camera.setH(self.camera, -80 * dt)
+        force *= 30.0
+        force = render.getRelativeVector(self.player, force)
+        self.player.node().setActive(True)
+        self.player.node().applyCentralForce(force)
+#        self.player.node().applyTorque(torque)
+
+        # Camera positioning code, owing a lot to the Roaming Ralph example's author Ryan Myers
+        camvec = self.player.getPos() - self.camera.getPos()
+        camvec.setZ(0)
+        camdist = camvec.length()
+        camvec.normalize()
+        if camdist > 10.0:
+            self.camera.setPos(self.camera.getPos() + camvec * (camdist - 10))
+            camdist = 10.0
+        if camdist < 5.0:
+            self.camera.setPos(self.camera.getPos() - camvec * (5 - camdist))
+            camdist = 5.0
+
+        self.camera.lookAt(self.player)
 
         return task.cont
 
