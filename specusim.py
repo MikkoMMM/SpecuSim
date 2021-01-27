@@ -60,11 +60,10 @@ class MyApp(ShowBase):
         self.camLens.set_near_far(0.1, 50000)
         
         #Heightfield's height
-        self.height = 50.0
+        self.height = 25.0
 
         # The motion controller's orientation is to be updated 100 times this number per second
         self.motionControllerAccuracy = 40
-        self.wantedHeading = 0
 
         # Physics setup
         self.world = BulletWorld()
@@ -136,8 +135,14 @@ class MyApp(ShowBase):
         self.player = self.render.attachNewNode(BulletRigidBodyNode('Box'))
         self.player.node().setMass(80.0)
         self.player.node().addShape(shape)
-        self.player.node().setAngularFactor(Vec3(0,0,1))
+        self.player.node().setAngularFactor(Vec3(0,0,0.1))
+        self.player.node().setAngularDamping(0.9)
+        self.player.node().setFriction(0.8)
+        terrainBulletNode.setFriction(0.8)
+        self.player.node().setRestitution(0.0)
+        terrainBulletNode.setRestitution(0.1)
         self.player.setPos(0, 0, 1)
+        self.player.setCollideMask(BitMask32.allOn())
         self.world.attachRigidBody(self.player.node())
         playerVisual = loader.loadModel("models/unit_cube.bam")
 #        playerVisual.flattenLight()
@@ -205,17 +210,15 @@ class MyApp(ShowBase):
         if inputState.isSet('cam-backward'): force.setY(-1.0)
         if inputState.isSet('cam-left'):     force.setX(-1.0)
         if inputState.isSet('cam-right'):    force.setX( 1.0)
-        if inputState.isSet('cam-turnleft'):  self.wantedHeading += 5
-        if inputState.isSet('cam-turnright'): self.wantedHeading -= 5
-        self.inst3.text = str(self.wantedHeading) + ", " + str(self.player.getH())
+        if inputState.isSet('cam-turnleft'):  torque.setZ(1500)
+        if inputState.isSet('cam-turnright'): torque.setZ(-1500)
+        self.inst3.text = str(self.player.getH())
 
-        torque.setZ(PythonUtil.fitDestAngle2Src(self.player.getH(), self.wantedHeading)/100)
-        self.inst4.text = str(torque)
         force *= 2400.0
         force = render.getRelativeVector(self.player, force)
         self.player.node().setActive(True)
         self.player.node().applyCentralForce(force)
-#        self.player.node().applyTorque(torque)
+        self.player.node().applyTorque(torque)
 
         return task.cont
 
