@@ -16,3 +16,5 @@
 20.1.2021 Reading up on models and actors for Panda3D. Trying out the basics of the Bullet physics engine. Resized the unit models.
 22.1.2021 Simplified the keyboard control code and some more Bullet basics. Looking at generative music models available for Python.
 24.1.2021 Some camera positioning code and trying to figure out movements still.
+26.1.2021 Email exchanging with the supervisor (1h). Writing up a project plan. A Trello page.
+27.1.2021 The camera now follows player's rotations too.

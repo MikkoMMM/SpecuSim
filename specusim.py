@@ -18,6 +18,7 @@ from panda3d.core import BitMask32
 from panda3d.bullet import BulletBoxShape
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import ZUp
+from direct.showbase import PythonUtil
 
 
 def timediff(time1, time2):
@@ -63,11 +64,14 @@ class MyApp(ShowBase):
 
         # The motion controller's orientation is to be updated 100 times this number per second
         self.motionControllerAccuracy = 40
+        self.wantedHeading = 0
 
         # Physics setup
         self.world = BulletWorld()
         self.world.setGravity(Vec3(0, 0, -9.81))
         '''
+        # These would show wireframes for the physics objects.
+        # However, the normal heightfield is too large for this to work. Switch to a smaller one if you wish to visually debug.
         self.worldNP = render.attachNewNode('World')
         self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
         self.debugNP.show()
@@ -83,6 +87,8 @@ class MyApp(ShowBase):
         # Set a heightfield, the heightfield should be a 16-bit png and
         # have a quadratic size of a power of two.
         elevation_img = PNMImage(Filename('worldmaps/seed_16783_grayscale.png'))
+        elevation_img_size = elevation_img.getXSize()
+        elevation_img_offset = elevation_img_size / 2.0 - 0.5
         heightfield = Texture("heightfield")
         heightfield.load(elevation_img)
         heightfield.wrap_u = SamplerState.WM_clamp
@@ -99,10 +105,8 @@ class MyApp(ShowBase):
         # Attach the terrain to the main scene and set its scale. With no scale
         # set, the terrain ranges from (0, 0, 0) to (1, 1, 1)
         self.terrain = render.attach_new_node(self.terrain_node)
-        self.terrain.set_scale(8192, 8192, self.height)
-        self.terrain.set_pos(-4096, -4096, -self.height/2)
-#        self.terrain.set_scale(1024, 1024, 50)
-#        self.terrain.set_pos(-512, -512, -25.0)
+        self.terrain.set_scale(elevation_img_size, elevation_img_size, self.height)
+        self.terrain.set_pos(-elevation_img_offset, -elevation_img_offset, -self.height/2)
 
         # Set a shader on the terrain. The ShaderTerrainMesh only works with
         # an applied shader. You can use the shaders used here in your own application
@@ -124,24 +128,25 @@ class MyApp(ShowBase):
         np = render.attachNewNode(terrainBulletNode)
         np.setCollideMask(BitMask32.allOn())
         self.world.attachRigidBody(terrainBulletNode)
-#        self.terrain.reparentTo(np)
         np.setScale(Vec3(1, 1, 1))
         np.setPos(0, 0, 0)
 
         # Player character's shape and collision boxes
         shape = BulletBoxShape(Vec3(0.5, 0.5, 0.5))
         self.player = self.render.attachNewNode(BulletRigidBodyNode('Box'))
-        self.player.node().setMass(1.0)
+        self.player.node().setMass(80.0)
         self.player.node().addShape(shape)
-        self.player.setPos(0, 0, 4)
+        self.player.node().setAngularFactor(Vec3(0,0,1))
+        self.player.setPos(0, 0, 1)
         self.world.attachRigidBody(self.player.node())
         playerVisual = loader.loadModel("models/unit_cube.bam")
 #        playerVisual.flattenLight()
+        playerVisual.clearModelNodes()
         playerVisual.reparentTo(self.player)
-        playerVisual.setScale(1)
-        playerVisual.setPos(0, 0, 0)
 
-        self.camera.setPos(0, 0, 5)
+        self.camera.reparentTo(self.player)
+        self.camera.setPos(0, -10, 40)
+        self.camera.lookAt(self.player, 0, 5, 0)
 
         # For calculating motion controller orientation
         self.heading = 0
@@ -152,6 +157,9 @@ class MyApp(ShowBase):
 
         self.inst1 = addInstructions(0.06, "[WASD]: Translate Camera")
         self.inst2 = addInstructions(0.12, "[QE]: Rotate Camera")
+        self.inst3 = addInstructions(0.18, "")
+        self.inst4 = addInstructions(0.24, "")
+        self.inst5 = addInstructions(0.30, "")
 
         self.accept('f1', self.toggleWireframe)
         self.accept('f2', self.toggleTexture)
@@ -188,6 +196,7 @@ class MyApp(ShowBase):
         dt = globalClock.getDt()
         
         force = Vec3(0, 0, 0)
+        torque = Vec3(0, 0, 0)
 
         # If the camera-left key is pressed, move camera left.
         # If the camera-right key is pressed, move camera right.
@@ -196,27 +205,17 @@ class MyApp(ShowBase):
         if inputState.isSet('cam-backward'): force.setY(-1.0)
         if inputState.isSet('cam-left'):     force.setX(-1.0)
         if inputState.isSet('cam-right'):    force.setX( 1.0)
-        if inputState.isSet('cam-turnleft'):  self.camera.setH(self.camera, +80 * dt)
-        if inputState.isSet('cam-turnright'): self.camera.setH(self.camera, -80 * dt)
-        force *= 30.0
+        if inputState.isSet('cam-turnleft'):  self.wantedHeading += 5
+        if inputState.isSet('cam-turnright'): self.wantedHeading -= 5
+        self.inst3.text = str(self.wantedHeading) + ", " + str(self.player.getH())
+
+        torque.setZ(PythonUtil.fitDestAngle2Src(self.player.getH(), self.wantedHeading)/100)
+        self.inst4.text = str(torque)
+        force *= 2400.0
         force = render.getRelativeVector(self.player, force)
         self.player.node().setActive(True)
         self.player.node().applyCentralForce(force)
 #        self.player.node().applyTorque(torque)
-
-        # Camera positioning code, owing a lot to the Roaming Ralph example's author Ryan Myers
-        camvec = self.player.getPos() - self.camera.getPos()
-        camvec.setZ(0)
-        camdist = camvec.length()
-        camvec.normalize()
-        if camdist > 10.0:
-            self.camera.setPos(self.camera.getPos() + camvec * (camdist - 10))
-            camdist = 10.0
-        if camdist < 5.0:
-            self.camera.setPos(self.camera.getPos() - camvec * (5 - camdist))
-            camdist = 5.0
-
-        self.camera.lookAt(self.player)
 
         return task.cont
 
