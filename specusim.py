@@ -8,7 +8,7 @@ from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
 from panda3d.core import Vec3, Vec4, ShaderTerrainMesh, Shader, load_prc_file_data
 from panda3d.core import SamplerState, TextNode, TextureStage, TP_normal
-from panda3d.core import CardMaker, Texture
+from panda3d.core import CardMaker, Texture, Mat4
 from panda3d.core import PNMImage, Filename
 from direct.task import Task
 from panda3d.bullet import BulletWorld
@@ -149,9 +149,28 @@ class MyApp(ShowBase):
         playerVisual.clearModelNodes()
         playerVisual.reparentTo(self.player)
 
+        shape = BulletBoxShape(Vec3(0.3, 0.3, 0.5))
+        self.playerLegs = self.render.attachNewNode(BulletRigidBodyNode('Box'))
+        self.playerLegs.reparentTo(self.player)
+        self.playerLegs.node().setMass(10.0)
+        self.playerLegs.node().addShape(shape)
+        self.playerLegs.node().setAngularFactor(Vec3(0,0,0.1))
+        self.playerLegs.node().setAngularDamping(0.9)
+        self.playerLegs.node().setFriction(0.8)
+        self.playerLegs.node().setRestitution(0.0)
+        self.playerLegs.setPos(0, 0, -1)
+        self.playerLegs.setCollideMask(BitMask32.allOn())
+        self.world.attachRigidBody(self.playerLegs.node())
+        playerVisual = loader.loadModel("models/unit_cube.bam")
+        playerVisual.setScale(Vec3(0.6, 0.6, 1))
+#        playerVisual.flattenLight()
+        playerVisual.clearModelNodes()
+        playerVisual.reparentTo(self.playerLegs)
+
         self.camera.reparentTo(self.player)
-        self.camera.setPos(0, -10, 40)
-        self.camera.lookAt(self.player, 0, 5, 0)
+#        self.camera.setPos(0, -10, 40)
+        self.camera.setPos(0, -10, 0)
+#        self.camera.lookAt(self.player, 0, 5, 0)
 
         # For calculating motion controller orientation
         self.heading = 0
@@ -160,12 +179,15 @@ class MyApp(ShowBase):
         self.deltat = DeltaT(timediff)
         self.fuse = Fusion(2, timediff)
 
-        self.inst1 = addInstructions(0.06, "[WASD]: Translate Camera")
-        self.inst2 = addInstructions(0.12, "[QE]: Rotate Camera")
-        self.inst3 = addInstructions(0.18, "")
-        self.inst4 = addInstructions(0.24, "")
+        self.inst1 = addInstructions(0.06, "[WASD]: Move")
+        self.inst2 = addInstructions(0.12, "[QE]: Rotate")
+        self.inst3 = addInstructions(0.18, "Middle mouse button: Rotate camera")
+        self.inst4 = addInstructions(0.24, "Right mouse button: Adjust zoom")
         self.inst5 = addInstructions(0.30, "")
 
+        self.accept('mouse1',self.disableMouse)
+        self.accept('mouse2',self.reEnableMouse)
+        self.accept('mouse3',self.reEnableMouse)
         self.accept('f1', self.toggleWireframe)
         self.accept('f2', self.toggleTexture)
         inputState.watchWithModifiers('cam-forward', 'w')
@@ -184,11 +206,25 @@ class MyApp(ShowBase):
         taskMgr.add(self.update, 'update')
 
 
+    def reEnableMouse(self):
+        base.disableMouse()
+        mat = Mat4(self.camera.getMat())
+        mat.invertInPlace()
+        base.mouseInterfaceNode.setMat(mat)
+        base.enableMouse()
+
     def update(self, task):
         dt = globalClock.getDt()
         # Choosing smaller substeps will make the simulation more realistic,
         # but performance will decrease too. Smaller substeps also reduce jitter.
         self.world.doPhysics(dt, 30, 1.0/540.0)
+
+        pFrom = self.player.getPos()
+
+        rc_result = self.world.rayTestClosest(pFrom + Vec3(0, 0, 9999), pFrom - Vec3(0, 0, 9999))
+        if rc_result.hasHit() and rc_result.getNode().getName() == 'terrainBodyNode':
+#            newHeight = min(max(rc_result.getHitPos().getZ() + 0.6, self.player.getZ() + 0.01), rc_result.getHitPos().getZ() + 0.601)
+            self.player.setZ(rc_result.getHitPos().getZ() + 0.5)
         return task.cont
 
     # Moves the camera with key presses
@@ -212,7 +248,7 @@ class MyApp(ShowBase):
         if inputState.isSet('cam-right'):    force.setX( 1.0)
         if inputState.isSet('cam-turnleft'):  torque.setZ(1500)
         if inputState.isSet('cam-turnright'): torque.setZ(-1500)
-        self.inst3.text = str(self.player.getH())
+        self.inst5.text = str(self.player.node().getLinearVelocity())
 
         force *= 2400.0
         force = render.getRelativeVector(self.player, force)
@@ -220,6 +256,7 @@ class MyApp(ShowBase):
         self.player.node().applyCentralForce(force)
         self.player.node().applyTorque(torque)
 
+        self.camera.setR(0)
         return task.cont
 
     # Define a procedure to rotate the camera with a motion controller.

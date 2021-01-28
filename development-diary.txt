@@ -17,4 +17,5 @@
 22.1.2021 Simplified the keyboard control code and some more Bullet basics. Looking at generative music models available for Python.
 24.1.2021 Some camera positioning code and trying to figure out movements still.
 26.1.2021 Email exchanging with the supervisor (1h). Writing up a project plan. A Trello page.
-27.1.2021 The camera now follows player's rotations too. Trying to solve what causes so much unintended rotation for the player character, and making a quick and dirty patch for it. Apparently the problem is called Internal Edge Collision.
+27.1.2021 The camera now follows player's rotations too. Trying to solve what causes so much unintended rotation for the player character, and making a quick and dirty patch for it. Apparently the problem is called Internal Edge Collision. Implementing a ground collision ray test and seeing what it's good for.
+28.1.2021 More reading up on a custom character controller implementation. Making an option to control the camera with the mouse.
