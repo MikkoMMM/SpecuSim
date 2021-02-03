@@ -1,5 +1,6 @@
-from motioncontrols.fusion import Fusion, DeltaT
-from motioncontrols.wiimote import Wiimote
+from src.motioncontrols.fusion import Fusion, DeltaT
+from src.motioncontrols.wiimote import Wiimote
+from src.humanoid import Humanoid
 from math import pi, sin, cos, radians
 
 from direct.showbase.InputStateGlobal import inputState
@@ -14,8 +15,7 @@ from direct.task import Task
 from panda3d.bullet import BulletWorld
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.bullet import BulletDebugNode
-from panda3d.core import BitMask32
-from panda3d.bullet import BulletBoxShape
+from panda3d.core import BitMask32, TransformState, Point3
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import ZUp
 from direct.showbase import PythonUtil
@@ -49,6 +49,7 @@ class MyApp(ShowBase):
             # number of chunks that will be visible at any given time.
             stm-max-chunk-count 2048
 
+            bullet-filter-algorithm groups-mask
         """)
 
         # Initialize the showbase
@@ -68,18 +69,26 @@ class MyApp(ShowBase):
         # Physics setup
         self.world = BulletWorld()
         self.world.setGravity(Vec3(0, 0, -9.81))
-        '''
-        # These would show wireframes for the physics objects.
-        # However, the normal heightfield is too large for this to work. Switch to a smaller one if you wish to visually debug.
-        self.worldNP = render.attachNewNode('World')
-        self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
-        self.debugNP.show()
-        self.debugNP.node().showNormals(True)
-        self.world.setDebugNode(self.debugNP.node())
-        '''
         self.motionControllerConnected = False
         self.disableMouse()
-
+        
+        #Collision groups:
+        # 0: ground and torso
+        # 1: other body parts
+        self.world.setGroupCollisionFlag(0, 1, True)
+        self.world.setGroupCollisionFlag(1, 1, False)
+        
+        # These would show wireframes for the physics objects.
+        # However, the normal heightfield is too large for this to work. Switch to a smaller one if you wish to visually debug.
+        '''
+        self.worldNP = render.attachNewNode('World')
+        self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
+        self.debugNP.node().showNormals(True)
+        self.debugNP.node().showBoundingBoxes(False)
+        self.debugNP.node().showConstraints(True)
+        self.debugNP.show()
+        self.world.setDebugNode(self.debugNP.node())
+        '''
         # Construct the terrain
         self.terrain_node = ShaderTerrainMesh()
 
@@ -125,52 +134,19 @@ class MyApp(ShowBase):
         terrain_colshape.setUseDiamondSubdivision(True)
         terrainBulletNode.addShape(terrain_colshape)
         np = render.attachNewNode(terrainBulletNode)
-        np.setCollideMask(BitMask32.allOn())
+        np.setCollideMask(BitMask32.bit(0))
         self.world.attachRigidBody(terrainBulletNode)
         np.setScale(Vec3(1, 1, 1))
         np.setPos(0, 0, 0)
+        #terrainBulletNode.setFriction(0.8)
+        #terrainBulletNode.setRestitution(0.1)
+        
+        self.player = Humanoid(self.render, self.world)
 
-        # Player character's shape and collision boxes
-        shape = BulletBoxShape(Vec3(0.5, 0.5, 0.5))
-        self.player = self.render.attachNewNode(BulletRigidBodyNode('Box'))
-        self.player.node().setMass(80.0)
-        self.player.node().addShape(shape)
-        self.player.node().setAngularFactor(Vec3(0,0,0.1))
-        self.player.node().setAngularDamping(0.9)
-        self.player.node().setFriction(0.8)
-        terrainBulletNode.setFriction(0.8)
-        self.player.node().setRestitution(0.0)
-        terrainBulletNode.setRestitution(0.1)
-        self.player.setPos(0, 0, 1)
-        self.player.setCollideMask(BitMask32.allOn())
-        self.world.attachRigidBody(self.player.node())
-        playerVisual = loader.loadModel("models/unit_cube.bam")
-#        playerVisual.flattenLight()
-        playerVisual.clearModelNodes()
-        playerVisual.reparentTo(self.player)
-
-        shape = BulletBoxShape(Vec3(0.3, 0.3, 0.5))
-        self.playerLegs = self.render.attachNewNode(BulletRigidBodyNode('Box'))
-        self.playerLegs.reparentTo(self.player)
-        self.playerLegs.node().setMass(10.0)
-        self.playerLegs.node().addShape(shape)
-        self.playerLegs.node().setAngularFactor(Vec3(0,0,0.1))
-        self.playerLegs.node().setAngularDamping(0.9)
-        self.playerLegs.node().setFriction(0.8)
-        self.playerLegs.node().setRestitution(0.0)
-        self.playerLegs.setPos(0, 0, -1)
-        self.playerLegs.setCollideMask(BitMask32.allOn())
-        self.world.attachRigidBody(self.playerLegs.node())
-        playerVisual = loader.loadModel("models/unit_cube.bam")
-        playerVisual.setScale(Vec3(0.6, 0.6, 1))
-#        playerVisual.flattenLight()
-        playerVisual.clearModelNodes()
-        playerVisual.reparentTo(self.playerLegs)
-
-        self.camera.reparentTo(self.player)
+        self.camera.reparentTo(self.player.torso)
 #        self.camera.setPos(0, -10, 40)
         self.camera.setPos(0, -10, 0)
-#        self.camera.lookAt(self.player, 0, 5, 0)
+#        self.camera.lookAt(self.player.torso, 0, 5, 0)
 
         # For calculating motion controller orientation
         self.heading = 0
@@ -215,16 +191,19 @@ class MyApp(ShowBase):
 
     def update(self, task):
         dt = globalClock.getDt()
+
+        '''
+        pFrom = self.player.torso.getPos()
+        rc_result = self.world.rayTestAll(pFrom + Vec3(0, 0, 9999), pFrom - Vec3(0, 0, 9999))
+        if rc_result.hasHits():
+            for hit in rc_result.getHits():
+                if hit.getNode().getName() == 'terrainBodyNode':
+                    self.player.torso.setZ(hit.getHitPos().getZ() + 1.5)
+        '''
         # Choosing smaller substeps will make the simulation more realistic,
         # but performance will decrease too. Smaller substeps also reduce jitter.
         self.world.doPhysics(dt, 30, 1.0/540.0)
 
-        pFrom = self.player.getPos()
-
-        rc_result = self.world.rayTestClosest(pFrom + Vec3(0, 0, 9999), pFrom - Vec3(0, 0, 9999))
-        if rc_result.hasHit() and rc_result.getNode().getName() == 'terrainBodyNode':
-#            newHeight = min(max(rc_result.getHitPos().getZ() + 0.6, self.player.getZ() + 0.01), rc_result.getHitPos().getZ() + 0.601)
-            self.player.setZ(rc_result.getHitPos().getZ() + 0.5)
         return task.cont
 
     # Moves the camera with key presses
@@ -248,13 +227,13 @@ class MyApp(ShowBase):
         if inputState.isSet('cam-right'):    force.setX( 1.0)
         if inputState.isSet('cam-turnleft'):  torque.setZ(1500)
         if inputState.isSet('cam-turnright'): torque.setZ(-1500)
-        self.inst5.text = str(self.player.node().getLinearVelocity())
+        self.inst5.text = str(self.player.torso.node().getLinearVelocity())
 
         force *= 2400.0
-        force = render.getRelativeVector(self.player, force)
-        self.player.node().setActive(True)
-        self.player.node().applyCentralForce(force)
-        self.player.node().applyTorque(torque)
+        force = render.getRelativeVector(self.player.torso, force)
+        self.player.torso.node().setActive(True)
+        self.player.torso.node().applyCentralForce(force)
+        self.player.torso.node().applyTorque(torque)
 
         self.camera.setR(0)
         return task.cont
