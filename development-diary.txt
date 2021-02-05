@@ -23,3 +23,5 @@
 30.1.2021 Pondering how to make the Animal class generalizable but simple. Attempting to make a controllable hinge constraint.
 31.1.2021 Instead of an Animal class, there's probably going to be a Humanoid. Some more groundwork for it.
 3.2.2021 Trying to get the collisions and constraints to work somewhat coherently between body parts and the ground.
+4.2.2021 Researching body proportions and implementing some. A script that tracks when files were modified, to help with tracking activity. Divided the torso up to a chest and a lower torso, and tweaked some dimensions and constraints.
+5.2.2021 A second leg, and started working on more finalized walking.

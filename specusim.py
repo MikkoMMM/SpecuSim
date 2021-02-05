@@ -73,7 +73,7 @@ class MyApp(ShowBase):
         self.disableMouse()
         
         #Collision groups:
-        # 0: ground and torso
+        # 0: ground and chest
         # 1: other body parts
         self.world.setGroupCollisionFlag(0, 1, True)
         self.world.setGroupCollisionFlag(1, 1, False)
@@ -143,10 +143,10 @@ class MyApp(ShowBase):
         
         self.player = Humanoid(self.render, self.world)
 
-        self.camera.reparentTo(self.player.torso)
+        self.camera.reparentTo(self.player.lowerTorso)
 #        self.camera.setPos(0, -10, 40)
         self.camera.setPos(0, -10, 0)
-#        self.camera.lookAt(self.player.torso, 0, 5, 0)
+#        self.camera.lookAt(self.player.chest, 0, 5, 0)
 
         # For calculating motion controller orientation
         self.heading = 0
@@ -166,12 +166,12 @@ class MyApp(ShowBase):
         self.accept('mouse3',self.reEnableMouse)
         self.accept('f1', self.toggleWireframe)
         self.accept('f2', self.toggleTexture)
-        inputState.watchWithModifiers('cam-forward', 'w')
-        inputState.watchWithModifiers('cam-left', 'a')
-        inputState.watchWithModifiers('cam-backward', 's')
-        inputState.watchWithModifiers('cam-right', 'd')
-        inputState.watchWithModifiers('cam-turnleft', 'q')
-        inputState.watchWithModifiers('cam-turnright', 'e')
+        inputState.watchWithModifiers('forward', 'w')
+        inputState.watchWithModifiers('left', 'a')
+        inputState.watchWithModifiers('backward', 's')
+        inputState.watchWithModifiers('right', 'd')
+        inputState.watchWithModifiers('turnleft', 'q')
+        inputState.watchWithModifiers('turnright', 'e')
 
         # Connect, calibrate and start reading information from a motion controller
 #        self.motionController = Wiimote(self)
@@ -193,12 +193,12 @@ class MyApp(ShowBase):
         dt = globalClock.getDt()
 
         '''
-        pFrom = self.player.torso.getPos()
+        pFrom = self.player.chest.getPos()
         rc_result = self.world.rayTestAll(pFrom + Vec3(0, 0, 9999), pFrom - Vec3(0, 0, 9999))
         if rc_result.hasHits():
             for hit in rc_result.getHits():
                 if hit.getNode().getName() == 'terrainBodyNode':
-                    self.player.torso.setZ(hit.getHitPos().getZ() + 1.5)
+                    self.player.chest.setZ(hit.getHitPos().getZ() + 1.5)
         '''
         # Choosing smaller substeps will make the simulation more realistic,
         # but performance will decrease too. Smaller substeps also reduce jitter.
@@ -221,19 +221,26 @@ class MyApp(ShowBase):
         # If the camera-left key is pressed, move camera left.
         # If the camera-right key is pressed, move camera right.
 
-        if inputState.isSet('cam-forward'):  force.setY( 1.0)
-        if inputState.isSet('cam-backward'): force.setY(-1.0)
-        if inputState.isSet('cam-left'):     force.setX(-1.0)
-        if inputState.isSet('cam-right'):    force.setX( 1.0)
-        if inputState.isSet('cam-turnleft'):  torque.setZ(1500)
-        if inputState.isSet('cam-turnright'): torque.setZ(-1500)
-        self.inst5.text = str(self.player.torso.node().getLinearVelocity())
+        if inputState.isSet('forward'):
+            #force.setY( 1.0)
+#            self.player.leftLeg.node().setMass(0)
+            self.player.rightLegConstraint.enableMotor(True)
+            self.player.rightLegConstraint.setMotorTarget(40, 1)
+            self.player.leftLegConstraint.enableMotor(True)
+            self.player.leftLegConstraint.setMotorTarget(-40, 1)
+#        if inputState.isSet('backward'):
+            #force.setY(-1.0)
+        if inputState.isSet('left'):     force.setX(-1.0)
+        if inputState.isSet('right'):    force.setX( 1.0)
+        if inputState.isSet('turnleft'):  torque.setZ(500)
+        if inputState.isSet('turnright'): torque.setZ(-500)
+        self.inst5.text = str(self.player.chest.node().getLinearVelocity())
 
         force *= 2400.0
-        force = render.getRelativeVector(self.player.torso, force)
-        self.player.torso.node().setActive(True)
-        self.player.torso.node().applyCentralForce(force)
-        self.player.torso.node().applyTorque(torque)
+        force = render.getRelativeVector(self.player.chest, force)
+        self.player.chest.node().setActive(True)
+        self.player.chest.node().applyCentralForce(force)
+        self.player.chest.node().applyTorque(torque)
 
         self.camera.setR(0)
         return task.cont
