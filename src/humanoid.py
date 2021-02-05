@@ -5,6 +5,7 @@ from panda3d.core import BitMask32, Point3, TransformState
 from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint
 from panda3d.bullet import ZUp
 from src.shapes import createCapsule
+from src.leg import Leg
 
 class Humanoid():
     # Arguments:
@@ -75,32 +76,23 @@ class Humanoid():
         world.attachConstraint(cs, linked_collision=True)
 
         
-        self.leftLeg = self.createLeg(self.pelvisWidth/2-0.01, 0.8)
+        self.leftLeg = Leg(self.render, self.world, 0.8, self.pelvisWidth/2-0.01, (self.pelvisWidth/2-0.01)*0.8)
 
         pivotA = Point3(-self.pelvisWidth/8, 0, -0.25)
-        pivotB = Point3(self.pelvisWidth/8, 0, 0.5)
+        pivotB = Point3(self.pelvisWidth/8, 0, self.leftLeg.thighLength/2)
 
-        self.leftLegConstraint = BulletHingeConstraint(self.lowerTorso.node(), self.leftLeg.node(), pivotA, pivotB, axisA, axisA, True)
+        self.leftLegConstraint = BulletHingeConstraint(self.lowerTorso.node(), self.leftLeg.thigh.node(), pivotA, pivotB, axisA, axisA, True)
         self.leftLegConstraint.setDebugDrawSize(2.0)
         self.leftLegConstraint.setLimit(-60, 90, softness=0.9, bias=0.3, relaxation=1.0)
         self.world.attachConstraint(self.leftLegConstraint, linked_collision=True)
 
 
-        self.rightLeg = self.createLeg(self.pelvisWidth/2-0.01, 0.8)
+        self.rightLeg = Leg(self.render, self.world, 0.8, self.pelvisWidth/2-0.01, (self.pelvisWidth/2-0.01)*0.8)
 
         pivotA = Point3(self.pelvisWidth/8, 0, -0.25)
-        pivotB = Point3(-self.pelvisWidth/8, 0, 0.5)
+        pivotB = Point3(-self.pelvisWidth/8, 0, self.rightLeg.thighLength/2)
 
-        self.rightLegConstraint = BulletHingeConstraint(self.lowerTorso.node(), self.rightLeg.node(), pivotA, pivotB, axisA, axisA, True)
+        self.rightLegConstraint = BulletHingeConstraint(self.lowerTorso.node(), self.rightLeg.thigh.node(), pivotA, pivotB, axisA, axisA, True)
         self.rightLegConstraint.setDebugDrawSize(2.0)
         self.rightLegConstraint.setLimit(-60, 90, softness=0.9, bias=0.3, relaxation=1.0)
         self.world.attachConstraint(self.rightLegConstraint, linked_collision=True)
-
-    def createLeg(self, diameter, height):
-        leg = createCapsule(self.render, diameter, height)
-        leg.node().setMass(10.0)
-        self.world.attachRigidBody(leg.node())
-        legVisual = loader.loadModel("models/unit_cylinder.bam")
-        legVisual.setScale(Vec3(diameter, diameter, height))
-        legVisual.reparentTo(leg)
-        return leg

@@ -129,17 +129,15 @@ class MyApp(ShowBase):
         self.terrain.set_texture(terrain_tex)
 
         # Collision detection for the terrain
-        terrainBulletNode = BulletRigidBodyNode("terrainBodyNode")
+        self.terrainBulletNode = BulletRigidBodyNode("terrainBodyNode")
         terrain_colshape = BulletHeightfieldShape(elevation_img, self.height, ZUp)
         terrain_colshape.setUseDiamondSubdivision(True)
-        terrainBulletNode.addShape(terrain_colshape)
-        np = render.attachNewNode(terrainBulletNode)
+        self.terrainBulletNode.addShape(terrain_colshape)
+        np = render.attachNewNode(self.terrainBulletNode)
         np.setCollideMask(BitMask32.bit(0))
-        self.world.attachRigidBody(terrainBulletNode)
+        self.world.attachRigidBody(self.terrainBulletNode)
         np.setScale(Vec3(1, 1, 1))
         np.setPos(0, 0, 0)
-        #terrainBulletNode.setFriction(0.8)
-        #terrainBulletNode.setRestitution(0.1)
         
         self.player = Humanoid(self.render, self.world)
 
@@ -223,7 +221,6 @@ class MyApp(ShowBase):
 
         if inputState.isSet('forward'):
             #force.setY( 1.0)
-#            self.player.leftLeg.node().setMass(0)
             self.player.rightLegConstraint.enableMotor(True)
             self.player.rightLegConstraint.setMotorTarget(40, 1)
             self.player.leftLegConstraint.enableMotor(True)
@@ -235,6 +232,9 @@ class MyApp(ShowBase):
         if inputState.isSet('turnleft'):  torque.setZ(500)
         if inputState.isSet('turnright'): torque.setZ(-500)
         self.inst5.text = str(self.player.chest.node().getLinearVelocity())
+
+        if self.world.contactTestPair(self.player.leftLeg.thigh.node(), self.terrainBulletNode).getNumContacts() > 0:
+            self.player.leftLeg.thigh.node().setMass(0)
 
         force *= 2400.0
         force = render.getRelativeVector(self.player.chest, force)
