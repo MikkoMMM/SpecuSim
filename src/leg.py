@@ -42,8 +42,9 @@ class Leg():
 
         self.kneeConstraint = BulletHingeConstraint(self.thigh.node(), self.lowerLeg.node(), pivotA, pivotB, axisA, axisA, True)
         self.kneeConstraint.setDebugDrawSize(2.0)
-        self.kneeConstraint.setLimit(-90, 0, softness=0.9, bias=0.3, relaxation=1.0)
+        self.kneeConstraint.setLimit(-45, 0, softness=0.9, bias=0.3, relaxation=1.0)
         self.world.attachConstraint(self.kneeConstraint, linked_collision=True)
+#        self.kneeConstraint.enableMotor(True)
 
 
         self.foot = createBox(self.render, lowerLegDiameter, lowerLegDiameter*2.2, self.footHeight)
@@ -58,5 +59,6 @@ class Leg():
 
         self.heelConstraint = BulletHingeConstraint(self.lowerLeg.node(), self.foot.node(), pivotA, pivotB, axisA, axisA, True)
         self.heelConstraint.setDebugDrawSize(2.0)
-        self.heelConstraint.setLimit(-70, 30, softness=0.9, bias=0.3, relaxation=1.0)
+        self.heelConstraint.setLimit(0, 45, softness=0.9, bias=0.3, relaxation=1.0)
         self.world.attachConstraint(self.heelConstraint, linked_collision=True)
+        #self.heelConstraint.enableMotor(True)

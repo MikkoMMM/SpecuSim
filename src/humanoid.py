@@ -6,13 +6,15 @@ from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint
 from panda3d.bullet import ZUp
 from src.shapes import createCapsule
 from src.leg import Leg
+import time
 
 class Humanoid():
     # Arguments:
     # render: NodePath to render to
     # world: A BulletWorld to use for physics
+    # terrainBulletNode: A bullet physics node for the terrain mesh
     # TODO: explanations for optional arguments
-    def __init__(self, render, world, name="", sex='', height=0, mass=0, age=0):
+    def __init__(self, render, world, terrainBulletNode, name="", sex='', height=0, mass=0, age=0):
         self.name = name
         self.sex = sex or ''
         self.height = height or 170
@@ -23,6 +25,9 @@ class Humanoid():
         self.mass = mass
         self.render = render
         self.world = world
+        self.terrainBulletNode = terrainBulletNode
+        self.lastStepTime = 0
+        self.direction = 0
 
         axisA = Vec3(1, 0, 0)
 
@@ -36,6 +41,7 @@ class Humanoid():
         self.chest.node().addShape(shape)
         self.chest.node().setAngularFactor(Vec3(0.15,0.05,0.1))
         self.chest.node().setAngularDamping(0.9)
+        self.chest.node().setLinearDamping(0.5)
         self.chest.node().setFriction(0.8)
         self.chest.node().setRestitution(0.0)
         self.chest.setCollideMask(BitMask32.allOn())
@@ -51,6 +57,7 @@ class Humanoid():
         self.lowerTorso.node().setMass(40.0)
         self.lowerTorso.node().addShape(shape)
         self.lowerTorso.node().setAngularFactor(Vec3(0,0,0.1))
+        self.lowerTorso.node().setLinearDamping(0.5)
         self.lowerTorso.node().setAngularDamping(0.9)
         self.lowerTorso.node().setFriction(0.8)
         self.lowerTorso.node().setRestitution(0.0)
@@ -85,6 +92,8 @@ class Humanoid():
         self.leftLegConstraint.setDebugDrawSize(2.0)
         self.leftLegConstraint.setLimit(-60, 90, softness=0.9, bias=0.3, relaxation=1.0)
         self.world.attachConstraint(self.leftLegConstraint, linked_collision=True)
+        self.leftLegConstraint.enableMotor(True)
+        self.leftLegConstraint.setMaxMotorImpulse(1000)
 
 
         self.rightLeg = Leg(self.render, self.world, 0.8, self.pelvisWidth/2-0.01, (self.pelvisWidth/2-0.01)*0.8)
@@ -96,3 +105,77 @@ class Humanoid():
         self.rightLegConstraint.setDebugDrawSize(2.0)
         self.rightLegConstraint.setLimit(-60, 90, softness=0.9, bias=0.3, relaxation=1.0)
         self.world.attachConstraint(self.rightLegConstraint, linked_collision=True)
+        self.rightLegConstraint.enableMotor(True)
+        self.rightLegConstraint.setMaxMotorImpulse(1000)
+        
+    def testIfNearGround(self, bodypart, distance):
+        pFrom = bodypart.getPos()
+        rc_result = self.world.rayTestAll(pFrom + Vec3(0, 0, distance), pFrom - Vec3(0, 0, distance))
+
+        for hit in rc_result.getHits():
+            if hit.getNode() == self.terrainBulletNode:
+                return True
+        return False
+
+    def takeStepForward(self, seconds):
+        self.takeStep(seconds, True)
+    def takeStepBackward(self, seconds):
+        self.takeStep(seconds, False)
+
+    def takeStep(self, seconds, forward):
+        moveMass = 50
+#        print(self.leftLeg.thigh.node().getAngularVelocity())
+        # Some pretty messy code for testing if the character is touching the ground, and making them stay there
+#        if self.world.contactTestPair(self.rightLeg.foot.node(), self.terrainBulletNode).getNumContacts() == 0 and self.world.contactTestPair(self.leftLeg.foot.node(), self.terrainBulletNode).getNumContacts():
+#            return
+
+        if forward:
+            if self.leftLegConstraint.getHingeAngle() > self.rightLegConstraint.getHingeAngle():
+                self.leftLeg.foot.node().setMass(moveMass)
+                self.rightLeg.foot.node().setMass(1)
+                self.leftLeg.foot.setColor(0,1,0)
+                self.rightLeg.foot.setColor(1,1,1)
+            elif self.leftLegConstraint.getHingeAngle() <= self.rightLegConstraint.getHingeAngle():
+                self.rightLeg.foot.node().setMass(moveMass)
+                self.leftLeg.foot.node().setMass(1)
+                self.rightLeg.foot.setColor(0,1,0)
+                self.leftLeg.foot.setColor(1,1,1)
+        else:
+            if self.leftLegConstraint.getHingeAngle() > self.rightLegConstraint.getHingeAngle():
+                self.rightLeg.foot.node().setMass(moveMass)
+                self.leftLeg.foot.node().setMass(1)
+                self.rightLeg.foot.setColor(0,1,0)
+                self.leftLeg.foot.setColor(1,1,1)
+            elif self.leftLegConstraint.getHingeAngle() <= self.rightLegConstraint.getHingeAngle():
+                self.leftLeg.foot.node().setMass(moveMass)
+                self.rightLeg.foot.node().setMass(1)
+                self.leftLeg.foot.setColor(0,1,0)
+                self.rightLeg.foot.setColor(1,1,1)
+
+        if forward:
+            if self.direction == 1 and time.time() < self.lastStepTime + seconds:
+                return
+            self.direction = 1
+        else:
+            if self.direction == -1 and time.time() < self.lastStepTime + seconds:
+                return
+            self.direction = -1
+
+        self.lastStepTime = time.time()
+
+        if self.leftLeg.foot.node().getMass() == moveMass:
+#            if self.world.contactTestPair(self.rightLeg.foot.node(), self.terrainBulletNode).getNumContacts() > 0:
+#                self.rightLeg.foot.node().setMass(0)
+#                self.rightLeg.foot.setColor(1,0,0)
+#            self.leftLeg.foot.node().setMass(1)
+#            self.leftLeg.foot.setColor(1,1,1)
+            self.leftLegConstraint.setMotorTarget(self.direction*-40, seconds)
+            self.rightLegConstraint.setMotorTarget(self.direction*40, seconds)
+        else:
+#            if self.world.contactTestPair(self.leftLeg.foot.node(), self.terrainBulletNode).getNumContacts() > 0:
+#                self.leftLeg.foot.node().setMass(0)
+#                self.leftLeg.foot.setColor(1,0,0)
+#            self.rightLeg.foot.node().setMass(1)
+#            self.rightLeg.foot.setColor(1,1,1)
+            self.rightLegConstraint.setMotorTarget(self.direction*-40, seconds)
+            self.leftLegConstraint.setMotorTarget(self.direction*40, seconds)

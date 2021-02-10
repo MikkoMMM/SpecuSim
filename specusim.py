@@ -1,7 +1,7 @@
 from src.motioncontrols.fusion import Fusion, DeltaT
 from src.motioncontrols.wiimote import Wiimote
 from src.humanoid import Humanoid
-from math import pi, sin, cos, radians
+from math import pi, sin, cos, radians, sqrt
 
 from direct.showbase.InputStateGlobal import inputState
 from direct.gui.DirectGui import DirectFrame
@@ -139,7 +139,7 @@ class MyApp(ShowBase):
         np.setScale(Vec3(1, 1, 1))
         np.setPos(0, 0, 0)
         
-        self.player = Humanoid(self.render, self.world)
+        self.player = Humanoid(self.render, self.world, self.terrainBulletNode)
 
         self.camera.reparentTo(self.player.lowerTorso)
 #        self.camera.setPos(0, -10, 40)
@@ -198,6 +198,7 @@ class MyApp(ShowBase):
                 if hit.getNode().getName() == 'terrainBodyNode':
                     self.player.chest.setZ(hit.getHitPos().getZ() + 1.5)
         '''
+        
         # Choosing smaller substeps will make the simulation more realistic,
         # but performance will decrease too. Smaller substeps also reduce jitter.
         self.world.doPhysics(dt, 30, 1.0/540.0)
@@ -220,21 +221,14 @@ class MyApp(ShowBase):
         # If the camera-right key is pressed, move camera right.
 
         if inputState.isSet('forward'):
-            #force.setY( 1.0)
-            self.player.rightLegConstraint.enableMotor(True)
-            self.player.rightLegConstraint.setMotorTarget(40, 1)
-            self.player.leftLegConstraint.enableMotor(True)
-            self.player.leftLegConstraint.setMotorTarget(-40, 1)
-#        if inputState.isSet('backward'):
-            #force.setY(-1.0)
+            self.player.takeStepForward(0.5)
+        if inputState.isSet('backward'):
+            self.player.takeStepBackward(0.5)
         if inputState.isSet('left'):     force.setX(-1.0)
         if inputState.isSet('right'):    force.setX( 1.0)
         if inputState.isSet('turnleft'):  torque.setZ(500)
         if inputState.isSet('turnright'): torque.setZ(-500)
-        self.inst5.text = str(self.player.chest.node().getLinearVelocity())
-
-        if self.world.contactTestPair(self.player.leftLeg.thigh.node(), self.terrainBulletNode).getNumContacts() > 0:
-            self.player.leftLeg.thigh.node().setMass(0)
+        self.inst5.text = str(sqrt(pow(self.player.chest.node().getLinearVelocity()[0], 2) + pow(self.player.chest.node().getLinearVelocity()[1], 2)))
 
         force *= 2400.0
         force = render.getRelativeVector(self.player.chest, force)

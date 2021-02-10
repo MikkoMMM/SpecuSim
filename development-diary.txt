@@ -25,3 +25,6 @@
 3.2.2021 Trying to get the collisions and constraints to work somewhat coherently between body parts and the ground.
 4.2.2021 Researching body proportions and implementing some. A script that tracks when files were modified, to help with tracking activity. Divided the torso up to a chest and a lower torso, and tweaked some dimensions and constraints.
 5.2.2021 A second leg, and started working on more finalized walking. The leg has been split into a thigh, a lower leg and a foot, with constraints between each.
+8.2.2021 Starting up with code for stepping, and reading up on tasks and event handling in Panda3D.
+9.2.2021 More work done on walking. Also sent a message to the supervisor and looked for inspiration from ragdoll physics.
+10.2.2021 Walking forward and backward is now in a usable state.
