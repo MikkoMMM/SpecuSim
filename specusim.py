@@ -221,11 +221,13 @@ class MyApp(ShowBase):
         # If the camera-right key is pressed, move camera right.
 
         if inputState.isSet('forward'):
-            self.player.takeStepForward(0.5)
+            self.player.takeStep(0.5, 0)
         if inputState.isSet('backward'):
-            self.player.takeStepBackward(0.5)
-        if inputState.isSet('left'):     force.setX(-1.0)
-        if inputState.isSet('right'):    force.setX( 1.0)
+            self.player.takeStep(0.5, 180)
+        if inputState.isSet('left'):
+            self.player.takeStep(0.5, -90)
+        if inputState.isSet('right'):
+            self.player.takeStep(0.5, 90)
         if inputState.isSet('turnleft'):  torque.setZ(500)
         if inputState.isSet('turnright'): torque.setZ(-500)
         self.inst5.text = str(sqrt(pow(self.player.chest.node().getLinearVelocity()[0], 2) + pow(self.player.chest.node().getLinearVelocity()[1], 2)))

@@ -2,7 +2,7 @@ from panda3d.bullet import BulletCapsuleShape, BulletCylinderShape
 from panda3d.core import Vec3
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.core import BitMask32, Point3, TransformState
-from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint
+from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint, BulletGenericConstraint
 from panda3d.bullet import ZUp
 from src.shapes import createCapsule, createBox
 
@@ -37,12 +37,15 @@ class Leg():
         visual.setScale(Vec3(lowerLegDiameter, lowerLegDiameter, self.lowerLegLength))
         visual.reparentTo(self.lowerLeg)
 
-        pivotA = Point3(0, 0, -self.thighLength/2)
-        pivotB = Point3(0, 0, self.lowerLegLength/2)
+        frameA = TransformState.makePosHpr(Point3(0,0,-self.thighLength/2), Vec3(0, 0, 0))
+        frameB = TransformState.makePosHpr(Point3(0,0,self.lowerLegLength/2), Vec3(0, 0, 0))
 
-        self.kneeConstraint = BulletHingeConstraint(self.thigh.node(), self.lowerLeg.node(), pivotA, pivotB, axisA, axisA, True)
+        self.kneeConstraint = BulletGenericConstraint(self.thigh.node(), self.lowerLeg.node(), frameA, frameB, True)
+
         self.kneeConstraint.setDebugDrawSize(2.0)
-        self.kneeConstraint.setLimit(-45, 0, softness=0.9, bias=0.3, relaxation=1.0)
+        self.kneeConstraint.setAngularLimit(0, 0, 45)
+        self.kneeConstraint.setAngularLimit(1, 0, 0)
+        self.kneeConstraint.setAngularLimit(2, 0, 0)
         self.world.attachConstraint(self.kneeConstraint, linked_collision=True)
 #        self.kneeConstraint.enableMotor(True)
 

@@ -27,4 +27,8 @@
 5.2.2021 A second leg, and started working on more finalized walking. The leg has been split into a thigh, a lower leg and a foot, with constraints between each.
 8.2.2021 Starting up with code for stepping, and reading up on tasks and event handling in Panda3D.
 9.2.2021 More work done on walking. Also sent a message to the supervisor and looked for inspiration from ragdoll physics.
-10.2.2021 Walking forward and backward is now in a usable state.
+10.2.2021 Walking forward and backward is now in a usable state. Researching how to implement sideways movement. Looking at some inverse kinematics and active ragdoll stuff.
+11.2.2021 Converting the hip constraints to BulletGenericConstraints. Their motors work differently enough that it requires new trial and error finding how to make the walking work properly.
+12.2.2021–13.2.2021 "Sick leave"; I had a food poisoning.
+14.2.2021 Reminding myself where I left off
+15.2.2021 Looking into how I'd like to implement sideways motion: walking in potentially an arbitrary direction requires different, likely more difficult, logic than WASD. Considering what this all means regarding possible multiplayer prospects and about its implementation in general as well.
