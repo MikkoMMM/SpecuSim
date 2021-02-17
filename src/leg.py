@@ -40,14 +40,13 @@ class Leg():
         frameA = TransformState.makePosHpr(Point3(0,0,-self.thighLength/2), Vec3(0, 0, 0))
         frameB = TransformState.makePosHpr(Point3(0,0,self.lowerLegLength/2), Vec3(0, 0, 0))
 
-        self.kneeConstraint = BulletGenericConstraint(self.thigh.node(), self.lowerLeg.node(), frameA, frameB, True)
+        self.knee = BulletGenericConstraint(self.thigh.node(), self.lowerLeg.node(), frameA, frameB, True)
 
-        self.kneeConstraint.setDebugDrawSize(2.0)
-        self.kneeConstraint.setAngularLimit(0, 0, 45)
-        self.kneeConstraint.setAngularLimit(1, 0, 0)
-        self.kneeConstraint.setAngularLimit(2, 0, 0)
-        self.world.attachConstraint(self.kneeConstraint, linked_collision=True)
-#        self.kneeConstraint.enableMotor(True)
+        self.knee.setDebugDrawSize(2.0)
+        self.knee.setAngularLimit(0, 0, 45)
+        self.knee.setAngularLimit(1, 0, 0)
+        self.knee.setAngularLimit(2, 0, 0)
+        self.world.attachConstraint(self.knee, linked_collision=True)
 
 
         self.foot = createBox(self.render, lowerLegDiameter, lowerLegDiameter*2.2, self.footHeight)
@@ -60,8 +59,7 @@ class Leg():
         pivotA = Point3(0, lowerLegDiameter/6, -self.lowerLegLength/2)
         pivotB = Point3(0, -lowerLegDiameter/6, self.footHeight/2)
 
-        self.heelConstraint = BulletHingeConstraint(self.lowerLeg.node(), self.foot.node(), pivotA, pivotB, axisA, axisA, True)
-        self.heelConstraint.setDebugDrawSize(2.0)
-        self.heelConstraint.setLimit(0, 45, softness=0.9, bias=0.3, relaxation=1.0)
-        self.world.attachConstraint(self.heelConstraint, linked_collision=True)
-        #self.heelConstraint.enableMotor(True)
+        self.heel = BulletHingeConstraint(self.lowerLeg.node(), self.foot.node(), pivotA, pivotB, axisA, axisA, True)
+        self.heel.setDebugDrawSize(2.0)
+        self.heel.setLimit(0, 45, softness=0.9, bias=0.3, relaxation=1.0)
+        self.world.attachConstraint(self.heel, linked_collision=True)

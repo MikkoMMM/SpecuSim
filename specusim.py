@@ -1,7 +1,7 @@
 from src.motioncontrols.fusion import Fusion, DeltaT
 from src.motioncontrols.wiimote import Wiimote
 from src.humanoid import Humanoid
-from math import pi, sin, cos, radians, sqrt
+from math import pi, sin, cos, radians, sqrt, degrees
 
 from direct.showbase.InputStateGlobal import inputState
 from direct.gui.DirectGui import DirectFrame
@@ -18,7 +18,7 @@ from panda3d.bullet import BulletDebugNode
 from panda3d.core import BitMask32, TransformState, Point3
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import ZUp
-from direct.showbase import PythonUtil
+from src.utils import angleDiff
 
 
 def timediff(time1, time2):
@@ -158,6 +158,7 @@ class MyApp(ShowBase):
         self.inst3 = addInstructions(0.18, "Middle mouse button: Rotate camera")
         self.inst4 = addInstructions(0.24, "Right mouse button: Adjust zoom")
         self.inst5 = addInstructions(0.30, "")
+        self.inst6 = addInstructions(0.36, "")
 
         self.accept('mouse1',self.disableMouse)
         self.accept('mouse2',self.reEnableMouse)
@@ -190,15 +191,6 @@ class MyApp(ShowBase):
     def update(self, task):
         dt = globalClock.getDt()
 
-        '''
-        pFrom = self.player.chest.getPos()
-        rc_result = self.world.rayTestAll(pFrom + Vec3(0, 0, 9999), pFrom - Vec3(0, 0, 9999))
-        if rc_result.hasHits():
-            for hit in rc_result.getHits():
-                if hit.getNode().getName() == 'terrainBodyNode':
-                    self.player.chest.setZ(hit.getHitPos().getZ() + 1.5)
-        '''
-        
         # Choosing smaller substeps will make the simulation more realistic,
         # but performance will decrease too. Smaller substeps also reduce jitter.
         self.world.doPhysics(dt, 30, 1.0/540.0)
@@ -217,20 +209,37 @@ class MyApp(ShowBase):
         force = Vec3(0, 0, 0)
         torque = Vec3(0, 0, 0)
 
-        # If the camera-left key is pressed, move camera left.
-        # If the camera-right key is pressed, move camera right.
+        stepping = False
+        stepTime = 0.5
 
         if inputState.isSet('forward'):
-            self.player.takeStep(0.5, 0)
-        if inputState.isSet('backward'):
-            self.player.takeStep(0.5, 180)
-        if inputState.isSet('left'):
-            self.player.takeStep(0.5, -90)
-        if inputState.isSet('right'):
-            self.player.takeStep(0.5, 90)
+            if inputState.isSet('left'):
+                self.player.takeStep(stepTime, -45)
+            elif inputState.isSet('right'):
+                self.player.takeStep(stepTime, 45)
+            else:
+                self.player.takeStep(stepTime, 0)
+            stepping = True
+        elif inputState.isSet('backward'):
+            if inputState.isSet('left'):
+                self.player.takeStep(stepTime, -135)
+            elif inputState.isSet('right'):
+                self.player.takeStep(stepTime, 135)
+            else:
+                self.player.takeStep(stepTime, 180)
+            stepping = True
+        elif inputState.isSet('left'):
+            self.player.takeStep(stepTime, -90)
+            stepping = True
+        elif inputState.isSet('right'):
+            self.player.takeStep(stepTime, 90)
+            stepping = True
+        if not stepping:
+            self.player.standStill()
         if inputState.isSet('turnleft'):  torque.setZ(500)
         if inputState.isSet('turnright'): torque.setZ(-500)
         self.inst5.text = str(sqrt(pow(self.player.chest.node().getLinearVelocity()[0], 2) + pow(self.player.chest.node().getLinearVelocity()[1], 2)))
+#        self.inst5.text = str(degrees(self.player.leftLegConstraint.getAngle(2)))
 
         force *= 2400.0
         force = render.getRelativeVector(self.player.chest, force)
