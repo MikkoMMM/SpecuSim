@@ -6,7 +6,7 @@ from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint, Bul
 from panda3d.bullet import ZUp
 from src.shapes import createCapsule
 from src.leg import Leg
-from src.utils import angleDiff
+from src.utils import angleDiff, normalizeAngle
 import time
 from math import degrees, radians, sqrt
 
@@ -61,16 +61,14 @@ class Humanoid():
         self.lowerTorso.node().setFriction(0.8)
         self.lowerTorso.node().setRestitution(0.0)
         self.lowerTorso.setCollideMask(BitMask32.allOn())
+        self.lowerTorso.node().setAngularSleepThreshold(0) # For whatever reason, sleep seems to freeze the whole character if still
         self.world.attachRigidBody(self.lowerTorso.node())
         lowerTorsoVisual = loader.loadModel("models/unit_cylinder.bam")
         lowerTorsoVisual.setScale(size)
         lowerTorsoVisual.reparentTo(self.lowerTorso)
         
-        pivotA = Point3(0, 0, -0.25)
-        pivotB = Point3(0, 0, 0.25)
-
-        frameA = TransformState.makePosHpr(Point3(0, 0, -0.25), Vec3(0, 0, -90))
-        frameB = TransformState.makePosHpr(Point3(0, 0, 0.25), Vec3(0, 0, -90))
+        frameA = TransformState.makePosHpr(Point3(0, 0, -0.25), Vec3(0, 0, 0))
+        frameB = TransformState.makePosHpr(Point3(0, 0, 0.25), Vec3(0, 0, 0))
 
         swing1 = 10 # leaning forward/backward degrees
         swing2 = 5 # leaning side to side degrees
@@ -133,12 +131,15 @@ class Humanoid():
         self.leftLeg.knee.setAngularLimit(2, -180, 180)
         self.rightLeg.knee.setAngularLimit(2, -180, 180)
 
+        self.desiredHeading = self.lowerTorso.getH()
+
 
     # A really hacky physics-driven movement implementation.
     # seconds: roughly how long each step should take in seconds
     # angle: angle in which to walk. For instance, zero is ahead, -90 is left and 90 is right.
     def takeStep(self, seconds, angle):
         moveMass = 40
+        self.updateHeading()
 
         if abs(angleDiff(degrees(self.leftLegConstraint.getAngle(2)),angle)) > 90:
             self.inverted = True
@@ -212,7 +213,24 @@ class Humanoid():
         self.leftKneeZHinge.setTargetVelocity(-self.leftLeg.knee.getAngle(2)*4)
         self.rightKneeZHinge.setTargetVelocity(-self.rightLeg.knee.getAngle(2)*4)
 
+        self.updateHeading()
 
-    def turnTowardHeading(self, direction):
-        diff = angleDiff(-direction, self.lowerTorso.getH())
-        self.chest.node().applyTorque(Vec3(0, 0, -diff))
+
+    def turnLeft(self, dt):
+        if abs(angleDiff(-self.lowerTorso.getH(), self.desiredHeading)) > 170:
+            return
+        self.desiredHeading -= dt*450
+        self.desiredHeading = normalizeAngle(self.desiredHeading)
+        self.updateHeading()
+            
+    def turnRight(self, dt):
+        if abs(angleDiff(-self.lowerTorso.getH(), self.desiredHeading)) > 170:
+            return
+        self.desiredHeading += dt*450
+        self.desiredHeading = normalizeAngle(self.desiredHeading)
+        self.updateHeading()
+
+    # TODO: Torque impulse should scale with mass
+    def updateHeading(self):
+        diff = radians(angleDiff(-self.desiredHeading, self.lowerTorso.getH()))
+        self.lowerTorso.node().setAngularVelocity(Vec3(0,0,-diff*8))

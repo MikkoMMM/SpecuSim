@@ -33,4 +33,4 @@
 14.2.2021 Reminding myself where I left off
 15.2.2021 Looking into how I'd like to implement sideways motion: walking in potentially an arbitrary direction requires different, likely more difficult, logic than WASD. Started implementing one possible approach. Considering what this all means regarding possible multiplayer prospects and about its implementation in general as well.
 17.2.2021 Moving in an arbitrary direction was implemented. Also, a standing still animation (amazing, right?) A developer feature to change player speed on the fly. Some changes trying to make the movement happen more consistently early on.
-18.2.2021 The turning code was tried to be revised somewhat.
+18.2.2021 The turning code was revised and the player retains their heading now.

@@ -13,3 +13,9 @@ def testIfNearGround(self, bodypart, distance, world, terrainBulletNode):
         if hit.getNode() == terrainBulletNode:
             return True
     return False
+
+def normalizeAngle(angle):
+    angle = angle % 360
+    if angle > 180:
+        angle -= 360
+    return angle

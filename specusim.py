@@ -155,10 +155,11 @@ class MyApp(ShowBase):
 
         self.inst1 = addInstructions(0.06, "[WASD]: Move")
         self.inst2 = addInstructions(0.12, "[QE]: Rotate")
-        self.inst3 = addInstructions(0.18, "Middle mouse button: Rotate camera")
-        self.inst4 = addInstructions(0.24, "Right mouse button: Adjust zoom")
-        self.inst5 = addInstructions(0.30, "")
-        self.inst6 = addInstructions(0.36, "")
+        self.inst2 = addInstructions(0.18, "[+-]: Change speed")
+        self.inst3 = addInstructions(0.24, "Middle mouse button: Rotate camera")
+        self.inst4 = addInstructions(0.30, "Right mouse button: Adjust zoom")
+        self.inst5 = addInstructions(0.36, "")
+        self.inst6 = addInstructions(0.42, "")
 
         self.accept('mouse1',self.disableMouse)
         self.accept('mouse2',self.reEnableMouse)
@@ -178,11 +179,9 @@ class MyApp(ShowBase):
 #        self.motionController = Wiimote(self)
 
         # Tasks that are repeated ad infinitum
-        taskMgr.add(self.move, "moveTask")
+        taskMgr.add(self.update, "update")
         taskMgr.add(self.spinCameraTask, "SpinCameraTask")
-        taskMgr.add(self.update, 'update')
         self.stepTime = 0.4
-        self.desiredHeading = self.player.lowerTorso.getH()
 
 
     def reEnableMouse(self):
@@ -192,24 +191,19 @@ class MyApp(ShowBase):
         base.mouseInterfaceNode.setMat(mat)
         base.enableMouse()
 
+
+    # Moves the camera with key presses
+    # Also deals with grid checking and collision detection
     def update(self, task):
+        # Get the time that elapsed since last frame.  We multiply this with
+        # the desired speed in order to find out with which distance to move
+        # in order to achieve that desired speed.
         dt = globalClock.getDt()
 
         # Choosing smaller substeps will make the simulation more realistic,
         # but performance will decrease too. Smaller substeps also reduce jitter.
         self.world.doPhysics(dt, 30, 1.0/540.0)
 
-        return task.cont
-
-    # Moves the camera with key presses
-    # Also deals with grid checking and collision detection
-    def move(self, task):
-
-        # Get the time that elapsed since last frame.  We multiply this with
-        # the desired speed in order to find out with which distance to move
-        # in order to achieve that desired speed.
-        dt = globalClock.getDt()
-        
         torque = Vec3(0, 0, 0)
 
         stepping = False
@@ -238,24 +232,25 @@ class MyApp(ShowBase):
             stepping = True
         if not stepping:
             self.player.standStill()
-        if inputState.isSet('turnleft'): # TODO: clamp to [-180,180]
-            #torque.setZ(500)
-            #self.desiredHeading = self.player.lowerTorso.getH()
-            self.desiredHeading -= 2
+        if inputState.isSet('turnleft'):
+            self.player.turnLeft(dt)
         if inputState.isSet('turnright'):
-#            torque.setZ(-500)
-#            self.desiredHeading = self.player.lowerTorso.getH()
-            self.desiredHeading += 2
-        if inputState.isSet('speedup'):  self.stepTime -= 0.01
-        if inputState.isSet('speeddown'):  self.stepTime += 0.01
-#        self.inst5.text = str(self.stepTime) + " " + str(sqrt(pow(self.player.chest.node().getLinearVelocity()[0], 2) + pow(self.player.chest.node().getLinearVelocity()[1], 2)))
+            self.player.turnRight(dt)
+        if inputState.isSet('speedup'):
+            self.stepTime -= dt*1.20
+            if self.stepTime < 0:
+                self.stepTime = dt
+        if inputState.isSet('speeddown'):  self.stepTime += dt*1.20
+        
+        self.inst5.text = str(self.stepTime) + " " + str(sqrt(pow(self.player.chest.node().getLinearVelocity()[0], 2) + pow(self.player.chest.node().getLinearVelocity()[1], 2)))
 #        self.inst5.text = str(angleDiff(degrees(self.player.leftLegConstraint.getAngle(0)), degrees(self.player.rightLegConstraint.getAngle(0))))
-        self.inst6.text = str(round(self.player.lowerTorso.getH())) + " " + str(self.desiredHeading) + " " + str(angleDiff(self.desiredHeading, self.player.lowerTorso.getH()))
+        self.inst6.text = str(round(-self.player.lowerTorso.getH())) + " " + str(round(self.player.desiredHeading))
 
         #self.player.lowerTorso.node().applyTorque(torque)
-        self.player.turnTowardHeading(self.desiredHeading)
+        self.player.lowerTorso.node().setMass(40.0)
 
         self.camera.setR(0)
+
         return task.cont
 
     # Define a procedure to rotate the camera with a motion controller.
