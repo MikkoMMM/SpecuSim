@@ -139,7 +139,7 @@ class MyApp(ShowBase):
         np.setScale(Vec3(1, 1, 1))
         np.setPos(0, 0, 0)
         
-        self.player = Humanoid(self.render, self.world, self.terrainBulletNode)
+        self.player = Humanoid(self.render, self.world)
 
         self.camera.reparentTo(self.player.lowerTorso)
 #        self.camera.setPos(0, -10, 40)
@@ -171,6 +171,8 @@ class MyApp(ShowBase):
         inputState.watchWithModifiers('right', 'd')
         inputState.watchWithModifiers('turnleft', 'q')
         inputState.watchWithModifiers('turnright', 'e')
+        inputState.watchWithModifiers('speedup', '+')
+        inputState.watchWithModifiers('speeddown', '-')
 
         # Connect, calibrate and start reading information from a motion controller
 #        self.motionController = Wiimote(self)
@@ -179,6 +181,8 @@ class MyApp(ShowBase):
         taskMgr.add(self.move, "moveTask")
         taskMgr.add(self.spinCameraTask, "SpinCameraTask")
         taskMgr.add(self.update, 'update')
+        self.stepTime = 0.4
+        self.desiredHeading = self.player.lowerTorso.getH()
 
 
     def reEnableMouse(self):
@@ -206,46 +210,50 @@ class MyApp(ShowBase):
         # in order to achieve that desired speed.
         dt = globalClock.getDt()
         
-        force = Vec3(0, 0, 0)
         torque = Vec3(0, 0, 0)
 
         stepping = False
-        stepTime = 0.5
 
         if inputState.isSet('forward'):
             if inputState.isSet('left'):
-                self.player.takeStep(stepTime, -45)
+                self.player.takeStep(self.stepTime, -45)
             elif inputState.isSet('right'):
-                self.player.takeStep(stepTime, 45)
+                self.player.takeStep(self.stepTime, 45)
             else:
-                self.player.takeStep(stepTime, 0)
+                self.player.takeStep(self.stepTime, 0)
             stepping = True
         elif inputState.isSet('backward'):
             if inputState.isSet('left'):
-                self.player.takeStep(stepTime, -135)
+                self.player.takeStep(self.stepTime, -135)
             elif inputState.isSet('right'):
-                self.player.takeStep(stepTime, 135)
+                self.player.takeStep(self.stepTime, 135)
             else:
-                self.player.takeStep(stepTime, 180)
+                self.player.takeStep(self.stepTime, 180)
             stepping = True
         elif inputState.isSet('left'):
-            self.player.takeStep(stepTime, -90)
+            self.player.takeStep(self.stepTime, -90)
             stepping = True
         elif inputState.isSet('right'):
-            self.player.takeStep(stepTime, 90)
+            self.player.takeStep(self.stepTime, 90)
             stepping = True
         if not stepping:
             self.player.standStill()
-        if inputState.isSet('turnleft'):  torque.setZ(500)
-        if inputState.isSet('turnright'): torque.setZ(-500)
-        self.inst5.text = str(sqrt(pow(self.player.chest.node().getLinearVelocity()[0], 2) + pow(self.player.chest.node().getLinearVelocity()[1], 2)))
-#        self.inst5.text = str(degrees(self.player.leftLegConstraint.getAngle(2)))
+        if inputState.isSet('turnleft'): # TODO: clamp to [-180,180]
+            #torque.setZ(500)
+            #self.desiredHeading = self.player.lowerTorso.getH()
+            self.desiredHeading -= 2
+        if inputState.isSet('turnright'):
+#            torque.setZ(-500)
+#            self.desiredHeading = self.player.lowerTorso.getH()
+            self.desiredHeading += 2
+        if inputState.isSet('speedup'):  self.stepTime -= 0.01
+        if inputState.isSet('speeddown'):  self.stepTime += 0.01
+#        self.inst5.text = str(self.stepTime) + " " + str(sqrt(pow(self.player.chest.node().getLinearVelocity()[0], 2) + pow(self.player.chest.node().getLinearVelocity()[1], 2)))
+#        self.inst5.text = str(angleDiff(degrees(self.player.leftLegConstraint.getAngle(0)), degrees(self.player.rightLegConstraint.getAngle(0))))
+        self.inst6.text = str(round(self.player.lowerTorso.getH())) + " " + str(self.desiredHeading) + " " + str(angleDiff(self.desiredHeading, self.player.lowerTorso.getH()))
 
-        force *= 2400.0
-        force = render.getRelativeVector(self.player.chest, force)
-        self.player.chest.node().setActive(True)
-        self.player.chest.node().applyCentralForce(force)
-        self.player.chest.node().applyTorque(torque)
+        #self.player.lowerTorso.node().applyTorque(torque)
+        self.player.turnTowardHeading(self.desiredHeading)
 
         self.camera.setR(0)
         return task.cont

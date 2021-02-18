@@ -8,15 +8,14 @@ from src.shapes import createCapsule
 from src.leg import Leg
 from src.utils import angleDiff
 import time
-from math import degrees
+from math import degrees, radians, sqrt
 
 class Humanoid():
     # Arguments:
     # render: NodePath to render to
     # world: A BulletWorld to use for physics
-    # terrainBulletNode: A bullet physics node for the terrain mesh
     # TODO: explanations for optional arguments
-    def __init__(self, render, world, terrainBulletNode, name="", sex='', height=0, mass=0, age=0):
+    def __init__(self, render, world, name="", sex='', height=0, mass=0, age=0):
         self.name = name
         self.sex = sex or ''
         self.height = height or 170
@@ -27,8 +26,6 @@ class Humanoid():
         self.mass = mass
         self.render = render
         self.world = world
-        self.terrainBulletNode = terrainBulletNode
-        self.lastStepTime = 0
         self.stepCounter = 0
 
         axisA = Vec3(1, 0, 0)
@@ -92,7 +89,7 @@ class Humanoid():
 
         self.leftLegConstraint = BulletGenericConstraint(self.lowerTorso.node(), self.leftLeg.thigh.node(), frameA, frameB, True)
         self.leftLegConstraint.setDebugDrawSize(2.0)
-        self.leftLegConstraint.setAngularLimit(0, -90, 60)
+        self.leftLegConstraint.setAngularLimit(0, -80, 80)
         self.leftLegConstraint.setAngularLimit(1, 0, 0)
         self.leftLegConstraint.setAngularLimit(2, -180, 180)
         self.world.attachConstraint(self.leftLegConstraint, linked_collision=True)
@@ -111,7 +108,7 @@ class Humanoid():
 
         self.rightLegConstraint = BulletGenericConstraint(self.lowerTorso.node(), self.rightLeg.thigh.node(), frameA, frameB, True)
         self.rightLegConstraint.setDebugDrawSize(2.0)
-        self.rightLegConstraint.setAngularLimit(0, -90, 60)
+        self.rightLegConstraint.setAngularLimit(0, -80, 80)
         self.rightLegConstraint.setAngularLimit(1, 0, 0)
         self.rightLegConstraint.setAngularLimit(2, -180, 180)
         self.world.attachConstraint(self.rightLegConstraint, linked_collision=True)
@@ -137,20 +134,11 @@ class Humanoid():
         self.rightLeg.knee.setAngularLimit(2, -180, 180)
 
 
-    def testIfNearGround(self, bodypart, distance):
-        pFrom = bodypart.getPos()
-        rc_result = self.world.rayTestAll(pFrom + Vec3(0, 0, distance), pFrom - Vec3(0, 0, distance))
-
-        for hit in rc_result.getHits():
-            if hit.getNode() == self.terrainBulletNode:
-                return True
-        return False
-
     # A really hacky physics-driven movement implementation.
-    # seconds: roughly how long each step should take
+    # seconds: roughly how long each step should take in seconds
     # angle: angle in which to walk. For instance, zero is ahead, -90 is left and 90 is right.
     def takeStep(self, seconds, angle):
-        moveMass = 50
+        moveMass = 40
 
         if abs(angleDiff(degrees(self.leftLegConstraint.getAngle(2)),angle)) > 90:
             self.inverted = True
@@ -176,34 +164,55 @@ class Humanoid():
             self.rightLeg.foot.node().setMass(moveMass)
             self.leftLeg.foot.node().setMass(1)
 
-        if self.stepCounter == 1:
-            if time.time() < self.lastStepTime + seconds/2: # If we were standing still, it's a half-step
+        if self.stepCounter > 0:
+            # Check whether we are eligible for switching the front leg
+            curSpeedSq = pow(self.chest.node().getLinearVelocity()[0], 2) + pow(self.chest.node().getLinearVelocity()[1], 2)
+            if curSpeedSq < 9:
+                if abs(angleDiff(degrees(self.leftLegConstraint.getAngle(0)), degrees(self.rightLegConstraint.getAngle(0)))) < 150:
+                    return
+            elif abs(angleDiff(degrees(self.leftLegConstraint.getAngle(0)), degrees(self.rightLegConstraint.getAngle(0)))) < 110:
+                    return
+            if abs(degrees(self.leftLegConstraint.getAngle(0))) < 59 or abs(degrees(self.rightLegConstraint.getAngle(0))) < 59:
                 return
-        elif time.time() < self.lastStepTime + seconds:
-            return
+
         self.stepCounter += 1
-
-        self.lastStepTime = time.time()
-
-        if not self.inverted and self.leftLeg.foot.node().getMass() == moveMass or self.inverted and self.rightLeg.foot.node().getMass() == moveMass:
-            self.leftLegYHinge.setTargetVelocity(3/seconds)
-            self.rightLegYHinge.setTargetVelocity(-3/seconds)
+        if (not self.inverted and self.leftLegConstraint.getAngle(0) <= self.rightLegConstraint.getAngle(0)) or self.inverted and self.leftLegConstraint.getAngle(0) > self.rightLegConstraint.getAngle(0):
+            self.leftLeg.foot.node().setFriction(1.0)
+            self.rightLeg.foot.node().setFriction(0.0)
         else:
-            self.leftLegYHinge.setTargetVelocity(-3/seconds)
-            self.rightLegYHinge.setTargetVelocity(3/seconds)
+            self.leftLeg.foot.node().setFriction(0.0)
+            self.rightLeg.foot.node().setFriction(1.0)
+
+        # There were possible rounding errors with mass; don't remove the epsilon
+        if not self.inverted and self.leftLeg.foot.node().getMass() >= moveMass-0.01 or self.inverted and self.rightLeg.foot.node().getMass() >= moveMass-0.01:
+            self.leftLegYHinge.setTargetVelocity(radians(120)/seconds)
+            self.rightLegYHinge.setTargetVelocity(-radians(120)/seconds)
+        else:
+            self.leftLegYHinge.setTargetVelocity(-radians(120)/seconds)
+            self.rightLegYHinge.setTargetVelocity(radians(120)/seconds)
+
 
     def standStill(self):
-        self.neutralPosition()
+        if self.stepCounter != 0:
+            self.rightLeg.foot.node().setMass(1)
+            self.leftLeg.foot.node().setMass(1)
+            self.leftLeg.foot.node().setFriction(1.0)
+            self.rightLeg.foot.node().setFriction(1.0)
+            self.leftKneeYHinge.setMotorEnabled(True)
+            self.rightKneeYHinge.setMotorEnabled(True)
+            self.stepCounter = 0
 
-    def neutralPosition(self):
-        self.rightLeg.foot.node().setMass(1)
-        self.leftLeg.foot.node().setMass(1)
+        self.leftLegYHinge.setTargetVelocity(-self.leftLegConstraint.getAngle(0)*4)
+        self.rightLegYHinge.setTargetVelocity(-self.rightLegConstraint.getAngle(0)*4)
+        self.leftLegZHinge.setTargetVelocity(-self.leftLegConstraint.getAngle(2)*4)
+        self.rightLegZHinge.setTargetVelocity(-self.rightLegConstraint.getAngle(2)*4)
 
-        self.leftLegYHinge.setTargetVelocity(-self.leftLegConstraint.getAngle(0)*5)
-        self.rightLegYHinge.setTargetVelocity(-self.rightLegConstraint.getAngle(0)*5)
+        self.leftKneeYHinge.setTargetVelocity(-self.leftLeg.knee.getAngle(0)*4)
+        self.rightKneeYHinge.setTargetVelocity(-self.rightLeg.knee.getAngle(0)*4)
+        self.leftKneeZHinge.setTargetVelocity(-self.leftLeg.knee.getAngle(2)*4)
+        self.rightKneeZHinge.setTargetVelocity(-self.rightLeg.knee.getAngle(2)*4)
 
-        self.leftKneeYHinge.setMotorEnabled(True)
-        self.rightKneeYHinge.setMotorEnabled(True)
-        self.leftKneeYHinge.setTargetVelocity(-self.leftLeg.knee.getAngle(0)*5)
-        self.rightKneeYHinge.setTargetVelocity(-self.rightLeg.knee.getAngle(0)*5)
-        self.stepCounter = 0
+
+    def turnTowardHeading(self, direction):
+        diff = angleDiff(-direction, self.lowerTorso.getH())
+        self.chest.node().applyTorque(Vec3(0, 0, -diff))
