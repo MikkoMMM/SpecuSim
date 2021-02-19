@@ -1,4 +1,4 @@
-from panda3d.bullet import BulletCapsuleShape, BulletCylinderShape
+from panda3d.bullet import BulletCylinderShape
 from panda3d.core import Vec3
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.core import BitMask32, Point3, TransformState
@@ -6,6 +6,7 @@ from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint, Bul
 from panda3d.bullet import ZUp
 from src.shapes import createCapsule
 from src.leg import Leg
+from src.arm import Arm
 from src.utils import angleDiff, normalizeAngle
 import time
 from math import degrees, radians, sqrt
@@ -27,12 +28,13 @@ class Humanoid():
         self.render = render
         self.world = world
         self.stepCounter = 0
+        self.lowerTorsoHeight = 0.35
+        self.chestHeight = 0.35
 
         axisA = Vec3(1, 0, 0)
 
         # Organism's shape and collision boxes
-        # The chest's collision box has the tallness of the entire organism, divided by two
-        size = Vec3(self.chestWidth, 0.2, 0.5)
+        size = Vec3(self.chestWidth, 0.2, self.chestHeight)
         shape = BulletCylinderShape(size/2)
         self.chest = self.render.attachNewNode(BulletRigidBodyNode())
         self.chest.setCollideMask(BitMask32.bit(0))
@@ -49,7 +51,7 @@ class Humanoid():
         chestVisual.setScale(size)
         chestVisual.reparentTo(self.chest)
 
-        size = Vec3(self.pelvisWidth, 0.2, 0.5)
+        size = Vec3(self.pelvisWidth, 0.2, self.lowerTorsoHeight)
         shape = BulletCylinderShape(size/2)
         self.lowerTorso = self.render.attachNewNode(BulletRigidBodyNode())
         self.lowerTorso.setCollideMask(BitMask32.bit(0))
@@ -67,8 +69,8 @@ class Humanoid():
         lowerTorsoVisual.setScale(size)
         lowerTorsoVisual.reparentTo(self.lowerTorso)
         
-        frameA = TransformState.makePosHpr(Point3(0, 0, -0.25), Vec3(0, 0, 0))
-        frameB = TransformState.makePosHpr(Point3(0, 0, 0.25), Vec3(0, 0, 0))
+        frameA = TransformState.makePosHpr(Point3(0, 0, -self.chestHeight/2), Vec3(0, 0, 0))
+        frameB = TransformState.makePosHpr(Point3(0, 0, self.lowerTorsoHeight/2), Vec3(0, 0, 0))
 
         swing1 = 10 # leaning forward/backward degrees
         swing2 = 5 # leaning side to side degrees
@@ -76,13 +78,13 @@ class Humanoid():
 
         cs = BulletConeTwistConstraint(self.chest.node(), self.lowerTorso.node(), frameA, frameB)
         cs.setDebugDrawSize(2.0)
-        cs.setLimit(swing1, swing2, twist, softness=0.9, bias=0.3, relaxation=1.0)
+        cs.setLimit(twist, swing2, swing1, softness=0.9, bias=0.3, relaxation=1.0)
         world.attachConstraint(cs, linked_collision=True)
 
         
         self.leftLeg = Leg(self.render, self.world, 0.8, self.pelvisWidth/2-0.01, (self.pelvisWidth/2-0.01)*0.8)
 
-        frameA = TransformState.makePosHpr(Point3(-self.pelvisWidth/4, 0, -0.25), Vec3(0, 0, 0))
+        frameA = TransformState.makePosHpr(Point3(-self.pelvisWidth/4, 0, -self.lowerTorsoHeight/2), Vec3(0, 0, 0))
         frameB = TransformState.makePosHpr(Point3(0, 0, self.leftLeg.thighLength/2), Vec3(0, 0, 0))
 
         self.leftLegConstraint = BulletGenericConstraint(self.lowerTorso.node(), self.leftLeg.thigh.node(), frameA, frameB, True)
@@ -101,7 +103,7 @@ class Humanoid():
 
         self.rightLeg = Leg(self.render, self.world, 0.8, self.pelvisWidth/2-0.01, (self.pelvisWidth/2-0.01)*0.8)
 
-        frameA = TransformState.makePosHpr(Point3(self.pelvisWidth/4, 0, -0.25), Vec3(0, 0, 0))
+        frameA = TransformState.makePosHpr(Point3(self.pelvisWidth/4, 0, -self.lowerTorsoHeight/2), Vec3(0, 0, 0))
         frameB = TransformState.makePosHpr(Point3(0, 0, self.leftLeg.thighLength/2), Vec3(0, 0, 0))
 
         self.rightLegConstraint = BulletGenericConstraint(self.lowerTorso.node(), self.rightLeg.thigh.node(), frameA, frameB, True)
@@ -130,6 +132,39 @@ class Humanoid():
         self.rightKneeZHinge.setMaxMotorForce(200)
         self.leftLeg.knee.setAngularLimit(2, -180, 180)
         self.rightLeg.knee.setAngularLimit(2, -180, 180)
+
+
+        self.leftArm = Arm(self.render, self.world, 0.8, self.chestWidth/3-0.01, (self.chestWidth/3-0.01)*0.8, False)
+
+        frameA = TransformState.makePosHpr(Point3(-self.chestWidth/2-self.leftArm.upperArmDiameter/2, 0, self.chestHeight/2-self.leftArm.upperArmDiameter/8), Vec3(0, 0, 0))
+        frameB = TransformState.makePosHpr(Point3(0, 0, self.leftArm.upperArmLength/2), Vec3(0, -90, 0))
+
+        self.leftArmConstraint = BulletGenericConstraint(self.chest.node(), self.leftArm.upperArm.node(), frameA, frameB, True)
+        self.leftArmConstraint.setDebugDrawSize(2.0)
+        self.leftArmConstraint.setAngularLimit(0, -95, 120) #Up and down
+#        self.leftArmConstraint.setAngularLimit(0, 0, 0) #Up and down
+        self.leftArmConstraint.setAngularLimit(1, 0, 0)    # Rotation, handled in the elbow joint because here it glitches.
+        self.leftArmConstraint.setAngularLimit(2, -120, 35) # Left and right
+#        self.leftArmConstraint.setAngularLimit(2, 0, 0) # Left and right
+        self.leftArm.upperArm.node().setAngularFactor(Vec3(0.2,0.2,0.2))
+        self.world.attachConstraint(self.leftArmConstraint, linked_collision=True)
+
+
+        self.rightArm = Arm(self.render, self.world, 0.8, self.chestWidth/3-0.01, (self.chestWidth/3-0.01)*0.8, True)
+
+        frameA = TransformState.makePosHpr(Point3(self.chestWidth/2+self.rightArm.upperArmDiameter/2, 0, self.chestHeight/2-self.rightArm.upperArmDiameter/8), Vec3(0, 0, 0))
+        frameB = TransformState.makePosHpr(Point3(0, 0, self.rightArm.upperArmLength/2), Vec3(0, -90, 0))
+
+        self.rightArmConstraint = BulletGenericConstraint(self.chest.node(), self.rightArm.upperArm.node(), frameA, frameB, True)
+        self.rightArmConstraint.setDebugDrawSize(2.0)
+        self.rightArmConstraint.setAngularLimit(0, -95, 120) #Up and down
+#        self.rightArmConstraint.setAngularLimit(0, 0, 0) #Up and down
+        self.rightArmConstraint.setAngularLimit(1, 0, 0)    # Rotation, handled in the elbow joint because here it glitches.
+        self.rightArmConstraint.setAngularLimit(2, -35, 120) # Left and right
+#        self.rightArmConstraint.setAngularLimit(2, 0, 0) # Left and right
+        self.rightArm.upperArm.node().setAngularFactor(Vec3(0.2,0.2,0.2))
+        self.world.attachConstraint(self.rightArmConstraint, linked_collision=True)
+
 
         self.desiredHeading = self.lowerTorso.getH()
 
@@ -222,7 +257,7 @@ class Humanoid():
         self.desiredHeading -= dt*450
         self.desiredHeading = normalizeAngle(self.desiredHeading)
         self.updateHeading()
-            
+
     def turnRight(self, dt):
         if abs(angleDiff(-self.lowerTorso.getH(), self.desiredHeading)) > 170:
             return
@@ -230,7 +265,6 @@ class Humanoid():
         self.desiredHeading = normalizeAngle(self.desiredHeading)
         self.updateHeading()
 
-    # TODO: Torque impulse should scale with mass
     def updateHeading(self):
         diff = radians(angleDiff(-self.desiredHeading, self.lowerTorso.getH()))
         self.lowerTorso.node().setAngularVelocity(Vec3(0,0,-diff*8))
