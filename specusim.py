@@ -139,7 +139,15 @@ class MyApp(ShowBase):
         np.setScale(Vec3(1, 1, 1))
         np.setPos(0, 0, 0)
         
-        self.player = Humanoid(self.render, self.world)
+        self.player = Humanoid(self.render, self.world, Vec3(0,0,0), Vec3(0,0,0))
+        '''
+        self.doppelgangers = []
+        num = 11
+        for i in range(num):
+            for j in range(num):
+                if i == (num-1)/2 and j == (num-1)/2: continue
+                self.doppelgangers.append(Humanoid(self.render, self.world, Vec3(i-(num-1)/2,j-(num-1)/2,0), Vec3(0,0,0)))
+        '''
 
         self.camera.reparentTo(self.player.lowerTorso)
 #        self.camera.setPos(0, -10, 40)
@@ -192,20 +200,19 @@ class MyApp(ShowBase):
         base.enableMouse()
 
 
-    # Moves the camera with key presses
-    # Also deals with grid checking and collision detection
+    # Everything that needs to be done every frame goes here.
+    # Physics updates and movement and stuff.
     def update(self, task):
-        # Get the time that elapsed since last frame.  We multiply this with
-        # the desired speed in order to find out with which distance to move
-        # in order to achieve that desired speed.
+        # Get the time that elapsed since last frame.
         dt = globalClock.getDt()
 
+        # Do a physics update.
         # Choosing smaller substeps will make the simulation more realistic,
         # but performance will decrease too. Smaller substeps also reduce jitter.
-        self.world.doPhysics(dt, 30, 1.0/540.0)
+#        self.world.doPhysics(dt, 50, 1.0/900.0)
+        self.world.doPhysics(dt, 25, 1.0/450.0)
 
-        torque = Vec3(0, 0, 0)
-
+        # Define controls
         stepping = False
 
         if inputState.isSet('forward'):
@@ -244,10 +251,7 @@ class MyApp(ShowBase):
         
         self.inst5.text = str(self.stepTime) + " " + str(sqrt(pow(self.player.chest.node().getLinearVelocity()[0], 2) + pow(self.player.chest.node().getLinearVelocity()[1], 2)))
 #        self.inst5.text = str(angleDiff(degrees(self.player.leftLegConstraint.getAngle(0)), degrees(self.player.rightLegConstraint.getAngle(0))))
-        self.inst6.text = str(round(-self.player.lowerTorso.getH())) + " " + str(round(self.player.desiredHeading))
-
-        #self.player.lowerTorso.node().applyTorque(torque)
-        self.player.lowerTorso.node().setMass(40.0)
+        self.inst6.text = str(self.player.chest.getPos())
 
         self.camera.setR(0)
 

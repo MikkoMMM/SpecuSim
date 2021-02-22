@@ -1,12 +1,12 @@
 from panda3d.bullet import BulletCylinderShape
 from panda3d.core import Vec3
 from panda3d.bullet import BulletRigidBodyNode
-from panda3d.core import BitMask32, Point3, TransformState
+from panda3d.core import BitMask32, Point3, TransformState, RigidBodyCombiner, NodePath
 from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint, BulletGenericConstraint
 from panda3d.bullet import ZUp
-from src.shapes import createCapsule
-from src.leg import Leg
-from src.arm import Arm
+from src.shapes import createSphere
+from src.humanoid_leg import HumanoidLeg
+from src.humanoid_arm import HumanoidArm
 from src.utils import angleDiff, normalizeAngle
 import time
 from math import degrees, radians, sqrt
@@ -15,12 +15,14 @@ class Humanoid():
     # Arguments:
     # render: NodePath to render to
     # world: A BulletWorld to use for physics
+    # startPosition: where to spawn the humanoid
+    # startHeading: an optional starting heading
     # TODO: explanations for optional arguments
-    def __init__(self, render, world, name="", sex='', height=0, mass=0, age=0):
+    def __init__(self, render, world, startPosition, startHeading=Vec3(0,0,0), name="", sex='', height=1.7, mass=0, age=0):
         self.name = name
         self.sex = sex or ''
-        self.height = height or 170
-        self.headHeight = height/7.5
+        self.height = height
+        self.headHeight = self.height/7
         self.chestWidth = 0.38
         self.pelvisWidth = 0.38
         self.chestToHeightRatio = 0
@@ -28,8 +30,10 @@ class Humanoid():
         self.render = render
         self.world = world
         self.stepCounter = 0
-        self.lowerTorsoHeight = 0.35
-        self.chestHeight = 0.35
+        self.lowerTorsoHeight = 1.3*(self.height/7)
+        self.chestHeight = 1.5*(self.height/7)
+        self.legHeight = self.height - self.headHeight - self.lowerTorsoHeight - self.chestHeight
+        self.armHeight = self.legHeight*1
 
         axisA = Vec3(1, 0, 0)
 
@@ -82,7 +86,7 @@ class Humanoid():
         world.attachConstraint(cs, linked_collision=True)
 
         
-        self.leftLeg = Leg(self.render, self.world, 0.8, self.pelvisWidth/2-0.01, (self.pelvisWidth/2-0.01)*0.8)
+        self.leftLeg = HumanoidLeg(self.render, self.world, self.legHeight, self.pelvisWidth/2-0.01, (self.pelvisWidth/2-0.01)*self.legHeight, startPosition, startHeading)
 
         frameA = TransformState.makePosHpr(Point3(-self.pelvisWidth/4, 0, -self.lowerTorsoHeight/2), Vec3(0, 0, 0))
         frameB = TransformState.makePosHpr(Point3(0, 0, self.leftLeg.thighLength/2), Vec3(0, 0, 0))
@@ -101,7 +105,7 @@ class Humanoid():
         self.leftLegZHinge.setMaxMotorForce(200)
 
 
-        self.rightLeg = Leg(self.render, self.world, 0.8, self.pelvisWidth/2-0.01, (self.pelvisWidth/2-0.01)*0.8)
+        self.rightLeg = HumanoidLeg(self.render, self.world, self.legHeight, self.pelvisWidth/2-0.01, (self.pelvisWidth/2-0.01)*self.legHeight, startPosition, startHeading)
 
         frameA = TransformState.makePosHpr(Point3(self.pelvisWidth/4, 0, -self.lowerTorsoHeight/2), Vec3(0, 0, 0))
         frameB = TransformState.makePosHpr(Point3(0, 0, self.leftLeg.thighLength/2), Vec3(0, 0, 0))
@@ -134,39 +138,77 @@ class Humanoid():
         self.rightLeg.knee.setAngularLimit(2, -180, 180)
 
 
-        self.leftArm = Arm(self.render, self.world, 0.8, self.chestWidth/3-0.01, (self.chestWidth/3-0.01)*0.8, False)
+        self.leftArm = HumanoidArm(self.render, self.world, self.armHeight, self.chestWidth/3-0.01, (self.chestWidth/3-0.01)*self.armHeight, False, startPosition, startHeading)
 
         frameA = TransformState.makePosHpr(Point3(-self.chestWidth/2-self.leftArm.upperArmDiameter/2, 0, self.chestHeight/2-self.leftArm.upperArmDiameter/8), Vec3(0, 0, 0))
         frameB = TransformState.makePosHpr(Point3(0, 0, self.leftArm.upperArmLength/2), Vec3(0, -90, 0))
 
         self.leftArmConstraint = BulletGenericConstraint(self.chest.node(), self.leftArm.upperArm.node(), frameA, frameB, True)
         self.leftArmConstraint.setDebugDrawSize(2.0)
-        self.leftArmConstraint.setAngularLimit(0, -95, 120) #Up and down
-#        self.leftArmConstraint.setAngularLimit(0, 0, 0) #Up and down
-        self.leftArmConstraint.setAngularLimit(1, 0, 0)    # Rotation, handled in the elbow joint because here it glitches.
+        self.leftArmConstraint.setAngularLimit(0, -95, 135) # Front and back
+        self.leftArmConstraint.setAngularLimit(1, 0, 0)     # Rotation, handled in the elbow joint because here it glitches.
         self.leftArmConstraint.setAngularLimit(2, -120, 35) # Left and right
-#        self.leftArmConstraint.setAngularLimit(2, 0, 0) # Left and right
         self.leftArm.upperArm.node().setAngularFactor(Vec3(0.2,0.2,0.2))
         self.world.attachConstraint(self.leftArmConstraint, linked_collision=True)
 
 
-        self.rightArm = Arm(self.render, self.world, 0.8, self.chestWidth/3-0.01, (self.chestWidth/3-0.01)*0.8, True)
+        self.rightArm = HumanoidArm(self.render, self.world, self.armHeight, self.chestWidth/3-0.01, (self.chestWidth/3-0.01)*self.armHeight, True, startPosition, startHeading)
 
         frameA = TransformState.makePosHpr(Point3(self.chestWidth/2+self.rightArm.upperArmDiameter/2, 0, self.chestHeight/2-self.rightArm.upperArmDiameter/8), Vec3(0, 0, 0))
         frameB = TransformState.makePosHpr(Point3(0, 0, self.rightArm.upperArmLength/2), Vec3(0, -90, 0))
 
         self.rightArmConstraint = BulletGenericConstraint(self.chest.node(), self.rightArm.upperArm.node(), frameA, frameB, True)
         self.rightArmConstraint.setDebugDrawSize(2.0)
-        self.rightArmConstraint.setAngularLimit(0, -95, 120) #Up and down
-#        self.rightArmConstraint.setAngularLimit(0, 0, 0) #Up and down
-        self.rightArmConstraint.setAngularLimit(1, 0, 0)    # Rotation, handled in the elbow joint because here it glitches.
+        self.rightArmConstraint.setAngularLimit(0, -95, 135) # Front and back
+        self.rightArmConstraint.setAngularLimit(1, 0, 0)     # Rotation, handled in the elbow joint because here it glitches.
         self.rightArmConstraint.setAngularLimit(2, -35, 120) # Left and right
-#        self.rightArmConstraint.setAngularLimit(2, 0, 0) # Left and right
         self.rightArm.upperArm.node().setAngularFactor(Vec3(0.2,0.2,0.2))
         self.world.attachConstraint(self.rightArmConstraint, linked_collision=True)
 
 
+        self.head = createSphere(self.render, self.headHeight)
+        self.head.node().setMass(3.0)
+        self.world.attachRigidBody(self.head.node())
+        visual = loader.loadModel("models/unit_sphere.bam")
+        visual.setScale(Vec3(self.headHeight, self.headHeight, self.headHeight))
+        visual.reparentTo(self.head)
+
+        frameA = TransformState.makePosHpr(Point3(0,0,self.headHeight/2), Vec3(0, 0, 0))
+        frameB = TransformState.makePosHpr(Point3(0,0,-self.chestHeight/2), Vec3(0, 0, 0))
+
+        self.neck = BulletGenericConstraint(self.chest.node(), self.head.node(), frameA, frameB, True)
+
+        self.neck.setDebugDrawSize(2.0)
+        self.neck.setAngularLimit(0, -10, 10)
+        self.neck.setAngularLimit(1, 0, 0)
+        self.neck.setAngularLimit(2, -10, 10)
+        self.world.attachConstraint(self.neck, linked_collision=True)
+
+        self.head.setPosHpr(startPosition, startHeading)
+        self.lowerTorso.setPosHpr(startPosition, startHeading)
+        self.chest.setPosHpr(startPosition, startHeading)
         self.desiredHeading = self.lowerTorso.getH()
+        '''
+        rbc = RigidBodyCombiner("rbc")
+        rbcnp = NodePath(rbc)
+        rbcnp.reparentTo(self.render)
+        rbcnp.setPos(startPosition)
+
+        self.lowerTorso.reparentTo(rbcnp)
+        self.chest.reparentTo(rbcnp)
+        self.head.reparentTo(rbcnp)
+        self.leftArm.forearm.reparentTo(rbcnp)
+        self.leftArm.upperArm.reparentTo(rbcnp)
+        self.rightArm.forearm.reparentTo(rbcnp)
+        self.rightArm.upperArm.reparentTo(rbcnp)
+        self.leftLeg.thigh.reparentTo(rbcnp)
+        self.leftLeg.lowerLeg.reparentTo(rbcnp)
+        self.leftLeg.foot.reparentTo(rbcnp)
+        self.rightLeg.thigh.reparentTo(rbcnp)
+        self.rightLeg.lowerLeg.reparentTo(rbcnp)
+        self.rightLeg.foot.reparentTo(rbcnp)
+        rbc.collect()
+        '''
 
 
     # A really hacky physics-driven movement implementation.

@@ -6,14 +6,14 @@ from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint, Bul
 from panda3d.bullet import ZUp
 from src.shapes import createCapsule, createBox
 
-class Arm():
+class HumanoidArm():
     # Arguments:
     # render: NodePath to render to
     # world: A BulletWorld to use for physics
     # upperArmDiameter: upperArm's diameter
     # forearmDiameter: forearm's diameter
     # height: arm's total height
-    def __init__(self, render, world, height, upperArmDiameter, forearmDiameter, rightArm):
+    def __init__(self, render, world, height, upperArmDiameter, forearmDiameter, rightArm, startPosition, startHeading):
         self.render = render
         self.world = world
 
@@ -50,3 +50,6 @@ class Arm():
         self.elbow.setAngularLimit(2, 0, 0)
         self.elbow.setDebugDrawSize(2.0)
         self.world.attachConstraint(self.elbow, linked_collision=True)
+
+        self.upperArm.setPosHpr(startPosition, startHeading)
+        self.forearm.setPosHpr(startPosition, startHeading)

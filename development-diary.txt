@@ -35,3 +35,5 @@
 17.2.2021 Moving in an arbitrary direction was implemented. Also, a standing still animation (amazing, right?) A developer feature to change player speed on the fly. Some changes trying to make the movement happen more consistently early on.
 18.2.2021 The turning code was revised and the player retains their heading now. Started "real work" on arms.
 19.2.2021 The arms were finished and angular limits set. Mirroring left and right arms' limits also took some experimentation to find a good way. Also, for a moment it looked like there was a bug in the physics engine, which slowed down progress.
+20.2.2021 The player character got a-head in life. Also, tweaked the proportions somewhat.
+21.2.2021 Made it possible to set a humanoid's starting position

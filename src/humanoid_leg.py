@@ -6,20 +6,20 @@ from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint, Bul
 from panda3d.bullet import ZUp
 from src.shapes import createCapsule, createBox
 
-class Leg():
+class HumanoidLeg():
     # Arguments:
     # render: NodePath to render to
     # world: A BulletWorld to use for physics
+    # height: leg's total height
     # thighDiameter: thigh's diameter
     # lowerLegDiameter: lower leg's diameter
-    # height: leg's total height
-    def __init__(self, render, world, height, thighDiameter, lowerLegDiameter):
+    def __init__(self, render, world, height, thighDiameter, lowerLegDiameter, startPosition, startHeading):
         self.render = render
         self.world = world
 
         axisA = Vec3(1, 0, 0)
         self.thighLength = height*59/109
-        self.lowerLegLength = height*37/109
+        self.lowerLegLength = height*40/109
         self.footHeight = height - self.thighLength - self.lowerLegLength
 
         self.thigh = createCapsule(self.render, thighDiameter, self.thighLength)
@@ -63,3 +63,7 @@ class Leg():
         self.heel.setDebugDrawSize(2.0)
         self.heel.setLimit(0, 45, softness=0.9, bias=0.3, relaxation=1.0)
         self.world.attachConstraint(self.heel, linked_collision=True)
+
+        self.thigh.setPosHpr(startPosition, startHeading)
+        self.lowerLeg.setPosHpr(startPosition, startHeading)
+        self.foot.setPosHpr(startPosition, startHeading)
