@@ -29,7 +29,7 @@ class Humanoid():
         self.mass = mass
         self.render = render
         self.world = world
-        self.stepCounter = 0
+        self.stepCounter = 1
         self.lowerTorsoHeight = 1.3*(self.height/7)
         self.chestHeight = 1.5*(self.height/7)
         self.legHeight = self.height - self.headHeight - self.lowerTorsoHeight - self.chestHeight
@@ -41,7 +41,7 @@ class Humanoid():
         size = Vec3(self.chestWidth, 0.2, self.chestHeight)
         shape = BulletCylinderShape(size/2)
         self.chest = self.render.attachNewNode(BulletRigidBodyNode())
-        self.chest.setCollideMask(BitMask32.bit(0))
+        self.chest.setCollideMask(BitMask32.allOff())
         self.chest.node().setMass(40.0)
         self.chest.node().addShape(shape)
         self.chest.node().setAngularFactor(Vec3(0.15,0.05,0.1))
@@ -49,16 +49,17 @@ class Humanoid():
         self.chest.node().setLinearDamping(0.5)
         self.chest.node().setFriction(0.8)
         self.chest.node().setRestitution(0.0)
-        self.chest.setCollideMask(BitMask32.allOn())
         self.world.attachRigidBody(self.chest.node())
         chestVisual = loader.loadModel("models/unit_cylinder.bam")
         chestVisual.setScale(size)
         chestVisual.reparentTo(self.chest)
+        chestVisual.clearModelNodes()
+        self.chest.node().setAngularSleepThreshold(0.05)
 
         size = Vec3(self.pelvisWidth, 0.2, self.lowerTorsoHeight)
         shape = BulletCylinderShape(size/2)
         self.lowerTorso = self.render.attachNewNode(BulletRigidBodyNode())
-        self.lowerTorso.setCollideMask(BitMask32.bit(0))
+        self.lowerTorso.setCollideMask(BitMask32.allOff())
         self.lowerTorso.node().setMass(40.0)
         self.lowerTorso.node().addShape(shape)
         self.lowerTorso.node().setAngularFactor(Vec3(0,0,0.1))
@@ -66,12 +67,12 @@ class Humanoid():
         self.lowerTorso.node().setAngularDamping(0.9)
         self.lowerTorso.node().setFriction(0.8)
         self.lowerTorso.node().setRestitution(0.0)
-        self.lowerTorso.setCollideMask(BitMask32.allOn())
         self.lowerTorso.node().setAngularSleepThreshold(0) # For whatever reason, sleep seems to freeze the whole character if still
         self.world.attachRigidBody(self.lowerTorso.node())
         lowerTorsoVisual = loader.loadModel("models/unit_cylinder.bam")
         lowerTorsoVisual.setScale(size)
         lowerTorsoVisual.reparentTo(self.lowerTorso)
+        lowerTorsoVisual.clearModelNodes()
         
         frameA = TransformState.makePosHpr(Point3(0, 0, -self.chestHeight/2), Vec3(0, 0, 0))
         frameB = TransformState.makePosHpr(Point3(0, 0, self.lowerTorsoHeight/2), Vec3(0, 0, 0))
@@ -82,7 +83,7 @@ class Humanoid():
 
         cs = BulletConeTwistConstraint(self.chest.node(), self.lowerTorso.node(), frameA, frameB)
         cs.setDebugDrawSize(2.0)
-        cs.setLimit(twist, swing2, swing1, softness=0.9, bias=0.3, relaxation=1.0)
+        cs.setLimit(twist, swing2, swing1, softness=0.1, bias=1.0, relaxation=1.0)
         world.attachConstraint(cs, linked_collision=True)
 
         
@@ -93,16 +94,18 @@ class Humanoid():
 
         self.leftLegConstraint = BulletGenericConstraint(self.lowerTorso.node(), self.leftLeg.thigh.node(), frameA, frameB, True)
         self.leftLegConstraint.setDebugDrawSize(2.0)
-        self.leftLegConstraint.setAngularLimit(0, -80, 80)
+        self.leftLegConstraint.setAngularLimit(0, -75, 75)
         self.leftLegConstraint.setAngularLimit(1, 0, 0)
         self.leftLegConstraint.setAngularLimit(2, -180, 180)
         self.world.attachConstraint(self.leftLegConstraint, linked_collision=True)
         self.leftLegYHinge = self.leftLegConstraint.getRotationalLimitMotor(0)
         self.leftLegYHinge.setMotorEnabled(True)
         self.leftLegYHinge.setMaxMotorForce(200)
+        self.leftLegYHinge.setMaxLimitForce(400)
         self.leftLegZHinge = self.leftLegConstraint.getRotationalLimitMotor(2)
         self.leftLegZHinge.setMotorEnabled(True)
         self.leftLegZHinge.setMaxMotorForce(200)
+        self.leftLegZHinge.setMaxLimitForce(400)
 
 
         self.rightLeg = HumanoidLeg(self.render, self.world, self.legHeight, self.pelvisWidth/2-0.01, (self.pelvisWidth/2-0.01)*self.legHeight, startPosition, startHeading)
@@ -112,21 +115,25 @@ class Humanoid():
 
         self.rightLegConstraint = BulletGenericConstraint(self.lowerTorso.node(), self.rightLeg.thigh.node(), frameA, frameB, True)
         self.rightLegConstraint.setDebugDrawSize(2.0)
-        self.rightLegConstraint.setAngularLimit(0, -80, 80)
+        self.rightLegConstraint.setAngularLimit(0, -75, 75)
         self.rightLegConstraint.setAngularLimit(1, 0, 0)
         self.rightLegConstraint.setAngularLimit(2, -180, 180)
         self.world.attachConstraint(self.rightLegConstraint, linked_collision=True)
         self.rightLegYHinge = self.rightLegConstraint.getRotationalLimitMotor(0)
         self.rightLegYHinge.setMotorEnabled(True)
         self.rightLegYHinge.setMaxMotorForce(200)
+        self.rightLegYHinge.setMaxLimitForce(400)
         self.rightLegZHinge = self.rightLegConstraint.getRotationalLimitMotor(2)
         self.rightLegZHinge.setMotorEnabled(True)
         self.rightLegZHinge.setMaxMotorForce(200)
+        self.rightLegZHinge.setMaxLimitForce(400)
 
         self.leftKneeYHinge = self.leftLeg.knee.getRotationalLimitMotor(0)
         self.rightKneeYHinge = self.rightLeg.knee.getRotationalLimitMotor(0)
         self.leftKneeYHinge.setMaxMotorForce(200)
         self.rightKneeYHinge.setMaxMotorForce(200)
+        self.leftKneeYHinge.setMaxLimitForce(400)
+        self.rightKneeYHinge.setMaxLimitForce(400)
 
         self.leftKneeZHinge = self.leftLeg.knee.getRotationalLimitMotor(2)
         self.rightKneeZHinge = self.rightLeg.knee.getRotationalLimitMotor(2)
@@ -134,11 +141,19 @@ class Humanoid():
         self.rightKneeZHinge.setMotorEnabled(True)
         self.leftKneeZHinge.setMaxMotorForce(200)
         self.rightKneeZHinge.setMaxMotorForce(200)
+        self.leftKneeZHinge.setMaxLimitForce(400)
+        self.rightKneeZHinge.setMaxLimitForce(400)
         self.leftLeg.knee.setAngularLimit(2, -180, 180)
         self.rightLeg.knee.setAngularLimit(2, -180, 180)
 
+        self.leftHeelYHinge = self.leftLeg.heel.getRotationalLimitMotor(0)
+        self.rightHeelYHinge = self.rightLeg.heel.getRotationalLimitMotor(0)
+        self.leftHeelYHinge.setMotorEnabled(True)
+        self.rightHeelYHinge.setMotorEnabled(True)
+        self.leftHeelYHinge.setMaxMotorForce(200)
+        self.rightHeelYHinge.setMaxMotorForce(200)
 
-        self.leftArm = HumanoidArm(self.render, self.world, self.armHeight, self.chestWidth/3-0.01, (self.chestWidth/3-0.01)*self.armHeight, False, startPosition, startHeading)
+        self.leftArm = HumanoidArm(self.chest, self.world, self.armHeight, self.chestWidth/3-0.01, (self.chestWidth/3-0.01)*self.armHeight, False, startPosition, startHeading)
 
         frameA = TransformState.makePosHpr(Point3(-self.chestWidth/2-self.leftArm.upperArmDiameter/2, 0, self.chestHeight/2-self.leftArm.upperArmDiameter/8), Vec3(0, 0, 0))
         frameB = TransformState.makePosHpr(Point3(0, 0, self.leftArm.upperArmLength/2), Vec3(0, -90, 0))
@@ -172,6 +187,7 @@ class Humanoid():
         visual = loader.loadModel("models/unit_sphere.bam")
         visual.setScale(Vec3(self.headHeight, self.headHeight, self.headHeight))
         visual.reparentTo(self.head)
+        visual.clearModelNodes()
 
         frameA = TransformState.makePosHpr(Point3(0,0,self.headHeight/2), Vec3(0, 0, 0))
         frameB = TransformState.makePosHpr(Point3(0,0,-self.chestHeight/2), Vec3(0, 0, 0))
@@ -188,34 +204,13 @@ class Humanoid():
         self.lowerTorso.setPosHpr(startPosition, startHeading)
         self.chest.setPosHpr(startPosition, startHeading)
         self.desiredHeading = self.lowerTorso.getH()
-        '''
-        rbc = RigidBodyCombiner("rbc")
-        rbcnp = NodePath(rbc)
-        rbcnp.reparentTo(self.render)
-        rbcnp.setPos(startPosition)
-
-        self.lowerTorso.reparentTo(rbcnp)
-        self.chest.reparentTo(rbcnp)
-        self.head.reparentTo(rbcnp)
-        self.leftArm.forearm.reparentTo(rbcnp)
-        self.leftArm.upperArm.reparentTo(rbcnp)
-        self.rightArm.forearm.reparentTo(rbcnp)
-        self.rightArm.upperArm.reparentTo(rbcnp)
-        self.leftLeg.thigh.reparentTo(rbcnp)
-        self.leftLeg.lowerLeg.reparentTo(rbcnp)
-        self.leftLeg.foot.reparentTo(rbcnp)
-        self.rightLeg.thigh.reparentTo(rbcnp)
-        self.rightLeg.lowerLeg.reparentTo(rbcnp)
-        self.rightLeg.foot.reparentTo(rbcnp)
-        rbc.collect()
-        '''
 
 
     # A really hacky physics-driven movement implementation.
     # seconds: roughly how long each step should take in seconds
     # angle: angle in which to walk. For instance, zero is ahead, -90 is left and 90 is right.
     def takeStep(self, seconds, angle):
-        moveMass = 40
+        moveMass = 20
         self.updateHeading()
 
         if abs(angleDiff(degrees(self.leftLegConstraint.getAngle(2)),angle)) > 90:
@@ -226,10 +221,13 @@ class Humanoid():
             self.inverted = False
 
         # A way to support an arbitrary walking angle
-        self.leftLegZHinge.setTargetVelocity(angleDiff(degrees(self.leftLegConstraint.getAngle(2)),angle)/15)
+        self.leftLegZHinge.setTargetVelocity(angleDiff(degrees(self.leftLegConstraint.getAngle(2)),angle)/5)
         self.rightLegZHinge.setTargetVelocity(angleDiff(degrees(self.rightLegConstraint.getAngle(2)),angle)/5)
         self.leftKneeZHinge.setTargetVelocity(angleDiff(degrees(self.leftLeg.knee.getAngle(2)),-angle)/5)
         self.rightKneeZHinge.setTargetVelocity(angleDiff(degrees(self.rightLeg.knee.getAngle(2)),-angle)/5)
+        
+        self.leftHeelYHinge.setTargetVelocity(radians(self.leftLeg.foot.getP())*4)
+        self.rightHeelYHinge.setTargetVelocity(radians(self.rightLeg.foot.getP())*4)
 
         #Enable ragdoll physics for the knee
         self.leftKneeYHinge.setMotorEnabled(False)
@@ -243,12 +241,7 @@ class Humanoid():
             self.leftLeg.foot.node().setMass(1)
 
         if self.stepCounter > 0:
-            # Check whether we are eligible for switching the front leg
-            curSpeedSq = pow(self.chest.node().getLinearVelocity()[0], 2) + pow(self.chest.node().getLinearVelocity()[1], 2)
-            if curSpeedSq < 9:
-                if abs(angleDiff(degrees(self.leftLegConstraint.getAngle(0)), degrees(self.rightLegConstraint.getAngle(0)))) < 150:
-                    return
-            elif abs(angleDiff(degrees(self.leftLegConstraint.getAngle(0)), degrees(self.rightLegConstraint.getAngle(0)))) < 110:
+            if abs(angleDiff(degrees(self.leftLegConstraint.getAngle(0)), degrees(self.rightLegConstraint.getAngle(0)))) < 110:
                     return
             if abs(degrees(self.leftLegConstraint.getAngle(0))) < 59 or abs(degrees(self.rightLegConstraint.getAngle(0))) < 59:
                 return
@@ -279,17 +272,19 @@ class Humanoid():
             self.leftKneeYHinge.setMotorEnabled(True)
             self.rightKneeYHinge.setMotorEnabled(True)
             self.stepCounter = 0
+        self.leftHeelYHinge.setTargetVelocity(radians(self.leftLeg.foot.getP())*6)
+        self.rightHeelYHinge.setTargetVelocity(radians(self.rightLeg.foot.getP())*6)
 
         self.leftLegYHinge.setTargetVelocity(-self.leftLegConstraint.getAngle(0)*4)
         self.rightLegYHinge.setTargetVelocity(-self.rightLegConstraint.getAngle(0)*4)
         self.leftLegZHinge.setTargetVelocity(-self.leftLegConstraint.getAngle(2)*4)
         self.rightLegZHinge.setTargetVelocity(-self.rightLegConstraint.getAngle(2)*4)
 
-        self.leftKneeYHinge.setTargetVelocity(-self.leftLeg.knee.getAngle(0)*4)
-        self.rightKneeYHinge.setTargetVelocity(-self.rightLeg.knee.getAngle(0)*4)
+        self.leftKneeYHinge.setTargetVelocity(-self.leftLeg.knee.getAngle(0)*8)
+        self.rightKneeYHinge.setTargetVelocity(-self.rightLeg.knee.getAngle(0)*8)
         self.leftKneeZHinge.setTargetVelocity(-self.leftLeg.knee.getAngle(2)*4)
         self.rightKneeZHinge.setTargetVelocity(-self.rightLeg.knee.getAngle(2)*4)
-
+        
         self.updateHeading()
 
 
