@@ -63,7 +63,7 @@ class MyApp(ShowBase):
         PStatClient.connect()
 
         self.physicsThreads = 0 # EXPERIMENTAL! 0 for disabling the functionality, 4 for 4 physics threads.
-        doppelgangerNum = 11 # Actual number will be doppelgangerNum^2-1
+        doppelgangerNum = 0 # Actual number will be doppelgangerNum^2-1
 
         # Increase camera FOV as well as the far plane
         self.camLens.set_fov(90)
@@ -73,7 +73,7 @@ class MyApp(ShowBase):
         self.height = 25.0
 
         self.motionControllerAccuracy = 40 # The motion controller's orientation is to be updated 100 times this number per second
-        self.stepTime = 0.3 # How long a character's step will take by default
+        self.stepTime = 0.8 # How long a character's step will take by default
 
         # Physics setup
         self.worlds = []
@@ -317,6 +317,9 @@ class MyApp(ShowBase):
         if self.physicsThreads == 0:
             world, root = self.worlds[0]
             world.doPhysics(dt, 5, 1.0/60.0)
+            
+        for doppelganger in self.doppelgangers:
+            doppelganger.standStill()
 
         # Define controls
         stepping = False
@@ -357,7 +360,7 @@ class MyApp(ShowBase):
         
         self.inst5.text = str(self.stepTime) + " " + str(sqrt(pow(self.player.chest.node().getLinearVelocity()[0], 2) + pow(self.player.chest.node().getLinearVelocity()[1], 2)))
 #        self.inst5.text = str(angleDiff(degrees(self.player.leftLegConstraint.getAngle(0)), degrees(self.player.rightLegConstraint.getAngle(0))))
-        self.inst6.text = str(self.player.leftLeg.foot.getP())
+        self.inst6.text = str(self.player.lowerTorso.getH())
 
         self.camera.setR(0)
 

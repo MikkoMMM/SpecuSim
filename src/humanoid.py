@@ -9,7 +9,7 @@ from src.humanoid_leg import HumanoidLeg
 from src.humanoid_arm import HumanoidArm
 from src.utils import angleDiff, normalizeAngle
 import time
-from math import degrees, radians, sqrt
+from math import degrees, radians, sqrt, pi, cos, sin
 
 class Humanoid():
     # Arguments:
@@ -29,11 +29,12 @@ class Humanoid():
         self.mass = mass
         self.render = render
         self.world = world
-        self.stepCounter = 1
+        self.lastStepTime = 1
         self.lowerTorsoHeight = 1.3*(self.height/7)
         self.chestHeight = 1.5*(self.height/7)
         self.legHeight = self.height - self.headHeight - self.lowerTorsoHeight - self.chestHeight
         self.armHeight = self.legHeight*1
+        self.legYLimit = 60
 
         axisA = Vec3(1, 0, 0)
 
@@ -94,14 +95,19 @@ class Humanoid():
 
         self.leftLegConstraint = BulletGenericConstraint(self.lowerTorso.node(), self.leftLeg.thigh.node(), frameA, frameB, True)
         self.leftLegConstraint.setDebugDrawSize(2.0)
-        self.leftLegConstraint.setAngularLimit(0, -75, 75)
+        self.leftLegConstraint.setAngularLimit(0, -self.legYLimit, self.legYLimit)
         self.leftLegConstraint.setAngularLimit(1, 0, 0)
         self.leftLegConstraint.setAngularLimit(2, -180, 180)
         self.world.attachConstraint(self.leftLegConstraint, linked_collision=True)
+        '''
         self.leftLegYHinge = self.leftLegConstraint.getRotationalLimitMotor(0)
-        self.leftLegYHinge.setMotorEnabled(True)
-        self.leftLegYHinge.setMaxMotorForce(200)
-        self.leftLegYHinge.setMaxLimitForce(400)
+        self.leftLegYHinge.setMotorEnabled(False)
+        self.leftLegYHinge.setMaxMotorForce(5000)
+        self.leftLegYHinge.setMaxLimitForce(5000)
+        self.leftLegYHinge.setStopCfm(0)
+        self.leftLegYHinge.setDamping(0)
+        self.leftLegYHinge.setBounce(0)
+        '''
         self.leftLegZHinge = self.leftLegConstraint.getRotationalLimitMotor(2)
         self.leftLegZHinge.setMotorEnabled(True)
         self.leftLegZHinge.setMaxMotorForce(200)
@@ -115,14 +121,19 @@ class Humanoid():
 
         self.rightLegConstraint = BulletGenericConstraint(self.lowerTorso.node(), self.rightLeg.thigh.node(), frameA, frameB, True)
         self.rightLegConstraint.setDebugDrawSize(2.0)
-        self.rightLegConstraint.setAngularLimit(0, -75, 75)
+        self.rightLegConstraint.setAngularLimit(0, -self.legYLimit, self.legYLimit)
         self.rightLegConstraint.setAngularLimit(1, 0, 0)
         self.rightLegConstraint.setAngularLimit(2, -180, 180)
         self.world.attachConstraint(self.rightLegConstraint, linked_collision=True)
+        '''
         self.rightLegYHinge = self.rightLegConstraint.getRotationalLimitMotor(0)
-        self.rightLegYHinge.setMotorEnabled(True)
-        self.rightLegYHinge.setMaxMotorForce(200)
-        self.rightLegYHinge.setMaxLimitForce(400)
+        self.rightLegYHinge.setMotorEnabled(False)
+        self.rightLegYHinge.setMaxMotorForce(5000)
+        self.rightLegYHinge.setMaxLimitForce(5000)
+        self.rightLegYHinge.setStopCfm(0)
+        self.rightLegYHinge.setDamping(0)
+        self.rightLegYHinge.setBounce(0)
+        '''
         self.rightLegZHinge = self.rightLegConstraint.getRotationalLimitMotor(2)
         self.rightLegZHinge.setMotorEnabled(True)
         self.rightLegZHinge.setMaxMotorForce(200)
@@ -210,8 +221,17 @@ class Humanoid():
     # seconds: roughly how long each step should take in seconds
     # angle: angle in which to walk. For instance, zero is ahead, -90 is left and 90 is right.
     def takeStep(self, seconds, angle):
-        moveMass = 20
+        moveMass = 10
         self.updateHeading()
+        
+        if self.lastStepTime == 0:
+            self.lastStepTime = time.time()
+            timeDiff = 0
+            timeDiff2Pi = 0
+#            self.rightLeg.foot.node().setMass(moveMass)
+        else:
+            timeDiff = (time.time()-self.lastStepTime)/seconds
+            timeDiff2Pi = 2*pi*(time.time()-self.lastStepTime)/seconds
 
         if abs(angleDiff(degrees(self.leftLegConstraint.getAngle(2)),angle)) > 90:
             self.inverted = True
@@ -233,20 +253,14 @@ class Humanoid():
         self.leftKneeYHinge.setMotorEnabled(False)
         self.rightKneeYHinge.setMotorEnabled(False)
 
+        
         if (not self.inverted and self.leftLegConstraint.getAngle(0) <= self.rightLegConstraint.getAngle(0)) or self.inverted and self.leftLegConstraint.getAngle(0) > self.rightLegConstraint.getAngle(0):
             self.leftLeg.foot.node().setMass(moveMass)
             self.rightLeg.foot.node().setMass(1)
         else:
             self.rightLeg.foot.node().setMass(moveMass)
             self.leftLeg.foot.node().setMass(1)
-
-        if self.stepCounter > 0:
-            if abs(angleDiff(degrees(self.leftLegConstraint.getAngle(0)), degrees(self.rightLegConstraint.getAngle(0)))) < 110:
-                    return
-            if abs(degrees(self.leftLegConstraint.getAngle(0))) < 59 or abs(degrees(self.rightLegConstraint.getAngle(0))) < 59:
-                return
-
-        self.stepCounter += 1
+        
         if (not self.inverted and self.leftLegConstraint.getAngle(0) <= self.rightLegConstraint.getAngle(0)) or self.inverted and self.leftLegConstraint.getAngle(0) > self.rightLegConstraint.getAngle(0):
             self.leftLeg.foot.node().setFriction(1.0)
             self.rightLeg.foot.node().setFriction(0.0)
@@ -254,29 +268,77 @@ class Humanoid():
             self.leftLeg.foot.node().setFriction(0.0)
             self.rightLeg.foot.node().setFriction(1.0)
 
-        # There were possible rounding errors with mass; don't remove the epsilon
-        if not self.inverted and self.leftLeg.foot.node().getMass() >= moveMass-0.01 or self.inverted and self.rightLeg.foot.node().getMass() >= moveMass-0.01:
-            self.leftLegYHinge.setTargetVelocity(radians(120)/seconds)
-            self.rightLegYHinge.setTargetVelocity(-radians(120)/seconds)
+#        self.lowerTorso.node().applyCentralImpulse(Vec3(0,0,8))
+        if not self.inverted:
+            '''
+            if self.leftLeg.foot.node().getMass() > moveMass - 0.1:
+                self.rightLeg.thigh.node().applyTorque(Vec3(0.5*cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
+                self.leftLeg.thigh.node().applyTorque(Vec3(-0.5*cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
+            else:
+                self.leftLeg.thigh.node().applyTorque(Vec3(0.5*cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
+                self.rightLeg.thigh.node().applyTorque(Vec3(-0.5*cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
+            '''
+            '''
+            force = 500/seconds
+            if self.leftLeg.thigh.getP() < cos(timeDiff2Pi)*self.legYLimit:
+                self.leftLeg.thigh.node().applyTorque(Vec3(force,0,0))
+                self.rightLeg.thigh.node().applyTorque(Vec3(-force,0,0))
+            else:
+                self.rightLeg.thigh.node().applyTorque(Vec3(force,0,0))
+                self.leftLeg.thigh.node().applyTorque(Vec3(-force,0,0))
+            '''
+            self.leftLeg.thigh.node().setAngularVelocity(Vec3(cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
+            self.rightLeg.thigh.node().setAngularVelocity(Vec3(-cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
+#            self.rightLeg.thigh.setP(-cos(timeDiff2Pi)*self.legYLimit)
+#            self.leftLegConstraint.setAngularLimit(0, cos(timeDiff2Pi)*self.legYLimit, cos(timeDiff2Pi)*self.legYLimit)
+#            self.leftLeg.foot.setY(self.lowerTorso.getY()+sin(cos(timeDiff2Pi)*self.legYLimit)*self.legHeight)
+#            self.leftLeg.thigh.setX(self.lowerTorso.getX()+(self.pelvisWidth/2-0.01))
+#            self.leftLegYHinge.setTargetVelocity(radians(self.legYLimit)+cos(timeDiff2Pi)*self.legYLimit/seconds)
+#            self.rightLegYHinge.setTargetVelocity(-radians(self.legYLimit)-cos(timeDiff2Pi)*self.legYLimit/seconds)
+#            self.lowerTorso.getH()
+#            speed = 200
+#            if self.rightLeg.foot.node().getMass() == 0:
+#                self.leftLeg.foot.node().applyCentralForce(Vec3(speed/seconds*sin(self.leftLegConstraint.getAngle(2)),speed/seconds*cos(self.leftLegConstraint.getAngle(2)),0))
+#            else:
+#                self.rightLeg.foot.node().applyCentralForce(Vec3(speed/seconds*sin(self.rightLegConstraint.getAngle(2)),speed/seconds*cos(self.rightLegConstraint.getAngle(2)),0))
         else:
-            self.leftLegYHinge.setTargetVelocity(-radians(120)/seconds)
-            self.rightLegYHinge.setTargetVelocity(radians(120)/seconds)
+            pass
+#            self.leftLegYHinge.setTargetVelocity(-cos(timeDiff2Pi)*radians(120)/seconds)
+#            self.rightLegYHinge.setTargetVelocity(cos(timeDiff2Pi)*radians(120)/seconds)
 
+        '''
+        if self.leftLeg.thigh.getP() >= 70:
+            self.leftLeg.foot.node().setMass(moveMass)
+            self.rightLeg.foot.node().setMass(1)
+        elif self.rightLeg.thigh.getP() >= 70:
+            self.rightLeg.foot.node().setMass(moveMass)
+            self.leftLeg.foot.node().setMass(1)
+        '''
+        '''
+        if timeDiff >= seconds:
+            self.lastStepTime = time.time()
+            if self.leftLeg.foot.node().getMass() == 0:
+                self.rightLeg.foot.node().setMass(moveMass)
+                self.leftLeg.foot.node().setMass(1)
+            else:
+                self.leftLeg.foot.node().setMass(moveMass)
+                self.rightLeg.foot.node().setMass(1)
+        '''
 
     def standStill(self):
-        if self.stepCounter != 0:
+        if self.lastStepTime != 0:
             self.rightLeg.foot.node().setMass(1)
             self.leftLeg.foot.node().setMass(1)
             self.leftLeg.foot.node().setFriction(1.0)
             self.rightLeg.foot.node().setFriction(1.0)
             self.leftKneeYHinge.setMotorEnabled(True)
             self.rightKneeYHinge.setMotorEnabled(True)
-            self.stepCounter = 0
+            self.lastStepTime = 0
         self.leftHeelYHinge.setTargetVelocity(radians(self.leftLeg.foot.getP())*6)
         self.rightHeelYHinge.setTargetVelocity(radians(self.rightLeg.foot.getP())*6)
 
-        self.leftLegYHinge.setTargetVelocity(-self.leftLegConstraint.getAngle(0)*4)
-        self.rightLegYHinge.setTargetVelocity(-self.rightLegConstraint.getAngle(0)*4)
+#        self.leftLegYHinge.setTargetVelocity(-self.leftLegConstraint.getAngle(0)*4)
+#        self.rightLegYHinge.setTargetVelocity(-self.rightLegConstraint.getAngle(0)*4)
         self.leftLegZHinge.setTargetVelocity(-self.leftLegConstraint.getAngle(2)*4)
         self.rightLegZHinge.setTargetVelocity(-self.rightLegConstraint.getAngle(2)*4)
 
