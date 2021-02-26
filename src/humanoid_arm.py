@@ -53,3 +53,7 @@ class HumanoidArm():
 
         self.upperArm.setPosHpr(startPosition, startHeading)
         self.forearm.setPosHpr(startPosition, startHeading)
+    
+    def setPos(self, newPos):
+        self.upperArm.setPos(newPos)
+        self.forearm.setPos(newPos)

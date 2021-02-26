@@ -7,7 +7,7 @@ from panda3d.bullet import ZUp
 from src.shapes import createSphere
 from src.humanoid_leg import HumanoidLeg
 from src.humanoid_arm import HumanoidArm
-from src.utils import angleDiff, normalizeAngle
+from src.utils import angleDiff, normalizeAngle, getGroundZPos
 import time
 from math import degrees, radians, sqrt, pi, cos, sin
 
@@ -18,7 +18,7 @@ class Humanoid():
     # startPosition: where to spawn the humanoid
     # startHeading: an optional starting heading
     # TODO: explanations for optional arguments
-    def __init__(self, render, world, startPosition, startHeading=Vec3(0,0,0), name="", sex='', height=1.7, mass=0, age=0):
+    def __init__(self, render, world, terrainBulletNode, startPosition, startHeading=Vec3(0,0,0), name="", sex='', height=1.7, mass=0, age=0):
         self.name = name
         self.sex = sex or ''
         self.height = height
@@ -29,12 +29,14 @@ class Humanoid():
         self.mass = mass
         self.render = render
         self.world = world
+        self.terrainBulletNode = terrainBulletNode
         self.lastStepTime = 1
         self.lowerTorsoHeight = 1.3*(self.height/7)
         self.chestHeight = 1.5*(self.height/7)
         self.legHeight = self.height - self.headHeight - self.lowerTorsoHeight - self.chestHeight
         self.armHeight = self.legHeight*1
         self.legYLimit = 60
+        self.inverted = False
 
         axisA = Vec3(1, 0, 0)
 
@@ -215,6 +217,15 @@ class Humanoid():
         self.lowerTorso.setPosHpr(startPosition, startHeading)
         self.chest.setPosHpr(startPosition, startHeading)
         self.desiredHeading = self.lowerTorso.getH()
+        
+    # Set the humanoid's position on the Z axis.
+    # newZ: the new Z position for the bottom of the feet
+    def setPosZ(self, newZ):
+        self.leftLeg.setZ(newZ)
+        thighZ = self.rightLeg.setZ(newZ)
+        self.lowerTorso.setZ(thighZ+self.lowerTorsoHeight/2)
+        self.chest.setZ(thighZ+self.lowerTorsoHeight+self.chestHeight/2)
+        self.head.setZ(thighZ+self.lowerTorsoHeight+self.chestHeight+self.headHeight/2)
 
 
     # A really hacky physics-driven movement implementation.
@@ -268,27 +279,37 @@ class Humanoid():
             self.leftLeg.foot.node().setFriction(0.0)
             self.rightLeg.foot.node().setFriction(1.0)
 
-#        self.lowerTorso.node().applyCentralImpulse(Vec3(0,0,8))
-        if not self.inverted:
-            '''
-            if self.leftLeg.foot.node().getMass() > moveMass - 0.1:
-                self.rightLeg.thigh.node().applyTorque(Vec3(0.5*cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
-                self.leftLeg.thigh.node().applyTorque(Vec3(-0.5*cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
-            else:
-                self.leftLeg.thigh.node().applyTorque(Vec3(0.5*cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
-                self.rightLeg.thigh.node().applyTorque(Vec3(-0.5*cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
-            '''
-            '''
-            force = 500/seconds
-            if self.leftLeg.thigh.getP() < cos(timeDiff2Pi)*self.legYLimit:
-                self.leftLeg.thigh.node().applyTorque(Vec3(force,0,0))
-                self.rightLeg.thigh.node().applyTorque(Vec3(-force,0,0))
-            else:
-                self.rightLeg.thigh.node().applyTorque(Vec3(force,0,0))
-                self.leftLeg.thigh.node().applyTorque(Vec3(-force,0,0))
-            '''
-            self.leftLeg.thigh.node().setAngularVelocity(Vec3(cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
-            self.rightLeg.thigh.node().setAngularVelocity(Vec3(-cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
+        #velocity = self.lowerTorso.node().getLinearVelocity()
+#        self.lowerTorso.setZ(abs(cos(timeDiff2Pi))*self.legHeight)
+#        maxZ = getGroundZPos(self.lowerTorso, 9000, self.world, self.terrainBulletNode)+self.lowerTorsoHeight/2+abs(cos(timeDiff2Pi))*self.legHeight
+#        self.lowerTorso.node().applyCentralImpulse(Vec3(0,0,10*(maxZ-self.lowerTorso.getZ())*abs((maxZ-self.lowerTorso.getZ()))))
+        velocity = cos(timeDiff2Pi)*self.legYLimit/seconds
+        if self.inverted:
+            velocity = -velocity
+#        direction = radians(self.lowerTorso.getH())
+        direction = radians(self.leftLeg.thigh.getH())
+#        if not self.inverted:
+        '''
+        if self.leftLeg.foot.node().getMass() > moveMass - 0.1:
+            self.rightLeg.thigh.node().applyTorque(Vec3(0.5*cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
+            self.leftLeg.thigh.node().applyTorque(Vec3(-0.5*cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
+        else:
+            self.leftLeg.thigh.node().applyTorque(Vec3(0.5*cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
+            self.rightLeg.thigh.node().applyTorque(Vec3(-0.5*cos(timeDiff2Pi)*self.legYLimit/seconds,0,0))
+        '''
+        '''
+        force = 500/seconds
+        if self.leftLeg.thigh.getP() < cos(timeDiff2Pi)*self.legYLimit:
+            self.leftLeg.thigh.node().applyTorque(Vec3(force,0,0))
+            self.rightLeg.thigh.node().applyTorque(Vec3(-force,0,0))
+        else:
+            self.rightLeg.thigh.node().applyTorque(Vec3(force,0,0))
+            self.leftLeg.thigh.node().applyTorque(Vec3(-force,0,0))
+        '''
+        self.leftLeg.thigh.node().setAngularVelocity(Vec3(cos(direction)*velocity,sin(direction)*velocity,0))
+        self.rightLeg.thigh.node().setAngularVelocity(Vec3(-cos(direction)*velocity,-sin(direction)*velocity,0))
+#            self.leftLeg.thigh.node().setAngularVelocity(Vec3(velocity,0,0))
+#            self.rightLeg.thigh.node().setAngularVelocity(Vec3(-velocity,0,0))
 #            self.rightLeg.thigh.setP(-cos(timeDiff2Pi)*self.legYLimit)
 #            self.leftLegConstraint.setAngularLimit(0, cos(timeDiff2Pi)*self.legYLimit, cos(timeDiff2Pi)*self.legYLimit)
 #            self.leftLeg.foot.setY(self.lowerTorso.getY()+sin(cos(timeDiff2Pi)*self.legYLimit)*self.legHeight)
@@ -301,19 +322,17 @@ class Humanoid():
 #                self.leftLeg.foot.node().applyCentralForce(Vec3(speed/seconds*sin(self.leftLegConstraint.getAngle(2)),speed/seconds*cos(self.leftLegConstraint.getAngle(2)),0))
 #            else:
 #                self.rightLeg.foot.node().applyCentralForce(Vec3(speed/seconds*sin(self.rightLegConstraint.getAngle(2)),speed/seconds*cos(self.rightLegConstraint.getAngle(2)),0))
-        else:
-            pass
+#        else:
+#            pass
 #            self.leftLegYHinge.setTargetVelocity(-cos(timeDiff2Pi)*radians(120)/seconds)
 #            self.rightLegYHinge.setTargetVelocity(cos(timeDiff2Pi)*radians(120)/seconds)
 
-        '''
-        if self.leftLeg.thigh.getP() >= 70:
-            self.leftLeg.foot.node().setMass(moveMass)
-            self.rightLeg.foot.node().setMass(1)
-        elif self.rightLeg.thigh.getP() >= 70:
-            self.rightLeg.foot.node().setMass(moveMass)
-            self.leftLeg.foot.node().setMass(1)
-        '''
+        dt = globalClock.getDt()
+        self.lowerTorso.node().applyCentralImpulse(Vec3(0,0,1000*dt))
+        if self.leftLeg.thigh.getP() >= 20:
+            self.leftLeg.foot.node().applyCentralImpulse(Vec3(0,0,-1000*dt))
+        elif self.rightLeg.thigh.getP() >= 20:
+            self.rightLeg.foot.node().applyCentralImpulse(Vec3(0,0,-1000*dt))
         '''
         if timeDiff >= seconds:
             self.lastStepTime = time.time()
@@ -347,6 +366,10 @@ class Humanoid():
         self.leftKneeZHinge.setTargetVelocity(-self.leftLeg.knee.getAngle(2)*4)
         self.rightKneeZHinge.setTargetVelocity(-self.rightLeg.knee.getAngle(2)*4)
         
+        #self.setPosZ(getGroundZPos(self.lowerTorso, 9000, self.world, self.terrainBulletNode))
+        #self.leftLeg.walkBlock.setPos(Vec3(self.leftLeg.foot.getX(), self.leftLeg.foot.getY(), getGroundZPos(self.leftLeg.foot, 9000, self.world, self.terrainBulletNode))-self.leftLeg.walkBlockOffset)
+        #self.rightLeg.walkBlock.setPos(Vec3(self.rightLeg.foot.getX(), self.rightLeg.foot.getY(), getGroundZPos(self.rightLeg.foot, 9000, self.world, self.terrainBulletNode))-self.leftLeg.walkBlockOffset)
+
         self.updateHeading()
 
 

@@ -15,6 +15,7 @@ from direct.task import Task
 from panda3d.bullet import BulletWorld
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.bullet import BulletDebugNode
+from panda3d.bullet import getBulletVersion
 from panda3d.core import BitMask32, TransformState, Point3, NodePath, PandaNode, RigidBodyCombiner
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import ZUp
@@ -160,6 +161,7 @@ class MyApp(ShowBase):
         self.terrainBulletNode0.addShape(terrain_colshape)
         self.terrainNp0 = render.attachNewNode(self.terrainBulletNode0)
         self.terrainNp0.setCollideMask(BitMask32.bit(0))
+        #self.terrainNp0.setCollideMask(BitMask32.bit(1))
         self.terrainNp0.setPos(0, 0, 0)
         if self.physicsThreads == 4:
             self.terrainBulletNode1 = BulletRigidBodyNode("terrainBodyNode1")
@@ -180,7 +182,7 @@ class MyApp(ShowBase):
 
 
         world, root = self.worlds[0]
-        self.player = Humanoid(self.render, world, Vec3(0,0,-8), Vec3(0,0,0))
+        self.player = Humanoid(self.render, world, self.terrainBulletNode0, Vec3(0,0,-8), Vec3(0,0,0))
         
         self.doppelgangers = []
         for i in range(doppelgangerNum):
@@ -190,7 +192,7 @@ class MyApp(ShowBase):
                 else:
                     world, root = self.worlds[i%self.physicsThreads]
                 if i == (doppelgangerNum-1)/2 and j == (doppelgangerNum-1)/2: continue
-                self.doppelgangers.append(Humanoid(self.render, world, Vec3(i-(doppelgangerNum-1)/2,j-(doppelgangerNum-1)/2,0), Vec3(0,0,0)))
+                self.doppelgangers.append(Humanoid(self.render, world, self.terrainBulletNode0, Vec3(i-(doppelgangerNum-1)/2,j-(doppelgangerNum-1)/2,0), Vec3(0,0,0)))
         
 
         self.camera.reparentTo(self.player.lowerTorso)
@@ -212,6 +214,7 @@ class MyApp(ShowBase):
         self.inst4 = addInstructions(0.30, "Right mouse button: Adjust zoom")
         self.inst5 = addInstructions(0.36, "")
         self.inst6 = addInstructions(0.42, "")
+        self.inst7 = addInstructions(0.48, "")
 
         self.accept('mouse1',self.disableMouse)
         self.accept('mouse2',self.reEnableMouse)
@@ -316,42 +319,61 @@ class MyApp(ShowBase):
 
         if self.physicsThreads == 0:
             world, root = self.worlds[0]
-            world.doPhysics(dt, 5, 1.0/60.0)
+            world.doPhysics(dt, 5, 1.0/80.0)
             
-        for doppelganger in self.doppelgangers:
-            doppelganger.standStill()
-
         # Define controls
         stepping = False
 
         if inputState.isSet('forward'):
             if inputState.isSet('left'):
                 self.player.takeStep(self.stepTime, -45)
+                for doppelganger in self.doppelgangers:
+                    doppelganger.takeStep(self.stepTime, -45)
             elif inputState.isSet('right'):
                 self.player.takeStep(self.stepTime, 45)
+                for doppelganger in self.doppelgangers:
+                    doppelganger.takeStep(self.stepTime, 45)
             else:
                 self.player.takeStep(self.stepTime, 0)
+                for doppelganger in self.doppelgangers:
+                    doppelganger.takeStep(self.stepTime, 0)
             stepping = True
         elif inputState.isSet('backward'):
             if inputState.isSet('left'):
                 self.player.takeStep(self.stepTime, -135)
+                for doppelganger in self.doppelgangers:
+                    doppelganger.takeStep(self.stepTime, -135)
             elif inputState.isSet('right'):
                 self.player.takeStep(self.stepTime, 135)
+                for doppelganger in self.doppelgangers:
+                    doppelganger.takeStep(self.stepTime, 135)
             else:
                 self.player.takeStep(self.stepTime, 180)
+                for doppelganger in self.doppelgangers:
+                    doppelganger.takeStep(self.stepTime, 180)
             stepping = True
         elif inputState.isSet('left'):
             self.player.takeStep(self.stepTime, -90)
+            for doppelganger in self.doppelgangers:
+                doppelganger.takeStep(self.stepTime, -90)
             stepping = True
         elif inputState.isSet('right'):
             self.player.takeStep(self.stepTime, 90)
+            for doppelganger in self.doppelgangers:
+                doppelganger.takeStep(self.stepTime, 90)
             stepping = True
         if not stepping:
             self.player.standStill()
+            for doppelganger in self.doppelgangers:
+                doppelganger.standStill()
         if inputState.isSet('turnleft'):
             self.player.turnLeft(dt)
+            for doppelganger in self.doppelgangers:
+                doppelganger.turnLeft(dt)
         if inputState.isSet('turnright'):
             self.player.turnRight(dt)
+            for doppelganger in self.doppelgangers:
+                doppelganger.turnRight(dt)
         if inputState.isSet('speedup'):
             self.stepTime -= dt*1.20
             if self.stepTime < 0:
@@ -359,8 +381,11 @@ class MyApp(ShowBase):
         if inputState.isSet('speeddown'):  self.stepTime += dt*1.20
         
         self.inst5.text = str(self.stepTime) + " " + str(sqrt(pow(self.player.chest.node().getLinearVelocity()[0], 2) + pow(self.player.chest.node().getLinearVelocity()[1], 2)))
-#        self.inst5.text = str(angleDiff(degrees(self.player.leftLegConstraint.getAngle(0)), degrees(self.player.rightLegConstraint.getAngle(0))))
-        self.inst6.text = str(self.player.lowerTorso.getH())
+        if self.player.inverted:
+            self.inst6.text = "True"
+        else:
+            self.inst6.text = "False"
+#        self.inst7.text = str(self.player.leftLeg.thigh.getH()) + " " + str(self.player.lowerTorso.getH())
 
         self.camera.setR(0)
 
@@ -374,5 +399,7 @@ class MyApp(ShowBase):
         self.camera.setHpr(self.heading, self.pitch, self.roll)
         return Task.cont
 
+print("Using Bullet Physics version ", getBulletVersion())
+print()
 app = MyApp()
 app.run()

@@ -5,6 +5,7 @@ from panda3d.core import BitMask32, Point3, TransformState
 from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint, BulletGenericConstraint
 from panda3d.bullet import ZUp
 from src.shapes import createCapsule, createBox
+from math import cos, sin, radians, asin
 
 class HumanoidLeg():
     # Arguments:
@@ -21,6 +22,7 @@ class HumanoidLeg():
         self.thighLength = height*59/109
         self.lowerLegLength = height*40/109
         self.footHeight = height - self.thighLength - self.lowerLegLength
+        self.footLength = lowerLegDiameter*2.2
 
         self.thigh = createCapsule(self.render, thighDiameter, self.thighLength)
         self.thigh.node().setMass(10.0)
@@ -31,7 +33,9 @@ class HumanoidLeg():
         visual.clearModelNodes()
 
 
-        self.lowerLeg = createCapsule(self.render, lowerLegDiameter*2.2, self.lowerLegLength+self.footHeight*2)
+        # The lower legs are special in that they collide with the ground and their physics boxes are larger than the visuals
+        self.lowerLeg = createCapsule(self.render, lowerLegDiameter*4, self.lowerLegLength*2+self.footHeight*2)
+        #self.lowerLeg = createCapsule(self.render, lowerLegDiameter, self.lowerLegLength)
         self.lowerLeg.node().setMass(5.0)
         self.world.attachRigidBody(self.lowerLeg.node())
         visual = loader.loadModel("models/unit_cylinder.bam")
@@ -51,13 +55,11 @@ class HumanoidLeg():
         self.knee.setAngularLimit(2, 0, 0)
         self.world.attachConstraint(self.knee, linked_collision=True)
 
-
-        # The feet are special in that they collide with the ground and their physics boxes are larger height-wise than the visuals
-        self.foot = createBox(self.render, lowerLegDiameter, lowerLegDiameter*2.2, self.footHeight)
+        self.foot = createBox(self.render, lowerLegDiameter, self.footLength, self.footHeight)
         self.foot.node().setMass(1.0)
         self.world.attachRigidBody(self.foot.node())
         visual = loader.loadModel("models/unit_cube.bam")
-        visual.setScale(Vec3(lowerLegDiameter, lowerLegDiameter*2.2, self.footHeight))
+        visual.setScale(Vec3(lowerLegDiameter, self.footLength, self.footHeight))
         visual.reparentTo(self.foot)
         visual.clearModelNodes()
         #self.foot.setCollideMask(BitMask32.bit(2)) # Collides with ground
@@ -78,3 +80,17 @@ class HumanoidLeg():
         self.thigh.setPosHpr(startPosition, startHeading)
         self.lowerLeg.setPosHpr(startPosition, startHeading)
         self.foot.setPosHpr(startPosition, startHeading)
+
+
+    # Resets the Z coordinate of the leg to a new value
+    # FIXME: Incorrect positions
+    # newZ: bottom of the foot's new Z position
+    # returns: the top of the thigh's new Z position
+    def setZ(self, newZ):
+        footZ = self.footLength*sin(radians(self.foot.getP()))+self.footHeight*cos(radians(self.foot.getP()))
+        lowerLegZ = self.footHeight+abs(sin(radians(self.lowerLeg.getP())))*self.lowerLegLength/2
+        thighZ = lowerLegZ+abs(sin(radians(self.thigh.getP())))*self.thighLength/2
+        self.foot.setZ(newZ+footZ)
+        self.lowerLeg.setZ(newZ+lowerLegZ)
+        self.thigh.setZ(newZ+thighZ)
+        return newZ+thighZ*2-lowerLegZ

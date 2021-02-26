@@ -41,3 +41,4 @@
 23.2.2021 Tested out possible physics multiprocessing and did more performance analysis. Started moving on to less frequent physics calculations.
 24.2.2021 Attempting to figure out a new movement algorithm for the less frequent physics.
 25.2.2021 Looking at various inverse kinematics options out there and more testing for a new movement algorithm.
+26.2.2021 There's a kind-of workable walking algorithm again now. Looking into repositioning characters when they clip through the ground.
