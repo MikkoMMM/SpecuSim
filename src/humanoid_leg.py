@@ -26,7 +26,7 @@ class HumanoidLeg():
 
         self.thigh = createCapsule(self.render, thighDiameter, self.thighLength)
         self.thigh.node().setMass(10.0)
-        self.world.attachRigidBody(self.thigh.node())
+        self.world.attach(self.thigh.node())
         visual = loader.loadModel("models/unit_cylinder.bam")
         visual.setScale(Vec3(thighDiameter, thighDiameter, self.thighLength))
         visual.reparentTo(self.thigh)
@@ -34,10 +34,10 @@ class HumanoidLeg():
 
 
         # The lower legs are special in that they collide with the ground and their physics boxes are larger than the visuals
-        self.lowerLeg = createCapsule(self.render, lowerLegDiameter*4, self.lowerLegLength*2+self.footHeight*2)
+        self.lowerLeg = createCapsule(self.render, lowerLegDiameter*4, self.lowerLegLength+self.footHeight*2)
         #self.lowerLeg = createCapsule(self.render, lowerLegDiameter, self.lowerLegLength)
         self.lowerLeg.node().setMass(5.0)
-        self.world.attachRigidBody(self.lowerLeg.node())
+        self.world.attach(self.lowerLeg.node())
         visual = loader.loadModel("models/unit_cylinder.bam")
         visual.setScale(Vec3(lowerLegDiameter, lowerLegDiameter, self.lowerLegLength))
         visual.reparentTo(self.lowerLeg)
@@ -57,7 +57,7 @@ class HumanoidLeg():
 
         self.foot = createBox(self.render, lowerLegDiameter, self.footLength, self.footHeight)
         self.foot.node().setMass(1.0)
-        self.world.attachRigidBody(self.foot.node())
+        self.world.attach(self.foot.node())
         visual = loader.loadModel("models/unit_cube.bam")
         visual.setScale(Vec3(lowerLegDiameter, self.footLength, self.footHeight))
         visual.reparentTo(self.foot)

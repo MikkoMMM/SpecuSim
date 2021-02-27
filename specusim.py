@@ -64,7 +64,7 @@ class MyApp(ShowBase):
         PStatClient.connect()
 
         self.physicsThreads = 0 # EXPERIMENTAL! 0 for disabling the functionality, 4 for 4 physics threads.
-        doppelgangerNum = 0 # Actual number will be doppelgangerNum^2-1
+        doppelgangerNum = 11 # Actual number will be doppelgangerNum^2-1
 
         # Increase camera FOV as well as the far plane
         self.camLens.set_fov(90)
@@ -74,7 +74,7 @@ class MyApp(ShowBase):
         self.height = 25.0
 
         self.motionControllerAccuracy = 40 # The motion controller's orientation is to be updated 100 times this number per second
-        self.stepTime = 0.8 # How long a character's step will take by default
+        self.stepTime = 0.6 # How long a character's step will take by default
 
         # Physics setup
         self.worlds = []

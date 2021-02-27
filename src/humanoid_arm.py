@@ -23,7 +23,7 @@ class HumanoidArm():
 
         self.upperArm = createCapsule(self.render, self.upperArmDiameter, self.upperArmLength)
         self.upperArm.node().setMass(3.0)
-        self.world.attachRigidBody(self.upperArm.node())
+        self.world.attach(self.upperArm.node())
         visual = loader.loadModel("models/unit_cylinder.bam")
         visual.setScale(Vec3(self.upperArmDiameter, self.upperArmDiameter, self.upperArmLength))
         visual.reparentTo(self.upperArm)
@@ -31,7 +31,7 @@ class HumanoidArm():
 
         self.forearm = createCapsule(self.render, forearmDiameter, self.forearmLength)
         self.forearm.node().setMass(2.0)
-        self.world.attachRigidBody(self.forearm.node())
+        self.world.attach(self.forearm.node())
         visual = loader.loadModel("models/unit_cylinder.bam")
         visual.setScale(Vec3(forearmDiameter, forearmDiameter, self.forearmLength))
         visual.reparentTo(self.forearm)
