@@ -30,6 +30,7 @@ class HumanoidArm():
 
 
         self.forearm = createCapsule(self.render, forearmDiameter, self.forearmLength)
+        self.forearm.setCollideMask(BitMask32.bit(3))
         self.forearm.node().setMass(2.0)
         self.world.attach(self.forearm.node())
         visual = loader.loadModel("models/unit_cylinder.bam")
@@ -48,7 +49,7 @@ class HumanoidArm():
             self.elbow.setAngularLimit(1, 0, 30)
 
         self.elbow.setAngularLimit(2, 0, 0)
-        self.elbow.setDebugDrawSize(2.0)
+        self.elbow.setDebugDrawSize(0.5)
         self.world.attachConstraint(self.elbow, linked_collision=True)
 
         self.upperArm.setPosHpr(startPosition, startHeading)

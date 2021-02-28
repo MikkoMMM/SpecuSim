@@ -63,8 +63,9 @@ class MyApp(ShowBase):
         base.setFrameRateMeter(True)
         PStatClient.connect()
 
-        self.physicsThreads = 0 # EXPERIMENTAL! 0 for disabling the functionality, 4 for 4 physics threads.
-        doppelgangerNum = 11 # Actual number will be doppelgangerNum^2-1
+        self.physicsThreads = 0  # EXPERIMENTAL! 0 for disabling the functionality, 4 for 4 physics threads.
+        doppelgangerNum = 16      # Actual number will be doppelgangerNum^2-1
+        self.physicsDebug = False # Show wireframes for the physics objects.
 
         # Increase camera FOV as well as the far plane
         self.camLens.set_fov(90)
@@ -74,7 +75,7 @@ class MyApp(ShowBase):
         self.height = 25.0
 
         self.motionControllerAccuracy = 40 # The motion controller's orientation is to be updated 100 times this number per second
-        self.stepTime = 0.6 # How long a character's step will take by default
+        self.stepTime = 0.9 # How long a character's step will take by default
 
         # Physics setup
         self.worlds = []
@@ -85,47 +86,55 @@ class MyApp(ShowBase):
         for i in range(end):
             world = BulletWorld()
             world.setGravity(Vec3(0, 0, -9.81))
-            root = NodePath(PandaNode("world root"))
 
             #Collision groups:
             # 0: ground
-            # 1: "normal" body parts
+            # 1: "ghost" body parts, for weapon hits
             # 2: feet
+            # 3: mutually colliding parts of characters
             world.setGroupCollisionFlag(0, 1, False)
+            world.setGroupCollisionFlag(1, 0, False)
             world.setGroupCollisionFlag(1, 1, False)
+            world.setGroupCollisionFlag(1, 2, False)
             world.setGroupCollisionFlag(2, 0, True)
             world.setGroupCollisionFlag(2, 1, False)
             world.setGroupCollisionFlag(2, 2, False)
+            world.setGroupCollisionFlag(3, 0, False)
+            world.setGroupCollisionFlag(3, 1, False)
+            world.setGroupCollisionFlag(3, 2, False)
+            world.setGroupCollisionFlag(3, 3, True)
 
-            self.worlds.append((world, root))
+            self.worlds.append(world)
 
         self.motionControllerConnected = False
         self.disableMouse()
         
        
-        # These would show wireframes for the physics objects.
-        # However, the normal heightfield is too large for this to work. Switch to a smaller one if you wish to visually debug.
-        '''
-        self.worldNP = render.attachNewNode('World')
-        self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
-        self.debugNP.node().showNormals(True)
-        self.debugNP.node().showBoundingBoxes(False)
-        self.debugNP.node().showConstraints(True)
-        self.debugNP.show()
-        self.world.setDebugNode(self.debugNP.node())
-        '''
-        # Construct the terrain
-        self.terrain_node = ShaderTerrainMesh()
+        if self.physicsDebug:
+            # We have to use a smaller heightfield image for debugging
+            elevation_img = PNMImage(Filename('worldmaps/seed_16783_grayscale_tiny.png'))
+            self.worldNP = render.attachNewNode('World')
+            self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
+            self.debugNP.node().showNormals(True)
+            self.debugNP.node().showBoundingBoxes(False)
+            self.debugNP.node().showConstraints(True)
+            self.debugNP.show()
+            world = self.worlds[0]
+            world.setDebugNode(self.debugNP.node())
+        else:
+            # Set a heightfield, the heightfield should be a 16-bit png and
+            # have a quadratic size of a power of two.
+            elevation_img = PNMImage(Filename('worldmaps/seed_16783_grayscale.png'))
 
-        # Set a heightfield, the heightfield should be a 16-bit png and
-        # have a quadratic size of a power of two.
-        elevation_img = PNMImage(Filename('worldmaps/seed_16783_grayscale.png'))
         elevation_img_size = elevation_img.getXSize()
         elevation_img_offset = elevation_img_size / 2.0
         heightfield = Texture("heightfield")
         heightfield.load(elevation_img)
         heightfield.wrap_u = SamplerState.WM_clamp
         heightfield.wrap_v = SamplerState.WM_clamp
+
+        # Construct the terrain
+        self.terrain_node = ShaderTerrainMesh()
         self.terrain_node.heightfield = heightfield
 
         # Set the target triangle width. For a value of 10.0 for example,
@@ -181,16 +190,16 @@ class MyApp(ShowBase):
             self.terrainNp3.setPos(0, 0, 0)
 
 
-        world, root = self.worlds[0]
+        world = self.worlds[0]
         self.player = Humanoid(self.render, world, self.terrainBulletNode0, Vec3(0,0,-8), Vec3(0,0,0))
         
         self.doppelgangers = []
         for i in range(doppelgangerNum):
             for j in range(doppelgangerNum):
                 if self.physicsThreads == 0:
-                    world, root = self.worlds[0]
+                    world = self.worlds[0]
                 else:
-                    world, root = self.worlds[i%self.physicsThreads]
+                    world = self.worlds[i%self.physicsThreads]
                 if i == (doppelgangerNum-1)/2 and j == (doppelgangerNum-1)/2: continue
                 self.doppelgangers.append(Humanoid(self.render, world, self.terrainBulletNode0, Vec3(i-(doppelgangerNum-1)/2,j-(doppelgangerNum-1)/2,0), Vec3(0,0,0)))
         
@@ -255,9 +264,7 @@ class MyApp(ShowBase):
     # This may not be the ideal way to do the following;
     # I'm doing it this way for simplicity and example
     def addCollisionNPToWorld(self, worldIndex, nodePath):
-        world, root = self.worlds[worldIndex]
-#        nodePath.setCollideMask(BitMask32.bit(collidemask))
-#        nodePath.reparentTo(root)
+        world = self.worlds[worldIndex]
         world.attach(nodePath.node())
 
 
@@ -275,7 +282,7 @@ class MyApp(ShowBase):
         # Do a physics update.
         # Choosing smaller substeps will make the simulation more realistic,
         # but performance will decrease too. Smaller substeps also reduce jitter.
-        world, root = self.worlds[0]
+        world = self.worlds[0]
         world.doPhysics(dt, 10, 1.0/125.0)
         return task.cont
 
@@ -286,7 +293,7 @@ class MyApp(ShowBase):
         # Do a physics update.
         # Choosing smaller substeps will make the simulation more realistic,
         # but performance will decrease too. Smaller substeps also reduce jitter.
-        world, root = self.worlds[1]
+        world = self.worlds[1]
         world.doPhysics(dt, 10, 1.0/125.0)
         return task.cont
 
@@ -297,7 +304,7 @@ class MyApp(ShowBase):
         # Do a physics update.
         # Choosing smaller substeps will make the simulation more realistic,
         # but performance will decrease too. Smaller substeps also reduce jitter.
-        world, root = self.worlds[2]
+        world = self.worlds[2]
         world.doPhysics(dt, 10, 1.0/125.0)
         return task.cont
 
@@ -308,7 +315,7 @@ class MyApp(ShowBase):
         # Do a physics update.
         # Choosing smaller substeps will make the simulation more realistic,
         # but performance will decrease too. Smaller substeps also reduce jitter.
-        world, root = self.worlds[3]
+        world = self.worlds[3]
         world.doPhysics(dt, 10, 1.0/125.0)
         return task.cont
 
@@ -318,7 +325,7 @@ class MyApp(ShowBase):
         dt = globalClock.getDt()
 
         if self.physicsThreads == 0:
-            world, root = self.worlds[0]
+            world = self.worlds[0]
             world.doPhysics(dt, 5, 1.0/80.0)
             
         # Define controls
