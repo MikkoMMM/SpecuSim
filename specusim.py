@@ -20,6 +20,8 @@ from panda3d.core import BitMask32, TransformState, Point3, NodePath, PandaNode,
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import ZUp
 from src.utils import angleDiff
+from src.menu import Menu
+from src.weapons.sword import Sword
 
 
 def timediff(time1, time2):
@@ -50,22 +52,38 @@ class MyApp(ShowBase):
             # number of chunks that will be visible at any given time.
             stm-max-chunk-count 2048
 
+            # The TransformState object cache is a performance hindrance for individually simulated body parts
+            transform-cache 0
+
             bullet-filter-algorithm groups-mask
+
+            # These are enabled for debugging purposes. For production use, disable them.
             task-timer-verbose 1
             pstats-tasks 1
-            transform-cache 0 # The TransformState object cache is a performance hindrance for individually simulated body parts
+#            direct-gui-edit 1
         """)
 
         # Initialize the showbase
         ShowBase.__init__(self)
+        # In case window size would be at first detected incorrectly, buy a bit of time.
+        base.graphicsEngine.renderFrame() 
 
         # Performance analysis
         base.setFrameRateMeter(True)
         PStatClient.connect()
 
-        self.physicsThreads = 0  # EXPERIMENTAL! 0 for disabling the functionality, 4 for 4 physics threads.
-        doppelgangerNum = 16      # Actual number will be doppelgangerNum^2-1
+        self.doppelgangerNum = 0      # Actual number will be doppelgangerNum^2-1
         self.physicsDebug = False # Show wireframes for the physics objects.
+
+        # For calculating motion controller orientation
+        self.heading = 0
+        self.pitch = 0
+        self.roll = 0
+        self.deltat = DeltaT(timediff)
+        self.fuse = Fusion(2, timediff)
+
+        self.menu = Menu(self)
+        self.menu.showMenu()
 
         # Increase camera FOV as well as the far plane
         self.camLens.set_fov(90)
@@ -78,33 +96,23 @@ class MyApp(ShowBase):
         self.stepTime = 0.9 # How long a character's step will take by default
 
         # Physics setup
-        self.worlds = []
-        if self.physicsThreads == 0:
-            end = 1
-        else:
-            end = self.physicsThreads
-        for i in range(end):
-            world = BulletWorld()
-            world.setGravity(Vec3(0, 0, -9.81))
+        self.world = BulletWorld()
+        self.world.setGravity(Vec3(0, 0, -9.81))
 
-            #Collision groups:
-            # 0: ground
-            # 1: "ghost" body parts, for weapon hits
-            # 2: feet
-            # 3: mutually colliding parts of characters
-            world.setGroupCollisionFlag(0, 1, False)
-            world.setGroupCollisionFlag(1, 0, False)
-            world.setGroupCollisionFlag(1, 1, False)
-            world.setGroupCollisionFlag(1, 2, False)
-            world.setGroupCollisionFlag(2, 0, True)
-            world.setGroupCollisionFlag(2, 1, False)
-            world.setGroupCollisionFlag(2, 2, False)
-            world.setGroupCollisionFlag(3, 0, False)
-            world.setGroupCollisionFlag(3, 1, False)
-            world.setGroupCollisionFlag(3, 2, False)
-            world.setGroupCollisionFlag(3, 3, True)
-
-            self.worlds.append(world)
+        #Collision groups:
+        # 0: ground
+        # 1: "ghost" body parts, for weapon hits
+        # 2: feet
+        # 3: mutually colliding parts of characters
+        self.world.setGroupCollisionFlag(1, 0, False)
+        self.world.setGroupCollisionFlag(1, 1, False)
+        self.world.setGroupCollisionFlag(2, 0, True)
+        self.world.setGroupCollisionFlag(2, 1, False)
+        self.world.setGroupCollisionFlag(2, 2, False)
+        self.world.setGroupCollisionFlag(3, 0, False)
+        self.world.setGroupCollisionFlag(3, 1, False)
+        self.world.setGroupCollisionFlag(3, 2, False)
+        self.world.setGroupCollisionFlag(3, 3, True)
 
         self.motionControllerConnected = False
         self.disableMouse()
@@ -119,8 +127,7 @@ class MyApp(ShowBase):
             self.debugNP.node().showBoundingBoxes(False)
             self.debugNP.node().showConstraints(True)
             self.debugNP.show()
-            world = self.worlds[0]
-            world.setDebugNode(self.debugNP.node())
+            self.world.setDebugNode(self.debugNP.node())
         else:
             # Set a heightfield, the heightfield should be a 16-bit png and
             # have a quadratic size of a power of two.
@@ -172,36 +179,24 @@ class MyApp(ShowBase):
         self.terrainNp0.setCollideMask(BitMask32.bit(0))
         #self.terrainNp0.setCollideMask(BitMask32.bit(1))
         self.terrainNp0.setPos(0, 0, 0)
-        if self.physicsThreads == 4:
-            self.terrainBulletNode1 = BulletRigidBodyNode("terrainBodyNode1")
-            self.terrainBulletNode1.addShape(terrain_colshape)
-            self.terrainNp1 = render.attachNewNode(self.terrainBulletNode1)
-            self.terrainNp1.setCollideMask(BitMask32.bit(0))
-            self.terrainNp1.setPos(0, 0, 0)
-            self.terrainBulletNode2 = BulletRigidBodyNode("terrainBodyNode2")
-            self.terrainBulletNode2.addShape(terrain_colshape)
-            self.terrainNp2 = render.attachNewNode(self.terrainBulletNode2)
-            self.terrainNp2.setCollideMask(BitMask32.bit(0))
-            self.terrainNp2.setPos(0, 0, 0)
-            self.terrainBulletNode3 = BulletRigidBodyNode("terrainBodyNode3")
-            self.terrainBulletNode3.addShape(terrain_colshape)
-            self.terrainNp3 = render.attachNewNode(self.terrainBulletNode3)
-            self.terrainNp3.setCollideMask(BitMask32.bit(0))
-            self.terrainNp3.setPos(0, 0, 0)
 
 
-        world = self.worlds[0]
-        self.player = Humanoid(self.render, world, self.terrainBulletNode0, Vec3(0,0,-8), Vec3(0,0,0))
+    def connectWiiRemote(self):
+        # Connect, calibrate and start reading information from a motion controller
+        self.menu.hideMenu()
+        self.motionController = Wiimote(self)
+        self.startGame()
+
+
+    def startGame(self):
+        self.menu.hideMenu()
+        self.player = Humanoid(self.render, self.world, self.terrainBulletNode0, Vec3(0,0,-8), Vec3(0,0,0))
         
         self.doppelgangers = []
-        for i in range(doppelgangerNum):
-            for j in range(doppelgangerNum):
-                if self.physicsThreads == 0:
-                    world = self.worlds[0]
-                else:
-                    world = self.worlds[i%self.physicsThreads]
-                if i == (doppelgangerNum-1)/2 and j == (doppelgangerNum-1)/2: continue
-                self.doppelgangers.append(Humanoid(self.render, world, self.terrainBulletNode0, Vec3(i-(doppelgangerNum-1)/2,j-(doppelgangerNum-1)/2,0), Vec3(0,0,0)))
+        for i in range(self.doppelgangerNum):
+            for j in range(self.doppelgangerNum):
+                if i == (self.doppelgangerNum-1)/2 and j == (self.doppelgangerNum-1)/2: continue
+                self.doppelgangers.append(Humanoid(self.render, self.world, self.terrainBulletNode0, Vec3(i-(self.doppelgangerNum-1)/2,j-(self.doppelgangerNum-1)/2,0), Vec3(0,0,0)))
         
 
         self.camera.reparentTo(self.player.lowerTorso)
@@ -209,12 +204,8 @@ class MyApp(ShowBase):
         self.camera.setPos(0, -10, 0)
 #        self.camera.lookAt(self.player.chest, 0, 5, 0)
 
-        # For calculating motion controller orientation
-        self.heading = 0
-        self.pitch = 0
-        self.roll = 0
-        self.deltat = DeltaT(timediff)
-        self.fuse = Fusion(2, timediff)
+        weapon = Sword(self.render, self.world)
+        self.player.grabRight(weapon.getAttachmentInfo())
 
         self.inst1 = addInstructions(0.06, "[WASD]: Move")
         self.inst2 = addInstructions(0.12, "[QE]: Rotate")
@@ -239,33 +230,11 @@ class MyApp(ShowBase):
         inputState.watchWithModifiers('speedup', '+')
         inputState.watchWithModifiers('speeddown', '-')
 
-        # Connect, calibrate and start reading information from a motion controller
-#        self.motionController = Wiimote(self)
-
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
         taskMgr.add(self.spinCameraTask, "SpinCameraTask")
-        self.addCollisionNPToWorld(0, self.terrainNp0)
-        if self.physicsThreads > 0:
-            physicsChain = taskMgr.setupTaskChain('physicsChain', numThreads = 4, threadPriority = None, frameSync = True)
-            taskMgr.add(self.physics0, 'physics0', taskChain = 'physicsChain')
-            self.addCollisionNPToWorld(0, self.terrainNp0)
-            if self.physicsThreads == 4:
-                taskMgr.add(self.physics1, 'physics1', taskChain = 'physicsChain')
-                taskMgr.add(self.physics2, 'physics2', taskChain = 'physicsChain')
-                taskMgr.add(self.physics3, 'physics3', taskChain = 'physicsChain')
-                self.addCollisionNPToWorld(1, self.terrainNp1)
-                self.addCollisionNPToWorld(2, self.terrainNp2)
-                self.addCollisionNPToWorld(3, self.terrainNp3)
+        self.world.attach(self.terrainNp0.node())
         self.render.analyze()
-
-
-
-    # This may not be the ideal way to do the following;
-    # I'm doing it this way for simplicity and example
-    def addCollisionNPToWorld(self, worldIndex, nodePath):
-        world = self.worlds[worldIndex]
-        world.attach(nodePath.node())
 
 
     def reEnableMouse(self):
@@ -275,59 +244,13 @@ class MyApp(ShowBase):
         base.mouseInterfaceNode.setMat(mat)
         base.enableMouse()
 
-    def physics0(self, task):
-        # Get the time that elapsed since last frame.
-        dt = globalClock.getDt()
-
-        # Do a physics update.
-        # Choosing smaller substeps will make the simulation more realistic,
-        # but performance will decrease too. Smaller substeps also reduce jitter.
-        world = self.worlds[0]
-        world.doPhysics(dt, 10, 1.0/125.0)
-        return task.cont
-
-    def physics1(self, task):
-        # Get the time that elapsed since last frame.
-        dt = globalClock.getDt()
-
-        # Do a physics update.
-        # Choosing smaller substeps will make the simulation more realistic,
-        # but performance will decrease too. Smaller substeps also reduce jitter.
-        world = self.worlds[1]
-        world.doPhysics(dt, 10, 1.0/125.0)
-        return task.cont
-
-    def physics2(self, task):
-        # Get the time that elapsed since last frame.
-        dt = globalClock.getDt()
-
-        # Do a physics update.
-        # Choosing smaller substeps will make the simulation more realistic,
-        # but performance will decrease too. Smaller substeps also reduce jitter.
-        world = self.worlds[2]
-        world.doPhysics(dt, 10, 1.0/125.0)
-        return task.cont
-
-    def physics3(self, task):
-        # Get the time that elapsed since last frame.
-        dt = globalClock.getDt()
-
-        # Do a physics update.
-        # Choosing smaller substeps will make the simulation more realistic,
-        # but performance will decrease too. Smaller substeps also reduce jitter.
-        world = self.worlds[3]
-        world.doPhysics(dt, 10, 1.0/125.0)
-        return task.cont
-
     # Everything that needs to be done every frame goes here.
     # Physics updates and movement and stuff.
     def update(self, task):
         dt = globalClock.getDt()
 
-        if self.physicsThreads == 0:
-            world = self.worlds[0]
-            world.doPhysics(dt, 5, 1.0/80.0)
-            
+        self.world.doPhysics(dt, 5, 1.0/80.0)
+
         # Define controls
         stepping = False
 

@@ -43,4 +43,7 @@
 25.2.2021 Looking at various inverse kinematics options out there and more testing for a new movement algorithm.
 26.2.2021 There's a kind-of workable walking algorithm again now. Looking into repositioning characters when they clip through the ground.
 27.2.2021 More experimentation on how to get walking "right" in every physics calculation interval at the very least. A physics debug mode, and some work on hitboxes. Fixed standing still.
-28.2.2021 A rounded box collision shape. Re-enabled some intra- and inter-body collisions. Combined feet with lower legs, and tried adjusting the movement system for the change once more.
+28.2.2021 A rounded box collision shape. Re-enabled some intra- and inter-body collisions. Combined feet with lower legs, and tried adjusting the movement system for the change once more. Removed the multithreading option; it doesn't seem worth the hassle for the time being.
+1.3.2021 Started up with a menu, at first for just selecting a weapon controller.
+3.3.2021 Finished with the control setup menu, for now.
+4.3.2021 Started with a sword.

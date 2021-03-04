@@ -46,10 +46,6 @@ class Humanoid():
         self.chest.node().setLinearDamping(0.5)
         self.chest.setCollideMask(BitMask32.bit(3))
         self.world.attach(self.chest.node())
-        chestVisual = loader.loadModel("models/unit_cylinder.bam")
-        chestVisual.setScale(Vec3(self.chestWidth, 0.2, self.chestHeight))
-        chestVisual.clearModelNodes()
-        chestVisual.reparentTo(self.chest)
         self.chest.node().setAngularSleepThreshold(0.05)
 
         self.lowerTorso = createRoundedBox(self.render, self.chestWidth, 0.2, self.chestHeight)
@@ -59,10 +55,6 @@ class Humanoid():
         self.lowerTorso.node().setAngularSleepThreshold(0) # For whatever reason, sleep seems to freeze the whole character if still
         self.lowerTorso.setCollideMask(BitMask32.bit(3))
         self.world.attach(self.lowerTorso.node())
-        lowerTorsoVisual = loader.loadModel("models/unit_cylinder.bam")
-        lowerTorsoVisual.setScale(Vec3(self.pelvisWidth, 0.2, self.lowerTorsoHeight))
-        lowerTorsoVisual.clearModelNodes()
-        lowerTorsoVisual.reparentTo(self.lowerTorso)
 
         frameA = TransformState.makePosHpr(Point3(0, 0, -self.chestHeight/2), Vec3(0, 0, 0))
         frameB = TransformState.makePosHpr(Point3(0, 0, self.lowerTorsoHeight/2), Vec3(0, 0, 0))
@@ -146,14 +138,6 @@ class Humanoid():
         self.leftLeg.knee.setAngularLimit(2, -180, 180)
         self.rightLeg.knee.setAngularLimit(2, -180, 180)
 
-        '''
-        self.leftHeelYHinge = self.leftLeg.heel.getRotationalLimitMotor(0)
-        self.rightHeelYHinge = self.rightLeg.heel.getRotationalLimitMotor(0)
-        self.leftHeelYHinge.setMotorEnabled(True)
-        self.rightHeelYHinge.setMotorEnabled(True)
-        self.leftHeelYHinge.setMaxMotorForce(200)
-        self.rightHeelYHinge.setMaxMotorForce(200)
-        '''
 
         self.leftArm = HumanoidArm(self.chest, self.world, self.armHeight, self.chestWidth/3-0.01, (self.chestWidth/3-0.01)*self.armHeight, False, startPosition, startHeading)
 
@@ -186,10 +170,6 @@ class Humanoid():
         self.head = createSphere(self.render, self.headHeight)
         self.head.node().setMass(3.0)
         self.world.attach(self.head.node())
-        visual = loader.loadModel("models/unit_sphere.bam")
-        visual.setScale(Vec3(self.headHeight, self.headHeight, self.headHeight))
-        visual.clearModelNodes()
-        visual.reparentTo(self.head)
 
         frameA = TransformState.makePosHpr(Point3(0,0,self.headHeight/2), Vec3(0, 0, 0))
         frameB = TransformState.makePosHpr(Point3(0,0,-self.chestHeight/2), Vec3(0, 0, 0))
@@ -207,14 +187,6 @@ class Humanoid():
         self.chest.setPosHpr(startPosition, startHeading)
         self.desiredHeading = self.lowerTorso.getH()
 
-        '''
-        self.lowerTorso.node().setGravity(Vec3(0,0,0))
-        self.chest.node().setGravity(Vec3(0,0,0))
-        self.leftLeg.thigh.node().setGravity(Vec3(0,0,0))
-        self.rightLeg.thigh.node().setGravity(Vec3(0,0,0))
-        self.leftLeg.lowerLeg.node().setGravity(Vec3(0,0,0))
-        self.rightLeg.lowerLeg.node().setGravity(Vec3(0,0,0))
-        '''
 
     # Set the humanoid's position on the Z axis.
     # newZ: the new Z position for the bottom of the feet
@@ -393,6 +365,12 @@ class Humanoid():
 #            self.lowerTorso.node().applyCentralImpulse(Vec3(0,0,400*dt))
 
         self.updateHeading()
+        
+    def grabLeft(self, attachmentInfo):
+        self.leftArm.grab(attachmentInfo)
+
+    def grabRight(self, attachmentInfo):
+        self.rightArm.grab(attachmentInfo)
 
 
     def turnLeft(self, dt):

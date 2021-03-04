@@ -4,7 +4,7 @@ from panda3d.bullet import BulletRigidBodyNode
 from panda3d.core import BitMask32, Point3, TransformState
 from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint, BulletGenericConstraint
 from panda3d.bullet import ZUp
-from src.shapes import createCapsule, createBox
+from src.shapes import createCapsule
 
 class HumanoidArm():
     # Arguments:
@@ -24,18 +24,12 @@ class HumanoidArm():
         self.upperArm = createCapsule(self.render, self.upperArmDiameter, self.upperArmLength)
         self.upperArm.node().setMass(3.0)
         self.world.attach(self.upperArm.node())
-        visual = loader.loadModel("models/unit_cylinder.bam")
-        visual.setScale(Vec3(self.upperArmDiameter, self.upperArmDiameter, self.upperArmLength))
-        visual.reparentTo(self.upperArm)
 
 
         self.forearm = createCapsule(self.render, forearmDiameter, self.forearmLength)
         self.forearm.setCollideMask(BitMask32.bit(3))
         self.forearm.node().setMass(2.0)
         self.world.attach(self.forearm.node())
-        visual = loader.loadModel("models/unit_cylinder.bam")
-        visual.setScale(Vec3(forearmDiameter, forearmDiameter, self.forearmLength))
-        visual.reparentTo(self.forearm)
 
         frameA = TransformState.makePosHpr(Point3(0,0,-self.upperArmLength/2), Vec3(0, 0, 0))
         frameB = TransformState.makePosHpr(Point3(0,0,self.forearmLength/2), Vec3(0, 0, 0))
@@ -55,6 +49,23 @@ class HumanoidArm():
         self.upperArm.setPosHpr(startPosition, startHeading)
         self.forearm.setPosHpr(startPosition, startHeading)
     
+    def grab(self, attachmentInfo):
+        if len(attachmentInfo) >= 3:
+            self.grabForReal(attachmentInfo[0], attachmentInfo[1], grabAngle=attachmentInfo[2])
+        else:
+            self.grabForReal(attachmentInfo[0], attachmentInfo[1])
+
+    def grabForReal(self, target, grabPosition, grabAngle=Vec3(0, 0, 0)):
+        frameA = TransformState.makePosHpr(Point3(0,0,-self.forearmLength/2), Vec3(0, 0, 0))
+        frameB = TransformState.makePosHpr(grabPosition, grabAngle)
+
+        self.hand = BulletGenericConstraint(self.forearm.node(), target.node(), frameA, frameB, True)
+        self.hand.setDebugDrawSize(0.5)
+        self.hand.setAngularLimit(0, -180, 180)
+        self.hand.setAngularLimit(1, -180, 180)
+        self.hand.setAngularLimit(2, -180, 180)
+        self.world.attachConstraint(self.hand, linked_collision=True)
+
     def setPos(self, newPos):
         self.upperArm.setPos(newPos)
         self.forearm.setPos(newPos)

@@ -37,3 +37,11 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (This is the Modified BSD License.  See also
 http://www.opensource.org/licenses/bsd-license.php )
+
+
+
+https://github.com/tobspr/RenderPipeline
+RenderPipeline
+
+Copyright (c) 2014-2016 tobspr <tobias.springer1@gmail.com>
+The MIT License
