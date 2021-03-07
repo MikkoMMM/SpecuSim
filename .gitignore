@@ -1,5 +1,6 @@
 # Custom ignores
 models/unit_*.blend
+*.kate-swp
 
 
 

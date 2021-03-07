@@ -80,7 +80,7 @@ class MyApp(ShowBase):
         self.pitch = 0
         self.roll = 0
         self.deltat = DeltaT(timediff)
-        self.fuse = Fusion(2, timediff)
+        self.fuse = Fusion(10, timediff) # A fairly large GyroMeansError so erroneous values are quickly resolved
 
         self.menu = Menu(self)
         self.menu.showMenu()
@@ -204,8 +204,8 @@ class MyApp(ShowBase):
         self.camera.setPos(0, -10, 0)
 #        self.camera.lookAt(self.player.chest, 0, 5, 0)
 
-        weapon = Sword(self.render, self.world)
-        self.player.grabRight(weapon.getAttachmentInfo())
+        self.weapon = Sword(self.render, self.world, self.player.lowerTorso)
+        self.player.grabRight(self.weapon.getAttachmentInfo())
 
         self.inst1 = addInstructions(0.06, "[WASD]: Move")
         self.inst2 = addInstructions(0.12, "[QE]: Rotate")
@@ -232,7 +232,6 @@ class MyApp(ShowBase):
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
-        taskMgr.add(self.spinCameraTask, "SpinCameraTask")
         self.world.attach(self.terrainNp0.node())
         self.render.analyze()
 
@@ -311,23 +310,16 @@ class MyApp(ShowBase):
         if inputState.isSet('speeddown'):  self.stepTime += dt*1.20
         
         self.inst5.text = str(self.stepTime) + " " + str(sqrt(pow(self.player.chest.node().getLinearVelocity()[0], 2) + pow(self.player.chest.node().getLinearVelocity()[1], 2)))
-        if self.player.inverted:
-            self.inst6.text = "True"
-        else:
-            self.inst6.text = "False"
+        self.inst6.text = "H" + str(int(self.heading)) + " P" + str(int(self.pitch))
 #        self.inst7.text = str(self.player.leftLeg.thigh.getH()) + " " + str(self.player.lowerTorso.getH())
 
         self.camera.setR(0)
+        
+#        if self.motionControllerConnected:
+        self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
 
         return task.cont
 
-    # Define a procedure to rotate the camera with a motion controller.
-    def spinCameraTask(self, task):
-        if not self.motionControllerConnected:
-            return Task.cont
-
-        self.camera.setHpr(self.heading, self.pitch, self.roll)
-        return Task.cont
 
 print("Using Bullet Physics version ", getBulletVersion())
 print()

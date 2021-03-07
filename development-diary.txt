@@ -46,4 +46,6 @@
 28.2.2021 A rounded box collision shape. Re-enabled some intra- and inter-body collisions. Combined feet with lower legs, and tried adjusting the movement system for the change once more. Removed the multithreading option; it doesn't seem worth the hassle for the time being.
 1.3.2021 Started up with a menu, at first for just selecting a weapon controller.
 3.3.2021 Finished with the control setup menu, for now.
-4.3.2021 Started with a sword.
+4.3.2021 A sword, and started up with its movement.
+6.3.2021 Some more work on sword movement.
+7.3.2021 Forearm movement works reasonably but the same approach was noticed to not give satisfactory results for the sword's movements. Also read up on some more network code stuff.

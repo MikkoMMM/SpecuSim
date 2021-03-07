@@ -50,10 +50,10 @@ class HumanoidArm():
         self.forearm.setPosHpr(startPosition, startHeading)
     
     def grab(self, attachmentInfo):
-        if len(attachmentInfo) >= 3:
-            self.grabForReal(attachmentInfo[0], attachmentInfo[1], grabAngle=attachmentInfo[2])
+        if len(attachmentInfo) >= 4:
+            self.grabForReal(attachmentInfo[1], attachmentInfo[2], grabAngle=attachmentInfo[3])
         else:
-            self.grabForReal(attachmentInfo[0], attachmentInfo[1])
+            self.grabForReal(attachmentInfo[1], attachmentInfo[2])
 
     def grabForReal(self, target, grabPosition, grabAngle=Vec3(0, 0, 0)):
         frameA = TransformState.makePosHpr(Point3(0,0,-self.forearmLength/2), Vec3(0, 0, 0))

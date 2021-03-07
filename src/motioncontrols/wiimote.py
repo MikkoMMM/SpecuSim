@@ -75,9 +75,14 @@ class Wiimote(object):
     # This calculates the likely orientation of the motion controller
     def calculateHpr(self):
         heading = self.showbase.heading
+        recentPitchChanges = 0
+        recentHeadingChanges = 0
+        lastPitch = 0
+        lastHeading = 0
 
         while True:
-            time.sleep(1/(100*self.showbase.motionControllerAccuracy)) # Having less time between updates increases accuracy but is obviously also computationally expensive
+            dt = 1/(100*self.showbase.motionControllerAccuracy)
+            time.sleep(dt) # Having less time between updates increases accuracy but is obviously also computationally expensive
             if not self.showbase.motionControllerConnected:
                 time.sleep(0.005)
                 continue
@@ -109,6 +114,38 @@ class Wiimote(object):
                     except:
                         pass # Due to asynchronous nature, a try-except was possibly necessary in any case
 
-            self.showbase.pitch = -self.showbase.fuse.roll
+            pitch = -self.showbase.fuse.roll
+            self.showbase.pitch = pitch
+            
+            if recentPitchChanges >= 0:
+                if pitch > lastPitch:
+                    recentPitchChanges += 1
+                else:
+                    recentPitchChanges = 0
+            else:
+                if pitch < lastPitch:
+                    recentPitchChanges -= 1
+                else:
+                    recentPitchChanges = 0
+
+            if recentHeadingChanges >= 0:
+                if heading > lastHeading:
+                    recentHeadingChanges += 1
+                else:
+                    recentHeadingChanges = 0
+            else:
+                if pitch < lastPitch:
+                    recentHeadingChanges -= 1
+                else:
+                    recentHeadingChanges = 0
+
+            # Drift heading toward the center if doing a diagonal slash toward the center
+            if self.showbase.pitch > 0 and recentPitchChanges <= -5 and abs(recentHeadingChanges) >= 5:
+                heading = heading * (1-dt*5)
+            if self.showbase.pitch < 0 and recentPitchChanges >= 5 and abs(recentHeadingChanges) >= 5:
+                heading = heading * (1-dt*5)
+
             self.showbase.heading = heading
             self.showbase.roll = self.showbase.fuse.pitch
+            lastPitch = pitch
+            lastHeading = heading

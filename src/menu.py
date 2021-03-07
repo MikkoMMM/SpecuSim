@@ -139,8 +139,9 @@ class Menu(object):
 
     def hideMenu(self):
         self.clearKeys()
-        seq= Sequence( LerpColorScaleInterval(self.myFrame, 0.4 ,(1,1,1,0)) , Func(self.myFrame.hide) )
-        seq.start()
+        self.myFrame.hide()
+#        seq= Sequence( LerpColorScaleInterval(self.myFrame, 0.4 ,(1,1,1,0)) , Func(self.myFrame.hide) )
+#        seq.start()
 
     def hideResume(self):
         seq= Sequence( LerpColorScaleInterval(self.resumeButton, .5 ,(1,1,1,0)) , Func(self.resumeButton.hide))

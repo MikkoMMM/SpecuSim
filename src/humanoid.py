@@ -36,6 +36,8 @@ class Humanoid():
         self.armHeight = self.legHeight*1
         self.legYLimit = 60
         self.inverted = False
+        self.inLeftHand = None
+        self.inRightHand = None
 
         axisA = Vec3(1, 0, 0)
 
@@ -169,6 +171,7 @@ class Humanoid():
 
         self.head = createSphere(self.render, self.headHeight)
         self.head.node().setMass(3.0)
+        self.head.setCollideMask(BitMask32.bit(3))
         self.world.attach(self.head.node())
 
         frameA = TransformState.makePosHpr(Point3(0,0,self.headHeight/2), Vec3(0, 0, 0))
@@ -368,9 +371,27 @@ class Humanoid():
         
     def grabLeft(self, attachmentInfo):
         self.leftArm.grab(attachmentInfo)
+        self.inLeftHand = attachmentInfo[0]
 
     def grabRight(self, attachmentInfo):
         self.rightArm.grab(attachmentInfo)
+        self.inRightHand = attachmentInfo[0]
+
+    def setLeftHandHpr(self, heading, pitch, roll):
+        self.inLeftHand.setHpr(heading, pitch, roll)
+
+    def setRightHandHpr(self, heading, pitch, roll):
+        heading = heading + self.lowerTorso.getH()
+        H = radians(heading+90)
+        P = radians(pitch)
+        x = cos(H) * cos(P)
+        y = sin(H) * cos(P)
+        z = sin(P)
+
+        force = 10
+        self.rightArm.forearm.node().applyCentralImpulse(Vec3(force*x,force*y,force*z))
+        self.lowerTorso.node().applyCentralImpulse(Vec3(-force*x,-force*y,-force*z))
+        self.inRightHand.setHpr(heading, pitch, roll)
 
 
     def turnLeft(self, dt):
