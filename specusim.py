@@ -1,6 +1,6 @@
 from src.motioncontrols.fusion import Fusion, DeltaT
 from src.motioncontrols.wiimote import Wiimote
-from src.humanoid import Humanoid
+from src.humanoid2 import Humanoid
 from math import pi, sin, cos, radians, sqrt, degrees
 
 from direct.showbase.InputStateGlobal import inputState
@@ -73,7 +73,7 @@ class MyApp(ShowBase):
         PStatClient.connect()
 
         self.doppelgangerNum = 0      # Actual number will be doppelgangerNum^2-1
-        self.physicsDebug = False # Show wireframes for the physics objects.
+        self.physicsDebug = True # Show wireframes for the physics objects.
 
         # For calculating motion controller orientation
         self.heading = 0
@@ -190,7 +190,8 @@ class MyApp(ShowBase):
 
     def startGame(self):
         self.menu.hideMenu()
-        self.player = Humanoid(self.render, self.world, self.terrainBulletNode0, Vec3(0,0,-8), Vec3(0,0,0))
+#        self.player = Humanoid(self.render, self.world, self.terrainBulletNode0, Vec3(0,0,-8), Vec3(0,0,0))
+        self.player = Humanoid(self.render, 0, 0, debug=self.physicsDebug)
         
         self.doppelgangers = []
         for i in range(self.doppelgangerNum):
@@ -199,13 +200,12 @@ class MyApp(ShowBase):
                 self.doppelgangers.append(Humanoid(self.render, self.world, self.terrainBulletNode0, Vec3(i-(self.doppelgangerNum-1)/2,j-(self.doppelgangerNum-1)/2,0), Vec3(0,0,0)))
         
 
-        self.camera.reparentTo(self.player.lowerTorso)
-#        self.camera.setPos(0, -10, 40)
+#        self.camera.reparentTo(self.player.lowerTorso)
         self.camera.setPos(0, -10, 0)
 #        self.camera.lookAt(self.player.chest, 0, 5, 0)
 
-        self.weapon = Sword(self.render, self.world, self.player.lowerTorso)
-        self.player.grabRight(self.weapon.getAttachmentInfo())
+#        self.weapon = Sword(self.render, self.world, self.player.lowerTorso)
+#        self.player.grabRight(self.weapon.getAttachmentInfo())
 
         self.inst1 = addInstructions(0.06, "[WASD]: Move")
         self.inst2 = addInstructions(0.12, "[QE]: Rotate")
@@ -234,6 +234,7 @@ class MyApp(ShowBase):
         taskMgr.add(self.update, "update")
         self.world.attach(self.terrainNp0.node())
         self.render.analyze()
+        taskMgr.add( self.player.moveTarget, "MoveTarget" )
 
 
     def reEnableMouse(self):
@@ -252,6 +253,7 @@ class MyApp(ShowBase):
 
         # Define controls
         stepping = False
+        '''
 
         if inputState.isSet('forward'):
             if inputState.isSet('left'):
@@ -313,10 +315,11 @@ class MyApp(ShowBase):
         self.inst6.text = "H" + str(int(self.heading)) + " P" + str(int(self.pitch))
 #        self.inst7.text = str(self.player.leftLeg.thigh.getH()) + " " + str(self.player.lowerTorso.getH())
 
-        self.camera.setR(0)
         
 #        if self.motionControllerConnected:
         self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
+        '''
+        self.camera.setR(0)
 
         return task.cont
 
