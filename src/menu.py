@@ -37,21 +37,6 @@ class Menu(object):
 #        self.myFrame.set_pos( -kx / 2, 0, -ky / 2)
         self.myFrame.set_transparency(True)
 
-        self.startButton = DirectButton(
-                    frameTexture="textures/empty_button.png",
-                    frameColor=(1,1,1,1),
-                    frameSize=(-64, 64, -20, 20),
-                    command=self.main.connectWiiRemote,
-                    relief=DGG.FLAT,
-                    rolloverSound=None,
-                    clickSound=None,
-                    parent=self.myFrame,
-                    scale=2.0,
-                    pos=(kx/2, 0, ky/2 + 150)
-                    )
-        self.setCenteredText(self.startButton, "With Wii Remote")
-        self.startButton.setTransparency(1)
-
         self.exitButton = DirectButton(
                     frameTexture="textures/empty_button.png",
                     frameColor=(1,1,1,1),
@@ -86,8 +71,8 @@ class Menu(object):
         
         self.selectFrame= DirectFrame( frameColor=(1,1,1,1) , frameSize=(-64, 64, -20, 20) , frameTexture="textures/select.png")
         self.selectFrame.setTransparency(1)
-        self.selectFrame.reparentTo(self.startButton)
-        self.entries = [self.exitButton,self.startButton,self.resumeButton]
+        self.selectFrame.reparentTo(self.exitButton)
+        self.entries = [self.exitButton,self.resumeButton]
         self.activeEntry = 1
 
 

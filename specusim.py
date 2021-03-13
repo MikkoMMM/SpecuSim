@@ -1,5 +1,4 @@
 from src.motioncontrols.fusion import Fusion, DeltaT
-from src.motioncontrols.wiimote import Wiimote
 from src.humanoid2 import Humanoid
 from math import pi, sin, cos, radians, sqrt, degrees
 
@@ -181,13 +180,6 @@ class MyApp(ShowBase):
         self.terrainNp0.setPos(0, 0, 0)
 
 
-    def connectWiiRemote(self):
-        # Connect, calibrate and start reading information from a motion controller
-        self.menu.hideMenu()
-        self.motionController = Wiimote(self)
-        self.startGame()
-
-
     def startGame(self):
         self.menu.hideMenu()
 #        self.player = Humanoid(self.render, self.world, self.terrainBulletNode0, Vec3(0,0,-8), Vec3(0,0,0))
@@ -200,7 +192,7 @@ class MyApp(ShowBase):
                 self.doppelgangers.append(Humanoid(self.render, self.world, self.terrainBulletNode0, Vec3(i-(self.doppelgangerNum-1)/2,j-(self.doppelgangerNum-1)/2,0), Vec3(0,0,0)))
         
 
-#        self.camera.reparentTo(self.player.lowerTorso)
+        self.camera.reparentTo(self.player.lowerTorso)
         self.camera.setPos(0, -10, 0)
 #        self.camera.lookAt(self.player.chest, 0, 5, 0)
 
@@ -234,7 +226,8 @@ class MyApp(ShowBase):
         taskMgr.add(self.update, "update")
         self.world.attach(self.terrainNp0.node())
         self.render.analyze()
-        taskMgr.add( self.player.moveTarget, "MoveTarget" )
+#        taskMgr.add( self.player.moveTarget, "MoveTarget" )
+        taskMgr.add( self.player.walk, "BipedWalk")
 
 
     def reEnableMouse(self):

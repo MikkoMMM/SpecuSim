@@ -6,9 +6,7 @@
 ### Motion controller
 Currently these options are supported:
 
-* Wii Remote with a MotionPlus attachment. A sensor bar is also strongly recommended (the game will run without but there will be severe gyroscopic yaw drift).
-
-Note that Wii Remote support may be discontinued at some point in favor of OpenVR and mobile devices, at which point there'll be another look at license options, too.
+Nothing. All support is currently on halt. But you should have a mouse instead.
 
 ## Software
 * Python 3.6 or later

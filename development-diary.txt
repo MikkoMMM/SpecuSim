@@ -51,4 +51,5 @@
 7.3.2021 Forearm movement works reasonably but the same approach was noticed to not give satisfactory results for the sword's movements. Also read up on some more network code stuff.
 9.3.2021 Trying out CCD-IK-Panda3D.
 11.3.2021 Continued work on integrating CCD-IK-Panda3D.
-12.3.2021 Refactoring IK parts and more integration of it.
+12.3.2021 Refactoring IK parts and more integration of it. Planned what a mouse control method for a weapon might be like.
+13.3.2021 Removed the Wii Remote related code and changed license to MIT. Continued integration of the IK code.
