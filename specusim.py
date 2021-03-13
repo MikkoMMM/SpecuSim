@@ -191,7 +191,7 @@ class MyApp(ShowBase):
     def startGame(self):
         self.menu.hideMenu()
 #        self.player = Humanoid(self.render, self.world, self.terrainBulletNode0, Vec3(0,0,-8), Vec3(0,0,0))
-        self.player = Humanoid(self.render, 0, 0, debug=self.physicsDebug)
+        self.player = Humanoid(self.render, self.world, 0, 0, debug=self.physicsDebug)
         
         self.doppelgangers = []
         for i in range(self.doppelgangerNum):

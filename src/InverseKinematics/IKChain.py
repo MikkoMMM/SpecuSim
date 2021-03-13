@@ -4,10 +4,13 @@ import random, math
 from src.InverseKinematics.Bone import Bone
 from src.InverseKinematics.Utils import *
 from src.InverseKinematics.VecUtils import *
- 
-class IKCharacter():
+
+class IKChain():
+
     def __init__( self, parent ):
-        self.char = Character('IKCharacter')
+
+        # Create a character.
+        self.char = Character('IKChain')
         self.bundle = self.char.getBundle(0)
         self.skeleton = PartGroup(self.bundle, '<skeleton>')
 
@@ -18,10 +21,6 @@ class IKCharacter():
         self.target = None
         self.targetReached = False
         self.parent = parent
-
-
-    def toggleAnimation( self ):
-        self.animateTarget = (self.animateTarget == False)
 
     def addBone( self, offset, rotAxis=None, minAng=0, maxAng=0, parentBone=None ):
 
@@ -42,11 +41,9 @@ class IKCharacter():
 
         return bone
 
-    def finalize( self, X, Y ):
+    def finalize( self ):
 
         self.charNodePath = NodePath(self.char)
-        self.charNodePath.setX(X)
-        self.charNodePath.setY(Y)
         self.actor = Actor(self.charNodePath)#, {'simplechar' : anim})
         self.actor.reparentTo(self.parent)
         self.rootExposedNode = self.actor.exposeJoint( None, "modelRoot", self.root.getName() )
@@ -78,7 +75,7 @@ class IKCharacter():
 
         # Solve the IK chain for the IK nodes:
         if self.target:
-            self.inverseKinematicsCCD(maxIterations=3)
+            self.inverseKinematicsCCD()
 
         # Copy the data from the IK chain to the actual bones.
         # This will end up affecting the actual mesh.
@@ -155,9 +152,9 @@ class IKCharacter():
                             #ang = -ang
                             #rotAxis = -rotAxis
 
-                    annealing = (j+1)/len(self.bones)
+                    #annealing = (j+1)/len(self.bones)
                     #print("annealing", annealing)
-                    q = qOld + (qNew-qOld)*annealing
+                    #q = qOld + (qNew-qOld)*annealing
 
                     qNew.setFromAxisAngleRad( ang, rotAxis )
 
@@ -248,4 +245,5 @@ class IKCharacter():
                 lnp.setBin("fixed", 40)
                 #lnp.setDepthWrite(False)
                 #lnp.setDepthTest(False)
- 
+#
+

@@ -1,9 +1,10 @@
 from panda3d.core import *
 import random, math
-from src.InverseKinematics.IKCharacter import IKCharacter
+from src.InverseKinematics.IKChain import IKChain
+from src.shapes import createPhysicsRoundedBox
 
 class Humanoid():
-    def __init__( self, parent, x, y, height=1.7, debug = False ):
+    def __init__( self, render, world, x, y, height=1.7, debug = False ):
 
         # Initialize body proportions
         self.height = height
@@ -27,55 +28,83 @@ class Humanoid():
         self.forearmLength = self.armHeight*50/100
         forearmDiameter = (self.chestWidth/3-0.01)*self.armHeight
 
+        # Control node and the whole body collision box
+        self.body = createPhysicsRoundedBox(render, self.chestWidth, 0.2, self.chestHeight)
+        self.body.setX(x)
+        self.body.setY(y)
+        self.body.node().setMass(70.0)
+        self.body.node().setAngularFactor(Vec3(0,0,0.1))
+        self.body.node().setLinearDamping(0.5)
+        self.body.node().setAngularSleepThreshold(0) # For whatever reason, sleep seems to freeze the whole character if still
+        self.body.setCollideMask(BitMask32.bit(3))
+        world.attach(self.body.node())
+        self.body.node().setGravity(Vec3(0,0,0))
+        '''
+        lines = LineSegs()
+        if debug:
+            col = (random.random(), random.random(), random.random())
+            lines.setThickness(15)
+            lines.setColor( col[0], col[1], col[2] )
+        lines.moveTo(0, 0, 0)
+        
+        self.body = render.attachNewNode(lines.create())
+        self.body.setPos( 0,0,0 )
+        '''
 
         # Set up information needed by inverse kinematics
-        self.char = IKCharacter( parent )
+        self.torso = IKChain( self.body )
 
-        self.lowerTorso = self.char.addBone( offset=Vec3(0,0,-self.lowerTorsoHeight),
+        self.lowerTorso = self.torso.addBone( offset=Vec3(0,0,-self.lowerTorsoHeight),
                 minAng = 0,
                 maxAng = 0,
                 rotAxis = None
                 )
 
-        left = 0
-        right = 1
+        self.torso.finalize()
+
         thigh = []
         lowerLeg = []
+        self.leg = []
 
         for i in range(2):
+            self.leg.append(IKChain( self.body ))
+
             if i == 0:
                 horizontalPlacement = -1
             else:
                 horizontalPlacement = 1
 
-            hip = self.char.addBone( offset=Vec3(horizontalPlacement*self.pelvisWidth/4,0,0),
+#            hip = self.leg[-1].addBone( offset=Vec3(0,horizontalPlacement*self.pelvisWidth/4,0),
+#                    minAng = math.pi*0.5,
+#                    maxAng = math.pi*0.5,
+            hip = self.leg[-1].addBone( offset=Vec3(horizontalPlacement*self.pelvisWidth/4,0,-self.lowerTorsoHeight),
                     minAng = 0,
                     maxAng = 0,
                     rotAxis = None,
-                    parentBone = self.lowerTorso
                     )
 
-            thigh.append(self.char.addBone( offset=Vec3(0,0,-self.thighLength),
+            thigh.append(self.leg[-1].addBone( offset=Vec3(0,0,-self.thighLength),
                     minAng = -math.pi*0.25,
                     maxAng = math.pi*0.25,
                     rotAxis = None,
                     parentBone = hip
                     ))
 
-            lowerLeg.append(self.char.addBone( offset=Vec3(0,0,-self.lowerLegLength),
+            lowerLeg.append(self.leg[-1].addBone( offset=Vec3(0,0,-self.lowerLegLength),
                     minAng = -math.pi*0.5,
                     maxAng = 0,
                     rotAxis = LVector3f.unitX(),
                     parentBone = thigh[-1]
                     ))
+            self.leg[-1].finalize()
 
-        self.char.finalize(x,y)
 
         # Add visuals to the bones. These MUST be after finalize().
         lowerTorsoVisual = loader.loadModel("models/unit_cylinder.bam")
         lowerTorsoVisual.setScale(Vec3(self.chestWidth, 0.2, self.lowerTorsoHeight))
         lowerTorsoVisual.reparentTo(self.lowerTorso.ikNode)
         lowerTorsoVisual.setPos( (lowerTorsoVisual.getPos() + self.lowerTorso.offset)/2 )
+
 
         for i in range(2):
             visual = loader.loadModel("models/unit_cylinder.bam")
@@ -97,34 +126,39 @@ class Humanoid():
 #            footVisual.clearModelNodes()
 #            visual.flattenStrong()
 #            footVisual.flattenStrong()
-        
+            self.leg[i].animateTarget = True
+
+            ##################################
+            ## Target point:
+            lines = LineSegs()
+            if debug:
+                col = (random.random(), random.random(), random.random())
+                lines.setThickness(15)
+                lines.setColor( col[0], col[1], col[2] )
+            lines.moveTo(0, 0, 0)
+            
+            target = render.attachNewNode(lines.create())
+            target.reparentTo(self.body)
+            target.setPos( 2,0,2 )
+
+            self.leg[i].setTarget( target )
+
 
 
         if debug:
-            self.char.debugDisplay()
-
-
-        self.char.animateTarget = True
-
-        ##################################
-        ## Target point:
-        col = (random.random(), random.random(), random.random())
-
-        lines = LineSegs()
-        lines.setThickness(15)
-        lines.setColor( col[0], col[1], col[2] )
-        lines.moveTo(0, 0, 0)
-        self.char.ikTarget = render.attachNewNode(lines.create())
-        self.char.ikTarget.setPos( 2,0,2 )
-
-        self.char.setTarget( self.char.ikTarget )
+            self.torso.debugDisplay()
+            for i in range(2):
+                self.leg[i].debugDisplay()
 
 
     def moveTarget( self, task ):
-        if self.char.animateTarget:
-            self.char.ikTarget.setPos( 2.5*math.sin(task.time), 5*math.sin(task.time*1.6+2), math.cos(task.time*1.6+2) )
+        ikChain = self.leg[0]
+        ikChain.target.setPos( 2.5*math.sin(task.time), 5*math.sin(task.time*1.6+2), math.cos(task.time*1.6+2) )
+        ikChain.updateIK()
 
-        self.char.updateIK()
+        ikChain = self.leg[1]
+        ikChain.target.setPos( -2.5*math.sin(task.time), -5*math.sin(task.time*1.6+2), math.cos(task.time*1.6+2) )
+        ikChain.updateIK()
 
-#        dt = globalClock.getDt()
+        self.body.node().applyCentralForce(Vec3(0,self.body.node().getMass()*4.0,0))
         return task.cont
