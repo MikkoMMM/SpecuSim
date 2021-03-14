@@ -1,14 +1,16 @@
-import random, math
+import random
 from src.InverseKinematics.IKChain import IKChain
 from src.InverseKinematics.WalkCycle import WalkCycle
 from src.InverseKinematics.Utils import *
 from src.shapes import createPhysicsRoundedBox
-from src.utils import getGroundZPos, getObjectGroundZPos
+from src.utils import angleDiff, normalizeAngle, getGroundZPos, getObjectGroundZPos
+from math import cos, sin, radians
 
 class Humanoid():
     def __init__( self, render, world, terrainBulletNode, x, y, height=1.7, debug = False ):
         self.world = world
         self.terrainBulletNode = terrainBulletNode
+        self.debug = debug
 
         # Initialize body proportions
         self.height = height
@@ -48,13 +50,14 @@ class Humanoid():
 
         ##################################
         # Set up body movement:
+        if self.debug:
+            self.targetNode = render.attachNewNode( "WalkTarget" )
+            geom = createAxes( 0.2 )
+            self.targetNode.attachNewNode( geom )
+            self.targetNode.hide()
 
-        self.targetNode = render.attachNewNode( "WalkTarget" )
-        geom = createAxes( 0.2 )
-        self.targetNode.attachNewNode( geom )
         self.walkSpeed = 1  # m/s
         self.turnSpeed = 2
-        self.newRandomTarget()
 
 
         # Set up information needed by inverse kinematics
@@ -93,7 +96,7 @@ class Humanoid():
                     ))
 
             self.leg[i].finalize()
-            if debug:
+            if self.debug:
                 self.leg[i].debugDisplay()
 
 
@@ -149,6 +152,7 @@ class Humanoid():
         self.stepRight = False
         
         self.walkCycle = WalkCycle( 2, 0.75 )
+        self.desiredHeading = self.lowerTorso.getH()
 
 
     def walkInDir( self, angle, strafe=True ):
@@ -158,6 +162,8 @@ class Humanoid():
         self._walkForReal(target=target, strafe=strafe)
 
     def _walkForReal( self, angle=0, target=None, strafe=True ):
+        angle = radians(angle+90)
+        
         #############################
         # Update body:
 
@@ -166,20 +172,21 @@ class Humanoid():
         if target:
             diff = target.getPos( self.lowerTorso )
             diff.z = 0
+            if self.debug:
+                self.targetNode.show()
+                self.targetNode.setPos(LVector3f( target.getX(), target.getY(), 0.1+getGroundZPos(x, y, self.world, self.terrainBulletNode) ) )
         else:
-            diff = Vec3(0,-1.01,0)
+            diff = Vec3(-cos(angle),sin(angle),0)
+            if self.debug:
+                self.targetNode.hide()
 
         diffN = diff.normalized()
-
-        if strafe:
-            ang = 0
-        else:
-            ang = LVector3f.unitY().angleRad( diffN )
 
         axis = LVector3f.unitY().cross( diffN )
         axis.normalize()
         maxRot = self.turnSpeed*globalClock.getDt()
         angClamped = 0
+        '''
         if axis.length() > 0.999:
             # Limit angle:
             angClamped = max( -maxRot, min( maxRot, ang ) )
@@ -189,17 +196,19 @@ class Humanoid():
             qOld = self.lowerTorso.getQuat()
             qNew = q*qOld
             self.lowerTorso.setQuat( qNew  )
-        if abs( ang ) < maxRot:
-            step = diffN*self.walkSpeed*globalClock.getDt()
-            if step.lengthSquared() > diff.lengthSquared():
-                self.newRandomTarget()
-                step = diff
-            step = self.lowerTorso.getQuat().xform( step )
-            self.lowerTorso.setPos( self.lowerTorso.getPos() + step )
-        self.lowerTorso.setZ(self.targetHeight+getObjectGroundZPos(self.lowerTorso, self.world, self.terrainBulletNode))
+        '''
+        if strafe or abs( LVector3f.unitY().angleRad( diffN ) ) < maxRot:
+            step = diffN*self.walkSpeed
+            if target and (step*globalClock.dt).lengthSquared() > diff.lengthSquared():
+                return True
+#                step = diff
+            ca = cos(radians(self.lowerTorso.getH()))
+            sa = sin(radians(self.lowerTorso.getH()))
+            self.lowerTorso.node().setLinearVelocity(Vec3(ca*step.getX() - sa*step.getY(), sa*step.getX() + ca*step.getY(), step.getZ()))
+        #self.lowerTorso.setZ(self.targetHeight+getObjectGroundZPos(self.lowerTorso, self.world, self.terrainBulletNode))
 
         # Calculate how far we've walked this frame:
-        curWalkDist = (prevPos - self.lowerTorso.getPos()).length()
+        curWalkDist = step.length()*globalClock.dt
 
         #############################
         # Update legs:
@@ -251,11 +260,20 @@ class Humanoid():
         self.leg[right].updateIK()
 
 
-    def newRandomTarget( self ):
-        x = random.random()*20-10
-        y = random.random()*20-10
+    def turnLeft(self, dt):
+        if abs(angleDiff(-self.lowerTorso.getH(), self.desiredHeading)) > 170:
+            return
+        self.desiredHeading -= dt*450
+        self.desiredHeading = normalizeAngle(self.desiredHeading)
+        self.updateHeading()
 
-        self.targetNode.setPos(
-                LVector3f( x,
-                    y,
-                    getGroundZPos(x, y, self.world, self.terrainBulletNode) ) )
+    def turnRight(self, dt):
+        if abs(angleDiff(-self.lowerTorso.getH(), self.desiredHeading)) > 170:
+            return
+        self.desiredHeading += dt*450
+        self.desiredHeading = normalizeAngle(self.desiredHeading)
+        self.updateHeading()
+
+    def updateHeading(self):
+        diff = radians(angleDiff(-self.desiredHeading, self.lowerTorso.getH()))
+        self.lowerTorso.node().setAngularVelocity(Vec3(0,0,-diff*8))

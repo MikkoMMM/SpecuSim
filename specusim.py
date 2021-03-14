@@ -245,50 +245,52 @@ class MyApp(ShowBase):
 
         # Define controls
         stepping = False
-        '''
+
 
         if inputState.isSet('forward'):
             if inputState.isSet('left'):
-                self.player.takeStep(self.stepTime, -45)
+                self.player.walkInDir(-45)
                 for doppelganger in self.doppelgangers:
                     doppelganger.takeStep(self.stepTime, -45)
             elif inputState.isSet('right'):
-                self.player.takeStep(self.stepTime, 45)
+                self.player.walkInDir(45)
                 for doppelganger in self.doppelgangers:
                     doppelganger.takeStep(self.stepTime, 45)
             else:
-                self.player.takeStep(self.stepTime, 0)
+                self.player.walkInDir(0)
                 for doppelganger in self.doppelgangers:
                     doppelganger.takeStep(self.stepTime, 0)
             stepping = True
         elif inputState.isSet('backward'):
             if inputState.isSet('left'):
-                self.player.takeStep(self.stepTime, -135)
+                self.player.walkInDir(-135)
                 for doppelganger in self.doppelgangers:
                     doppelganger.takeStep(self.stepTime, -135)
             elif inputState.isSet('right'):
-                self.player.takeStep(self.stepTime, 135)
+                self.player.walkInDir(135)
                 for doppelganger in self.doppelgangers:
                     doppelganger.takeStep(self.stepTime, 135)
             else:
-                self.player.takeStep(self.stepTime, 180)
+                self.player.walkInDir(180)
                 for doppelganger in self.doppelgangers:
                     doppelganger.takeStep(self.stepTime, 180)
             stepping = True
         elif inputState.isSet('left'):
-            self.player.takeStep(self.stepTime, -90)
+            self.player.walkInDir(-90)
             for doppelganger in self.doppelgangers:
                 doppelganger.takeStep(self.stepTime, -90)
             stepping = True
         elif inputState.isSet('right'):
-            self.player.takeStep(self.stepTime, 90)
+            self.player.walkInDir(90)
             for doppelganger in self.doppelgangers:
                 doppelganger.takeStep(self.stepTime, 90)
             stepping = True
+        '''
         if not stepping:
             self.player.standStill()
             for doppelganger in self.doppelgangers:
                 doppelganger.standStill()
+        '''
         if inputState.isSet('turnleft'):
             self.player.turnLeft(dt)
             for doppelganger in self.doppelgangers:
@@ -297,6 +299,7 @@ class MyApp(ShowBase):
             self.player.turnRight(dt)
             for doppelganger in self.doppelgangers:
                 doppelganger.turnRight(dt)
+        '''
         if inputState.isSet('speedup'):
             self.stepTime -= dt*1.20
             if self.stepTime < 0:
@@ -312,7 +315,7 @@ class MyApp(ShowBase):
         self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
         '''
         self.camera.setR(0)
-        self.player.walkInDir(0)
+        self.player.updateHeading()
 
         return task.cont
 
