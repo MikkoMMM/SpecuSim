@@ -1,12 +1,14 @@
-from panda3d.core import *
 import random, math
 from src.InverseKinematics.IKChain import IKChain
 from src.InverseKinematics.WalkCycle import WalkCycle
 from src.InverseKinematics.Utils import *
 from src.shapes import createPhysicsRoundedBox
+from src.utils import getGroundZPos, getObjectGroundZPos
 
 class Humanoid():
-    def __init__( self, render, world, x, y, height=1.7, debug = False ):
+    def __init__( self, render, world, terrainBulletNode, x, y, height=1.7, debug = False ):
+        self.world = world
+        self.terrainBulletNode = terrainBulletNode
 
         # Initialize body proportions
         self.height = height
@@ -30,16 +32,17 @@ class Humanoid():
         self.forearmLength = self.armHeight*50/100
         forearmDiameter = (self.chestWidth/3-0.01)*self.armHeight
 
+        self.targetHeight = self.legHeight + self.lowerTorsoHeight/2
+
         # Control node and the whole body collision box
         self.lowerTorso = createPhysicsRoundedBox(render, self.chestWidth, 0.2, self.chestHeight)
-        self.lowerTorso.setX(x)
-        self.lowerTorso.setY(y)
+        self.lowerTorso.setPos(Vec3(x,y,self.targetHeight+getGroundZPos(x, y, self.world, self.terrainBulletNode)))
         self.lowerTorso.node().setMass(70.0)
         self.lowerTorso.node().setAngularFactor(Vec3(0,0,0.1))
         self.lowerTorso.node().setLinearDamping(0.5)
-        self.lowerTorso.node().setAngularSleepThreshold(0) # For whatever reason, sleep seems to freeze the whole character if still
+        self.lowerTorso.node().setAngularSleepThreshold(0) # TODO: Test without, but on previous implementation, sleep seemed to freeze the whole character if still
         self.lowerTorso.setCollideMask(BitMask32.bit(3))
-        world.attach(self.lowerTorso.node())
+        self.world.attach(self.lowerTorso.node())
         self.lowerTorso.node().setGravity(Vec3(0,0,0))
 
 
@@ -60,7 +63,6 @@ class Humanoid():
         self.leg = []
         self.footTarget = []
         self.plannedFootTarget = []
-        self.targetHeight = -self.legHeight - self.lowerTorsoHeight/2
 
         for i in range(2):
             self.leg.append(IKChain( self.lowerTorso ))
@@ -102,13 +104,14 @@ class Humanoid():
             self.footTarget.append(render.attachNewNode("FootTarget"))
             geom = createAxes( 0.1 )
             self.footTarget[i].attachNewNode( geom )
+            self.footTarget[i].setZ(self.targetHeight+getObjectGroundZPos(self.footTarget[i], self.world, self.terrainBulletNode))
             self.leg[i].setTarget( self.footTarget[i] )
 
             # Set up nodes which stay (rigidly) infront of the body, on the floor.
             # Whenever a leg needs to take a step, the target will be placed on this position:
             self.plannedFootTarget.append(self.lowerTorso.attachNewNode( "PlannedFootTarget" ))
             stepDist = 0.15
-            self.plannedFootTarget[i].setPos( horizontalPlacement*0.15, stepDist, self.targetHeight )
+            self.plannedFootTarget[i].setPos( horizontalPlacement*self.pelvisWidth/4, stepDist, -self.targetHeight )
             self.plannedFootTarget[i].attachNewNode( geom )
 
 
@@ -116,7 +119,6 @@ class Humanoid():
         lowerTorsoVisual = loader.loadModel("models/unit_cylinder.bam")
         lowerTorsoVisual.setScale(Vec3(self.chestWidth, 0.2, self.lowerTorsoHeight))
         lowerTorsoVisual.reparentTo(self.lowerTorso)
-#        lowerTorsoVisual.setPos( (lowerTorsoVisual.getPos() + self.lowerTorsoHeight)/2 )
 
 
         for i in range(2):
@@ -148,31 +150,32 @@ class Humanoid():
         
         self.walkCycle = WalkCycle( 2, 0.75 )
 
-    '''
-    def moveTarget( self, task ):
-        ikChain = self.leg[0]
-        ikChain.target.setPos( 2.5*math.sin(task.time), 5*math.sin(task.time*1.6+2), math.cos(task.time*1.6+2) )
-        ikChain.updateIK()
 
-        ikChain = self.leg[1]
-        ikChain.target.setPos( -2.5*math.sin(task.time), -5*math.sin(task.time*1.6+2), math.cos(task.time*1.6+2) )
-        ikChain.updateIK()
+    def walkInDir( self, angle, strafe=True ):
+        self._walkForReal(angle=angle, strafe=strafe)
 
-#        self.lowerTorso.node().applyCentralForce(Vec3(0,self.lowerTorso.node().getMass()*4.0,0))
-        return task.cont
-    '''
+    def walkToward( self, target, strafe=False ):
+        self._walkForReal(target=target, strafe=strafe)
 
-    def walk( self, task ):
-
+    def _walkForReal( self, angle=0, target=None, strafe=True ):
         #############################
         # Update body:
 
         prevPos = self.lowerTorso.getPos()
 
-        diff = self.targetNode.getPos( self.lowerTorso )
-        diff.z = 0
+        if target:
+            diff = target.getPos( self.lowerTorso )
+            diff.z = 0
+        else:
+            diff = Vec3(0,-1.01,0)
+
         diffN = diff.normalized()
-        ang = LVector3f.unitY().angleRad( diffN )
+
+        if strafe:
+            ang = 0
+        else:
+            ang = LVector3f.unitY().angleRad( diffN )
+
         axis = LVector3f.unitY().cross( diffN )
         axis.normalize()
         maxRot = self.turnSpeed*globalClock.getDt()
@@ -193,6 +196,7 @@ class Humanoid():
                 step = diff
             step = self.lowerTorso.getQuat().xform( step )
             self.lowerTorso.setPos( self.lowerTorso.getPos() + step )
+        self.lowerTorso.setZ(self.targetHeight+getObjectGroundZPos(self.lowerTorso, self.world, self.terrainBulletNode))
 
         # Calculate how far we've walked this frame:
         curWalkDist = (prevPos - self.lowerTorso.getPos()).length()
@@ -205,8 +209,8 @@ class Humanoid():
         stepDist = curWalkDist*0.1/globalClock.dt
         left = 0
         right = 1
-        self.plannedFootTarget[left].setPos( -0.15, stepDist, self.targetHeight )
-        self.plannedFootTarget[right].setPos( 0.15, stepDist, self.targetHeight )
+        self.plannedFootTarget[left].setPos( -self.pelvisWidth/4, stepDist, -self.targetHeight )
+        self.plannedFootTarget[right].setPos( self.pelvisWidth/4, stepDist, -self.targetHeight )
 
         # Update the walkcycle to determine if a step needs to be taken:
         #update = curWalkDist*0.1/globalClock.dt
@@ -246,12 +250,12 @@ class Humanoid():
         self.leg[left].updateIK()
         self.leg[right].updateIK()
 
-        return task.cont
 
-    
     def newRandomTarget( self ):
+        x = random.random()*20-10
+        y = random.random()*20-10
 
         self.targetNode.setPos(
-                LVector3f( random.random()*10-5,
-                    random.random()*10-5,
-                    0 ) )
+                LVector3f( x,
+                    y,
+                    getGroundZPos(x, y, self.world, self.terrainBulletNode) ) )

@@ -7,7 +7,7 @@ from panda3d.bullet import ZUp
 from src.shapes import createSphere, createRoundedBox
 from src.humanoid_leg import HumanoidLeg
 from src.humanoid_arm import HumanoidArm
-from src.utils import angleDiff, normalizeAngle, getGroundZPos
+from src.utils import angleDiff, normalizeAngle, getObjectGroundZPos
 import time
 from math import degrees, radians, sqrt, pi, cos, sin, copysign
 
@@ -309,7 +309,7 @@ class Humanoid():
 #            self.leftLegYHinge.setTargetVelocity(-cos(timeDiff2Pi)*radians(120)/seconds)
 #            self.rightLegYHinge.setTargetVelocity(cos(timeDiff2Pi)*radians(120)/seconds)
 
-        wantedHeight = self.legHeight+self.lowerTorsoHeight/2+getGroundZPos(self.lowerTorso, 9000, self.world, self.terrainBulletNode)+9.81*dt
+        wantedHeight = self.legHeight+self.lowerTorsoHeight/2+getObjectGroundZPos(self.lowerTorso, self.world, self.terrainBulletNode)+9.81*dt
         if self.lowerTorso.getZ() < wantedHeight:
             self.lowerTorso.node().applyCentralImpulse(Vec3(0,0,300*dt+moveMass*2))
 #        else:

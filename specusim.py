@@ -7,15 +7,15 @@ from direct.gui.DirectGui import DirectFrame
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
 from panda3d.core import Vec3, Vec4, ShaderTerrainMesh, Shader, load_prc_file_data, PStatClient
-from panda3d.core import SamplerState, TextNode, TextureStage, TP_normal
-from panda3d.core import CardMaker, Texture, Mat4
+from panda3d.core import SamplerState, TextNode
+from panda3d.core import Texture, Mat4
 from panda3d.core import PNMImage, Filename
 from direct.task import Task
 from panda3d.bullet import BulletWorld
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.bullet import BulletDebugNode
 from panda3d.bullet import getBulletVersion
-from panda3d.core import BitMask32, TransformState, Point3, NodePath, PandaNode, RigidBodyCombiner
+from panda3d.core import BitMask32, TransformState, NodePath, PandaNode
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import ZUp
 from src.utils import angleDiff
@@ -172,9 +172,9 @@ class MyApp(ShowBase):
         terrain_colshape = BulletHeightfieldShape(elevation_img, self.height, ZUp)
         terrain_colshape.setUseDiamondSubdivision(True)
 
-        self.terrainBulletNode0 = BulletRigidBodyNode("terrainBodyNode0")
-        self.terrainBulletNode0.addShape(terrain_colshape)
-        self.terrainNp0 = render.attachNewNode(self.terrainBulletNode0)
+        self.terrainBulletNode = BulletRigidBodyNode("terrainBodyNode")
+        self.terrainBulletNode.addShape(terrain_colshape)
+        self.terrainNp0 = render.attachNewNode(self.terrainBulletNode)
         self.terrainNp0.setCollideMask(BitMask32.bit(0))
         #self.terrainNp0.setCollideMask(BitMask32.bit(1))
         self.terrainNp0.setPos(0, 0, 0)
@@ -182,14 +182,15 @@ class MyApp(ShowBase):
 
     def startGame(self):
         self.menu.hideMenu()
-#        self.player = Humanoid(self.render, self.world, self.terrainBulletNode0, Vec3(0,0,-8), Vec3(0,0,0))
-        self.player = Humanoid(self.render, self.world, 0, 0, debug=self.physicsDebug)
+        self.world.attach(self.terrainNp0.node())
+#        self.player = Humanoid(self.render, self.world, self.terrainBulletNode, Vec3(0,0,-8), Vec3(0,0,0))
+        self.player = Humanoid(self.render, self.world, self.terrainBulletNode, 0, 0, debug=self.physicsDebug)
         
         self.doppelgangers = []
         for i in range(self.doppelgangerNum):
             for j in range(self.doppelgangerNum):
                 if i == (self.doppelgangerNum-1)/2 and j == (self.doppelgangerNum-1)/2: continue
-                self.doppelgangers.append(Humanoid(self.render, self.world, self.terrainBulletNode0, Vec3(i-(self.doppelgangerNum-1)/2,j-(self.doppelgangerNum-1)/2,0), Vec3(0,0,0)))
+                self.doppelgangers.append(Humanoid(self.render, self.world, self.terrainBulletNode, Vec3(i-(self.doppelgangerNum-1)/2,j-(self.doppelgangerNum-1)/2,0), Vec3(0,0,0)))
         
 
         self.camera.reparentTo(self.player.lowerTorso)
@@ -224,10 +225,8 @@ class MyApp(ShowBase):
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
-        self.world.attach(self.terrainNp0.node())
         self.render.analyze()
 #        taskMgr.add( self.player.moveTarget, "MoveTarget" )
-        taskMgr.add( self.player.walk, "BipedWalk")
 
 
     def reEnableMouse(self):
@@ -313,6 +312,7 @@ class MyApp(ShowBase):
         self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
         '''
         self.camera.setR(0)
+        self.player.walkInDir(0)
 
         return task.cont
 
