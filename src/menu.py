@@ -73,7 +73,7 @@ class Menu(object):
         self.selectFrame.setTransparency(1)
         self.selectFrame.reparentTo(self.exitButton)
         self.entries = [self.exitButton,self.resumeButton]
-        self.activeEntry = 1
+        self.activeEntry = 0
 
 
     def setCenteredText(self, guiObject, text, scale=14, fg=(0.2,0.2,0.2,1)):

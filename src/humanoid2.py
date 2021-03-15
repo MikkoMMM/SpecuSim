@@ -4,10 +4,11 @@ from src.InverseKinematics.WalkCycle import WalkCycle
 from src.InverseKinematics.Utils import *
 from src.shapes import createPhysicsRoundedBox
 from src.utils import angleDiff, normalizeAngle, getGroundZPos, getObjectGroundZPos
-from math import cos, sin, radians
+from math import cos, sin, radians, degrees
 
 class Humanoid():
     def __init__( self, render, world, terrainBulletNode, x, y, height=1.7, debug = False ):
+        self.render = render
         self.world = world
         self.terrainBulletNode = terrainBulletNode
         self.debug = debug
@@ -37,7 +38,7 @@ class Humanoid():
         self.targetHeight = self.legHeight + self.lowerTorsoHeight/2
 
         # Control node and the whole body collision box
-        self.lowerTorso = createPhysicsRoundedBox(render, self.chestWidth, 0.2, self.chestHeight)
+        self.lowerTorso = createPhysicsRoundedBox(self.render, self.chestWidth, 0.2, self.chestHeight)
         self.lowerTorso.setPos(Vec3(x,y,self.targetHeight+getGroundZPos(x, y, self.world, self.terrainBulletNode)))
         self.lowerTorso.node().setMass(70.0)
         self.lowerTorso.node().setAngularFactor(Vec3(0,0,0.1))
@@ -50,19 +51,14 @@ class Humanoid():
 
         ##################################
         # Set up body movement:
-        if self.debug:
-            self.targetNode = render.attachNewNode( "WalkTarget" )
-            geom = createAxes( 0.2 )
-            self.targetNode.attachNewNode( geom )
-            self.targetNode.hide()
-
         self.walkSpeed = 1  # m/s
-        self.turnSpeed = 2
+        self.turnSpeed = 100
 
 
         # Set up information needed by inverse kinematics
         thigh = []
         lowerLeg = []
+        self.foot = []
         self.leg = []
         self.footTarget = []
         self.plannedFootTarget = []
@@ -96,6 +92,9 @@ class Humanoid():
                     ))
 
             self.leg[i].finalize()
+            self.foot.append(lowerLeg[i].ikNode.attachNewNode("Foot"))
+            self.foot[i].setPosHpr(Vec3(0,lowerLegDiameter/2,-self.lowerLegLength-self.footHeight/2), Vec3(0,0,0))
+
             if self.debug:
                 self.leg[i].debugDisplay()
 
@@ -104,7 +103,7 @@ class Humanoid():
             # Foot targets:
 
             # Set up a target that the foot should reach:
-            self.footTarget.append(render.attachNewNode("FootTarget"))
+            self.footTarget.append(self.render.attachNewNode("FootTarget"))
             geom = createAxes( 0.1 )
             self.footTarget[i].attachNewNode( geom )
             self.footTarget[i].setZ(self.targetHeight+getObjectGroundZPos(self.footTarget[i], self.world, self.terrainBulletNode))
@@ -136,10 +135,9 @@ class Humanoid():
             visual.setPos( (visual.getPos() + lowerLeg[i].offset)/2 )
 
             footVisual = loader.loadModel("models/unit_cube.bam")
-            footVisual.reparentTo(visual)
-            # I'm not exactly sure why it needs such weird scaling
-            footVisual.setScale(Vec3(lowerLegDiameter*6, self.footLength*6, self.footHeight*3.5))
-            footVisual.setPosHpr(Vec3(0,lowerLegDiameter*2,-self.lowerLegLength*2-self.footHeight), Vec3(0,0,0))
+            footVisual.reparentTo(self.foot[i])
+            footVisual.setScale(Vec3(lowerLegDiameter, self.footLength, self.footHeight))
+#            footVisual.setPosHpr(Vec3(0,lowerLegDiameter*2,-self.lowerLegLength*2-self.footHeight), Vec3(0,0,0))
 #            visual.clearModelNodes()
 #            footVisual.clearModelNodes()
 #            visual.flattenStrong()
@@ -155,102 +153,88 @@ class Humanoid():
         self.desiredHeading = self.lowerTorso.getH()
 
 
-    def walkInDir( self, angle, strafe=True ):
-        self._walkForReal(angle=angle, strafe=strafe)
+    def getCorrectZVelocity(self):
+        lowestFootZ = 9999
+        # Too high and you'll get massive jittering at sharp points in the terrain physics node
+        maxZChange = 4*globalClock.getDt()
+        average = 0
+        for foot in self.foot:
+            average += foot.getZ(self.render)-getGroundZPos(foot.getX(self.render), foot.getY(self.render), self.world, self.terrainBulletNode)
+        return -min(maxZChange,max(average/len(self.foot),-maxZChange))/globalClock.getDt()
 
-    def walkToward( self, target, strafe=False ):
-        self._walkForReal(target=target, strafe=strafe)
 
-    def _walkForReal( self, angle=0, target=None, strafe=True ):
-        angle = radians(angle+90)
-        
-        #############################
-        # Update body:
-
-        prevPos = self.lowerTorso.getPos()
-
-        if target:
-            diff = target.getPos( self.lowerTorso )
-            diff.z = 0
-            if self.debug:
-                self.targetNode.show()
-                self.targetNode.setPos(LVector3f( target.getX(), target.getY(), 0.1+getGroundZPos(x, y, self.world, self.terrainBulletNode) ) )
-        else:
-            diff = Vec3(-cos(angle),sin(angle),0)
-            if self.debug:
-                self.targetNode.hide()
-
+    def walkInDir( self, angle=0, strafe=True, visuals=True ):
+        mathAngle = radians(angle+90)
+        diff = Vec3(-cos(mathAngle),sin(mathAngle),0)
         diffN = diff.normalized()
-
-        axis = LVector3f.unitY().cross( diffN )
-        axis.normalize()
         maxRot = self.turnSpeed*globalClock.getDt()
-        angClamped = 0
-        '''
-        if axis.length() > 0.999:
-            # Limit angle:
-            angClamped = max( -maxRot, min( maxRot, ang ) )
-            q = Quat()
-            q.setFromAxisAngleRad( angClamped, axis )
 
-            qOld = self.lowerTorso.getQuat()
-            qNew = q*qOld
-            self.lowerTorso.setQuat( qNew  )
-        '''
-        if strafe or abs( LVector3f.unitY().angleRad( diffN ) ) < maxRot:
-            step = diffN*self.walkSpeed
-            if target and (step*globalClock.dt).lengthSquared() > diff.lengthSquared():
-                return True
-#                step = diff
+        step = diffN*self.walkSpeed
+        step.setZ(self.getCorrectZVelocity())
+        if strafe:
             ca = cos(radians(self.lowerTorso.getH()))
             sa = sin(radians(self.lowerTorso.getH()))
             self.lowerTorso.node().setLinearVelocity(Vec3(ca*step.getX() - sa*step.getY(), sa*step.getX() + ca*step.getY(), step.getZ()))
-        #self.lowerTorso.setZ(self.targetHeight+getObjectGroundZPos(self.lowerTorso, self.world, self.terrainBulletNode))
 
-        # Calculate how far we've walked this frame:
-        curWalkDist = step.length()*globalClock.dt
+            # Calculate how far we've walked this frame:
+            curWalkDist = step.length()*globalClock.getDt()
 
+            if visuals:
+                self._walkingVisuals( curWalkDist, 0 )
+        else:
+            self.desiredHeading = normalizeAngle(angle)
+            self.updateHeading()
+            if abs( angleDiff(-self.desiredHeading, self.lowerTorso.getH()) ) < maxRot:
+                self.lowerTorso.node().setLinearVelocity(step)
+
+                # Calculate how far we've walked this frame:
+                curWalkDist = step.length()*globalClock.getDt()
+
+                if visuals:
+                    self._walkingVisuals( curWalkDist, 0 )
+
+
+    def _walkingVisuals( self, curWalkDist, angClamped ):
         #############################
         # Update legs:
 
         # Move planned foot target further forward (longer steps) when character is
         # walking faster:
-        stepDist = curWalkDist*0.1/globalClock.dt
+        stepDist = curWalkDist*0.1/globalClock.getDt()
         left = 0
         right = 1
         self.plannedFootTarget[left].setPos( -self.pelvisWidth/4, stepDist, -self.targetHeight )
+        self.plannedFootTarget[left].setZ( self.render, getGroundZPos(self.plannedFootTarget[left].getX(self.render), self.plannedFootTarget[left].getY(self.render), self.world, self.terrainBulletNode) )
         self.plannedFootTarget[right].setPos( self.pelvisWidth/4, stepDist, -self.targetHeight )
+        self.plannedFootTarget[right].setZ( self.render, getGroundZPos(self.plannedFootTarget[right].getX(self.render), self.plannedFootTarget[right].getY(self.render), self.world, self.terrainBulletNode) )
 
         # Update the walkcycle to determine if a step needs to be taken:
-        #update = curWalkDist*0.1/globalClock.dt
         update = curWalkDist
         update += angClamped*0.5
         self.walkCycle.updateTime( update )
 
         if self.walkCycle.stepRequired[0]:
-            #self.footTargetLeft.setPos( self.plannedFootTargetLeft.getPos( render ) )
             self.walkCycle.step( 0 )
             self.stepLeft = True
         if self.walkCycle.stepRequired[1]:
-            #self.footTargetRight.setPos( self.plannedFootTargetRight.getPos( render ) )
             self.walkCycle.step( 1 )
             self.stepRight = True
 
         if self.stepLeft:
-            diff = self.plannedFootTarget[left].getPos(render) - self.footTarget[left].getPos()
-            legMoveDist = self.legMovementSpeed*globalClock.dt
+            diff = self.plannedFootTarget[left].getPos(self.render) - self.footTarget[left].getPos()
+            legMoveDist = self.legMovementSpeed*globalClock.getDt()
             if diff.length() < legMoveDist:
-                self.footTarget[left].setPos( self.plannedFootTarget[left].getPos( render ) )
+                self.footTarget[left].setPos( self.plannedFootTarget[left].getPos( self.render ) )
                 self.stepLeft = False
             else:
                 moved = self.footTarget[left].getPos() + diff.normalized()*legMoveDist
                 self.footTarget[left].setPos( moved )
 
         if self.stepRight:
-            diff = self.plannedFootTarget[right].getPos(render) - self.footTarget[right].getPos()
-            legMoveDist = self.legMovementSpeed*globalClock.dt
+            diff = self.plannedFootTarget[right].getPos(self.render) - self.footTarget[right].getPos()
+            legMoveDist = self.legMovementSpeed*globalClock.getDt()
             if diff.length() < legMoveDist:
-                self.footTarget[right].setPos( self.plannedFootTarget[right].getPos( render ) )
+                self.footTarget[right].setPos( self.plannedFootTarget[right].getPos( self.render ) )
                 self.stepRight = False
             else:
                 moved = self.footTarget[right].getPos() + diff.normalized()*legMoveDist
@@ -260,17 +244,17 @@ class Humanoid():
         self.leg[right].updateIK()
 
 
-    def turnLeft(self, dt):
+    def turnLeft(self):
         if abs(angleDiff(-self.lowerTorso.getH(), self.desiredHeading)) > 170:
             return
-        self.desiredHeading -= dt*450
+        self.desiredHeading -= globalClock.getDt()*450
         self.desiredHeading = normalizeAngle(self.desiredHeading)
         self.updateHeading()
 
-    def turnRight(self, dt):
+    def turnRight(self):
         if abs(angleDiff(-self.lowerTorso.getH(), self.desiredHeading)) > 170:
             return
-        self.desiredHeading += dt*450
+        self.desiredHeading += globalClock.getDt()*450
         self.desiredHeading = normalizeAngle(self.desiredHeading)
         self.updateHeading()
 

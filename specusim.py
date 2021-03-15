@@ -292,13 +292,13 @@ class MyApp(ShowBase):
                 doppelganger.standStill()
         '''
         if inputState.isSet('turnleft'):
-            self.player.turnLeft(dt)
+            self.player.turnLeft()
             for doppelganger in self.doppelgangers:
-                doppelganger.turnLeft(dt)
+                doppelganger.turnLeft()
         if inputState.isSet('turnright'):
-            self.player.turnRight(dt)
+            self.player.turnRight()
             for doppelganger in self.doppelgangers:
-                doppelganger.turnRight(dt)
+                doppelganger.turnRight()
         '''
         if inputState.isSet('speedup'):
             self.stepTime -= dt*1.20

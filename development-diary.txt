@@ -54,3 +54,4 @@
 12.3.2021 Refactoring IK parts and more integration of it. Planned what a mouse control method for a weapon might be like.
 13.3.2021 Removed the Wii Remote related code and changed license to MIT. Continued integration of the IK code.
 14.3.2021 More work done on the IK walking method.
+15.3.2021 Making the IK method work better on inclines
