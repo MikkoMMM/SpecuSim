@@ -67,19 +67,26 @@ class MyApp(ShowBase):
         # In case window size would be at first detected incorrectly, buy a bit of time.
         base.graphicsEngine.renderFrame() 
 
-        # Performance analysis
-        base.setFrameRateMeter(True)
-        PStatClient.connect()
+        self.performanceAnalysis = True # Enable pstat support and show frame rate
+        self.physicsDebug = False        # Show wireframes for the physics objects.
+        self.debugMessages = False       # Some extraneous information
 
-        self.doppelgangerNum = 0      # Actual number will be doppelgangerNum^2-1
-        self.physicsDebug = True # Show wireframes for the physics objects.
+        if self.debugMessages:
+            print("Using Bullet Physics version ", getBulletVersion())
+            print()
+
+        if self.performanceAnalysis:
+            base.setFrameRateMeter(True)
+            PStatClient.connect()
+
+        self.doppelgangerNum = 16      # Actual number will be doppelgangerNum^2-1
 
         # For calculating motion controller orientation
         self.heading = 0
         self.pitch = 0
         self.roll = 0
-        self.deltat = DeltaT(timediff)
-        self.fuse = Fusion(10, timediff) # A fairly large GyroMeansError so erroneous values are quickly resolved
+        #self.deltat = DeltaT(timediff)
+        #self.fuse = Fusion(10, timediff) # A fairly large GyroMeansError so erroneous values are quickly resolved
 
         self.menu = Menu(self)
         self.menu.showMenu()
@@ -92,7 +99,6 @@ class MyApp(ShowBase):
         self.height = 25.0
 
         self.motionControllerAccuracy = 40 # The motion controller's orientation is to be updated 100 times this number per second
-        self.stepTime = 0.9 # How long a character's step will take by default
 
         # Physics setup
         self.world = BulletWorld()
@@ -190,12 +196,12 @@ class MyApp(ShowBase):
         for i in range(self.doppelgangerNum):
             for j in range(self.doppelgangerNum):
                 if i == (self.doppelgangerNum-1)/2 and j == (self.doppelgangerNum-1)/2: continue
-                self.doppelgangers.append(Humanoid(self.render, self.world, self.terrainBulletNode, Vec3(i-(self.doppelgangerNum-1)/2,j-(self.doppelgangerNum-1)/2,0), Vec3(0,0,0)))
-        
+                self.doppelgangers.append(Humanoid(self.render, self.world, self.terrainBulletNode, i-(self.doppelgangerNum-1)/2, j-(self.doppelgangerNum-1)/2))
+
 
         self.camera.reparentTo(self.player.lowerTorso)
         self.camera.setPos(0, -10, 0)
-#        self.camera.lookAt(self.player.chest, 0, 5, 0)
+        self.oldCameraZ = self.camera.getZ(self.render)
 
 #        self.weapon = Sword(self.render, self.world, self.player.lowerTorso)
 #        self.player.grabRight(self.weapon.getAttachmentInfo())
@@ -225,8 +231,8 @@ class MyApp(ShowBase):
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
-        self.render.analyze()
-#        taskMgr.add( self.player.moveTarget, "MoveTarget" )
+        if self.debugMessages:
+            self.render.analyze()
 
 
     def reEnableMouse(self):
@@ -251,46 +257,46 @@ class MyApp(ShowBase):
             if inputState.isSet('left'):
                 self.player.walkInDir(-45)
                 for doppelganger in self.doppelgangers:
-                    doppelganger.takeStep(self.stepTime, -45)
+                    doppelganger.walkInDir(-45)
             elif inputState.isSet('right'):
                 self.player.walkInDir(45)
                 for doppelganger in self.doppelgangers:
-                    doppelganger.takeStep(self.stepTime, 45)
+                    doppelganger.walkInDir(45)
             else:
                 self.player.walkInDir(0)
                 for doppelganger in self.doppelgangers:
-                    doppelganger.takeStep(self.stepTime, 0)
+                    doppelganger.walkInDir(0)
             stepping = True
         elif inputState.isSet('backward'):
             if inputState.isSet('left'):
                 self.player.walkInDir(-135)
                 for doppelganger in self.doppelgangers:
-                    doppelganger.takeStep(self.stepTime, -135)
+                    doppelganger.walkInDir(-135)
             elif inputState.isSet('right'):
                 self.player.walkInDir(135)
                 for doppelganger in self.doppelgangers:
-                    doppelganger.takeStep(self.stepTime, 135)
+                    doppelganger.walkInDir(135)
             else:
                 self.player.walkInDir(180)
                 for doppelganger in self.doppelgangers:
-                    doppelganger.takeStep(self.stepTime, 180)
+                    doppelganger.walkInDir(180)
             stepping = True
         elif inputState.isSet('left'):
             self.player.walkInDir(-90)
             for doppelganger in self.doppelgangers:
-                doppelganger.takeStep(self.stepTime, -90)
+                doppelganger.walkInDir(-90)
             stepping = True
         elif inputState.isSet('right'):
             self.player.walkInDir(90)
             for doppelganger in self.doppelgangers:
-                doppelganger.takeStep(self.stepTime, 90)
+                doppelganger.walkInDir(90)
             stepping = True
-        '''
+
         if not stepping:
             self.player.standStill()
             for doppelganger in self.doppelgangers:
                 doppelganger.standStill()
-        '''
+
         if inputState.isSet('turnleft'):
             self.player.turnLeft()
             for doppelganger in self.doppelgangers:
@@ -299,13 +305,17 @@ class MyApp(ShowBase):
             self.player.turnRight()
             for doppelganger in self.doppelgangers:
                 doppelganger.turnRight()
-        '''
+
         if inputState.isSet('speedup'):
-            self.stepTime -= dt*1.20
-            if self.stepTime < 0:
-                self.stepTime = dt
-        if inputState.isSet('speeddown'):  self.stepTime += dt*1.20
-        
+            self.player.speedUp()
+            for doppelganger in self.doppelgangers:
+                doppelganger.speedUp()
+        if inputState.isSet('speeddown'):
+            self.player.slowDown()
+            for doppelganger in self.doppelgangers:
+                doppelganger.slowDown()
+        '''
+
         self.inst5.text = str(self.stepTime) + " " + str(sqrt(pow(self.player.chest.node().getLinearVelocity()[0], 2) + pow(self.player.chest.node().getLinearVelocity()[1], 2)))
         self.inst6.text = "H" + str(int(self.heading)) + " P" + str(int(self.pitch))
 #        self.inst7.text = str(self.player.leftLeg.thigh.getH()) + " " + str(self.player.lowerTorso.getH())
@@ -314,13 +324,21 @@ class MyApp(ShowBase):
 #        if self.motionControllerConnected:
         self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
         '''
+
+        # Roll in the camera would only serve to confuse
         self.camera.setR(0)
+        # Reduce camera's bounciness
+        if abs(self.camera.getZ(self.render)-self.oldCameraZ) < 0.1:
+            self.camera.setZ(self.render, self.oldCameraZ)
+        else:
+            self.camera.setZ(self.render, (self.oldCameraZ*2 + self.camera.getZ(self.render))/3)
+        self.oldCameraZ = self.camera.getZ(self.render)
+
         self.player.updateHeading()
+        for doppelganger in self.doppelgangers:
+            doppelganger.updateHeading()
 
         return task.cont
 
-
-print("Using Bullet Physics version ", getBulletVersion())
-print()
 app = MyApp()
 app.run()

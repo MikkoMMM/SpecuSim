@@ -5,6 +5,7 @@ from src.InverseKinematics.Utils import *
 from src.shapes import createPhysicsRoundedBox
 from src.utils import angleDiff, normalizeAngle, getGroundZPos, getObjectGroundZPos
 from math import cos, sin, radians, degrees
+from panda3d.bullet import BulletSphereShape
 
 class Humanoid():
     def __init__( self, render, world, terrainBulletNode, x, y, height=1.7, debug = False ):
@@ -43,7 +44,7 @@ class Humanoid():
         self.lowerTorso.node().setMass(70.0)
         self.lowerTorso.node().setAngularFactor(Vec3(0,0,0.1))
         self.lowerTorso.node().setLinearDamping(0.5)
-        self.lowerTorso.node().setAngularSleepThreshold(0) # TODO: Test without, but on previous implementation, sleep seemed to freeze the whole character if still
+        self.lowerTorso.node().setAngularSleepThreshold(0) # Sleep would freeze the whole character if still
         self.lowerTorso.setCollideMask(BitMask32.bit(3))
         self.world.attach(self.lowerTorso.node())
         self.lowerTorso.node().setGravity(Vec3(0,0,0))
@@ -51,8 +52,8 @@ class Humanoid():
 
         ##################################
         # Set up body movement:
-        self.walkSpeed = 1  # m/s
-        self.turnSpeed = 100
+        self.walkSpeed = 2  # m/s
+        self.turnSpeed = 300
 
 
         # Set up information needed by inverse kinematics
@@ -64,24 +65,19 @@ class Humanoid():
         self.plannedFootTarget = []
 
         for i in range(2):
-            self.leg.append(IKChain( self.lowerTorso ))
-
             if i == 0:
                 horizontalPlacement = -1
             else:
                 horizontalPlacement = 1
 
-            hip = self.leg[i].addBone( offset=Vec3(horizontalPlacement*self.pelvisWidth/4,0,-self.lowerTorsoHeight/2),
-                    minAng = 0,
-                    maxAng = 0,
-                    rotAxis = None,
-                    )
+            hip = self.lowerTorso.attachNewNode("Hip")
+            hip.setPos(Vec3(horizontalPlacement*self.pelvisWidth/4,0,-self.lowerTorsoHeight/2))
+            self.leg.append(IKChain( hip ))
 
             thigh.append(self.leg[i].addBone( offset=Vec3(0,0,-self.thighLength),
                     minAng = -math.pi*0.25,
                     maxAng = math.pi*0.25,
                     rotAxis = None,
-                    parentBone = hip
                     ))
 
             lowerLeg.append(self.leg[i].addBone( offset=Vec3(0,0,-self.lowerLegLength),
@@ -104,8 +100,6 @@ class Humanoid():
 
             # Set up a target that the foot should reach:
             self.footTarget.append(self.render.attachNewNode("FootTarget"))
-            geom = createAxes( 0.1 )
-            self.footTarget[i].attachNewNode( geom )
             self.footTarget[i].setZ(self.targetHeight+getObjectGroundZPos(self.footTarget[i], self.world, self.terrainBulletNode))
             self.leg[i].setTarget( self.footTarget[i] )
 
@@ -114,7 +108,11 @@ class Humanoid():
             self.plannedFootTarget.append(self.lowerTorso.attachNewNode( "PlannedFootTarget" ))
             stepDist = 0.15
             self.plannedFootTarget[i].setPos( horizontalPlacement*self.pelvisWidth/4, stepDist, -self.targetHeight )
-            self.plannedFootTarget[i].attachNewNode( geom )
+
+            if self.debug:
+                geom = createAxes( 0.2 )
+                self.footTarget[i].attachNewNode( geom )
+                self.plannedFootTarget[i].attachNewNode( geom )
 
 
         # Add visuals to the bones. These MUST be after finalize().
@@ -137,11 +135,6 @@ class Humanoid():
             footVisual = loader.loadModel("models/unit_cube.bam")
             footVisual.reparentTo(self.foot[i])
             footVisual.setScale(Vec3(lowerLegDiameter, self.footLength, self.footHeight))
-#            footVisual.setPosHpr(Vec3(0,lowerLegDiameter*2,-self.lowerLegLength*2-self.footHeight), Vec3(0,0,0))
-#            visual.clearModelNodes()
-#            footVisual.clearModelNodes()
-#            visual.flattenStrong()
-#            footVisual.flattenStrong()
 
 
         self.legMovementSpeed = self.walkSpeed*3
@@ -153,15 +146,46 @@ class Humanoid():
         self.desiredHeading = self.lowerTorso.getH()
 
 
-    def getCorrectZVelocity(self):
-        lowestFootZ = 9999
-        # Too high and you'll get massive jittering at sharp points in the terrain physics node
-        maxZChange = 4*globalClock.getDt()
-        average = 0
-        for foot in self.foot:
-            average += foot.getZ(self.render)-getGroundZPos(foot.getX(self.render), foot.getY(self.render), self.world, self.terrainBulletNode)
-        return -min(maxZChange,max(average/len(self.foot),-maxZChange))/globalClock.getDt()
+    def speedUp( self ):
+        self.walkSpeed += 0.1
+        self.walkSpeed = min(self.walkSpeed, 5)
+        self.legMovementSpeed = self.walkSpeed*3
 
+    def slowDown( self ):
+        self.walkSpeed -= 0.1
+        self.walkSpeed = max(self.walkSpeed, 0)
+        self.legMovementSpeed = self.walkSpeed*3
+
+
+    def getCorrectZVelocity(self, currentZPos=None):
+        # Too high and you'll get massive jittering at sharp points in the terrain physics node
+        maxZChange = 4*globalClock.getDt()*self.walkSpeed
+        if currentZPos:
+            return -min(maxZChange,max(currentZPos,-maxZChange))/globalClock.getDt()
+        return -min(maxZChange,max(self.getFeetAveragedGroundZPos(),-maxZChange))/globalClock.getDt()
+
+
+    def getFeetAveragedGroundZPos(self, offsetX=0, offsetY=0):
+        averageX = 0
+        averageY = 0
+        averageZ = 0
+        for foot in self.foot:
+            averageX += foot.getX(self.render)
+            averageY += foot.getY(self.render)
+            averageZ += foot.getZ(self.render)-self.footHeight/2
+        averageX /= len(self.foot)
+        averageY /= len(self.foot)
+        averageZ /= len(self.foot)
+        averageZ -= getGroundZPos(averageX+offsetX, averageY+offsetY, self.world, self.terrainBulletNode)
+        return averageZ
+
+
+    def standStill(self):
+        newZVelocity = self.getCorrectZVelocity()
+        newVelocity = self.lowerTorso.node().getLinearVelocity()
+        newVelocity.setZ(newZVelocity)
+        self.lowerTorso.node().setLinearVelocity(newVelocity)
+        
 
     def walkInDir( self, angle=0, strafe=True, visuals=True ):
         mathAngle = radians(angle+90)
@@ -170,28 +194,31 @@ class Humanoid():
         maxRot = self.turnSpeed*globalClock.getDt()
 
         step = diffN*self.walkSpeed
-        step.setZ(self.getCorrectZVelocity())
+        currentZPos = self.getFeetAveragedGroundZPos()
+        preliminaryZVelocity = self.getCorrectZVelocity(currentZPos)
         if strafe:
             ca = cos(radians(self.lowerTorso.getH()))
             sa = sin(radians(self.lowerTorso.getH()))
-            self.lowerTorso.node().setLinearVelocity(Vec3(ca*step.getX() - sa*step.getY(), sa*step.getX() + ca*step.getY(), step.getZ()))
+            newVector = Vec3(ca*step.getX() - sa*step.getY(), sa*step.getX() + ca*step.getY(), preliminaryZVelocity)
 
-            # Calculate how far we've walked this frame:
-            curWalkDist = step.length()*globalClock.getDt()
+            if currentZPos - self.getFeetAveragedGroundZPos(offsetX=newVector.getX()*0.01, offsetY=newVector.getY()*0.01) > 0.015:
+                self.lowerTorso.node().setLinearVelocity(Vec3(0,0,preliminaryZVelocity))
+                return
 
-            if visuals:
-                self._walkingVisuals( curWalkDist, 0 )
+            self.lowerTorso.node().setLinearVelocity(newVector)
+
         else:
             self.desiredHeading = normalizeAngle(angle)
             self.updateHeading()
             if abs( angleDiff(-self.desiredHeading, self.lowerTorso.getH()) ) < maxRot:
+                step.setZ(preliminaryZVelocity)
                 self.lowerTorso.node().setLinearVelocity(step)
 
-                # Calculate how far we've walked this frame:
-                curWalkDist = step.length()*globalClock.getDt()
+        # Calculate how far we've walked this frame:
+        curWalkDist = step.length()*globalClock.getDt()
 
-                if visuals:
-                    self._walkingVisuals( curWalkDist, 0 )
+        if visuals:
+            self._walkingVisuals( curWalkDist, 0 )
 
 
     def _walkingVisuals( self, curWalkDist, angClamped ):
