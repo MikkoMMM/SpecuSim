@@ -8,7 +8,7 @@ from math import cos, sin, radians, degrees
 from panda3d.bullet import BulletSphereShape
 
 class Humanoid():
-    def __init__( self, render, world, terrainBulletNode, x, y, height=1.7, debug = False ):
+    def __init__( self, render, world, terrainBulletNode, x, y, height=1.7, debug = False, debugTextNode = None ):
         self.render = render
         self.world = world
         self.terrainBulletNode = terrainBulletNode
@@ -43,7 +43,7 @@ class Humanoid():
         self.lowerTorso.setPos(Vec3(x,y,self.targetHeight+getGroundZPos(x, y, self.world, self.terrainBulletNode)))
         self.lowerTorso.node().setMass(70.0)
         self.lowerTorso.node().setAngularFactor(Vec3(0,0,0.1))
-        self.lowerTorso.node().setLinearDamping(0.5)
+        self.lowerTorso.node().setLinearDamping(0.8)
         self.lowerTorso.node().setAngularSleepThreshold(0) # Sleep would freeze the whole character if still
         self.lowerTorso.setCollideMask(BitMask32.bit(3))
         self.world.attach(self.lowerTorso.node())
@@ -148,7 +148,7 @@ class Humanoid():
 
     def speedUp( self ):
         self.walkSpeed += 0.1
-        self.walkSpeed = min(self.walkSpeed, 5)
+        self.walkSpeed = min(self.walkSpeed, 9)
         self.legMovementSpeed = self.walkSpeed*3
 
     def slowDown( self ):
@@ -159,7 +159,8 @@ class Humanoid():
 
     def getCorrectZVelocity(self, currentZPos=None):
         # Too high and you'll get massive jittering at sharp points in the terrain physics node
-        maxZChange = 4*globalClock.getDt()*self.walkSpeed
+        vector = self.lowerTorso.node().getLinearVelocity()
+        maxZChange = 4*globalClock.getDt()*min(self.walkSpeed, Vec3(vector.getX(), vector.getY(), 0).length())
         if currentZPos:
             return -min(maxZChange,max(currentZPos,-maxZChange))/globalClock.getDt()
         return -min(maxZChange,max(self.getFeetAveragedGroundZPos(),-maxZChange))/globalClock.getDt()
@@ -181,43 +182,44 @@ class Humanoid():
 
 
     def standStill(self):
-        newZVelocity = self.getCorrectZVelocity()
-        newVelocity = self.lowerTorso.node().getLinearVelocity()
-        newVelocity.setZ(newZVelocity)
-        self.lowerTorso.node().setLinearVelocity(newVelocity)
+        self.walkInDir(self.lowerTorso.getH(),decelerate=True)
         
 
-    def walkInDir( self, angle=0, strafe=True, visuals=True ):
-        mathAngle = radians(angle+90)
-        diff = Vec3(-cos(mathAngle),sin(mathAngle),0)
-        diffN = diff.normalized()
-        maxRot = self.turnSpeed*globalClock.getDt()
+    def walkInDir( self, angle=0, visuals=True, decelerate=False ):
+        if not decelerate:
+            mathAngle = radians(angle+90)
+            diff = Vec3(-cos(mathAngle),sin(mathAngle),0)
+            diffN = diff.normalized()
+            step = diffN*self.walkSpeed
 
-        step = diffN*self.walkSpeed
         currentZPos = self.getFeetAveragedGroundZPos()
         preliminaryZVelocity = self.getCorrectZVelocity(currentZPos)
-        if strafe:
+        if decelerate:
+            newVector = Vec3(self.lowerTorso.node().getLinearVelocity().getX(), self.lowerTorso.node().getLinearVelocity().getY(), preliminaryZVelocity)
+        else:
             ca = cos(radians(self.lowerTorso.getH()))
             sa = sin(radians(self.lowerTorso.getH()))
             newVector = Vec3(ca*step.getX() - sa*step.getY(), sa*step.getX() + ca*step.getY(), preliminaryZVelocity)
+        zDiff = currentZPos - self.getFeetAveragedGroundZPos(offsetX=newVector.getX()*0.01, offsetY=newVector.getY()*0.01)
 
-            if currentZPos - self.getFeetAveragedGroundZPos(offsetX=newVector.getX()*0.01, offsetY=newVector.getY()*0.01) > 0.015:
-                self.lowerTorso.node().setLinearVelocity(Vec3(0,0,preliminaryZVelocity))
+        multMin = 0.01
+        if zDiff > multMin:
+            multMax = 0.02
+            mult = ((1/multMax)*(multMax-multMin - (min(multMax,zDiff)-multMin)))
+            self.lowerTorso.node().setLinearVelocity(Vec3(newVector.getX()*mult, newVector.getY()*mult, preliminaryZVelocity))
+            if zDiff >= multMax:
                 return
-
+        else:
             self.lowerTorso.node().setLinearVelocity(newVector)
 
-        else:
-            self.desiredHeading = normalizeAngle(angle)
-            self.updateHeading()
-            if abs( angleDiff(-self.desiredHeading, self.lowerTorso.getH()) ) < maxRot:
-                step.setZ(preliminaryZVelocity)
-                self.lowerTorso.node().setLinearVelocity(step)
-
-        # Calculate how far we've walked this frame:
-        curWalkDist = step.length()*globalClock.getDt()
+        # Negligible speed; assume we've come to a halt and save on resources
+        if self.lowerTorso.node().getLinearVelocity().length() < 0.2 and abs(self.lowerTorso.node().getAngularVelocity().getZ()) < 0.1:
+            self.lowerTorso.node().setLinearVelocity(Vec3(0,0,self.lowerTorso.node().getLinearVelocity().getZ()))
+            return
 
         if visuals:
+            # Calculate how far we've walked this frame:
+            curWalkDist = self.lowerTorso.node().getLinearVelocity().length()*globalClock.getDt()
             self._walkingVisuals( curWalkDist, 0 )
 
 

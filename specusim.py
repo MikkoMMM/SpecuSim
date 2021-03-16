@@ -79,7 +79,7 @@ class MyApp(ShowBase):
             base.setFrameRateMeter(True)
             PStatClient.connect()
 
-        self.doppelgangerNum = 16      # Actual number will be doppelgangerNum^2-1
+        self.doppelgangerNum = 0      # Actual number will be doppelgangerNum^2-1
 
         # For calculating motion controller orientation
         self.heading = 0
@@ -314,16 +314,14 @@ class MyApp(ShowBase):
             self.player.slowDown()
             for doppelganger in self.doppelgangers:
                 doppelganger.slowDown()
-        '''
 
-        self.inst5.text = str(self.stepTime) + " " + str(sqrt(pow(self.player.chest.node().getLinearVelocity()[0], 2) + pow(self.player.chest.node().getLinearVelocity()[1], 2)))
-        self.inst6.text = "H" + str(int(self.heading)) + " P" + str(int(self.pitch))
+        self.inst5.text = "Speed " + str(round(sqrt(pow(self.player.lowerTorso.node().getLinearVelocity()[0], 2) + pow(self.player.lowerTorso.node().getLinearVelocity()[1], 2)),2)) + " / " + str(round(self.player.walkSpeed,1)) + " m/s"
+#        self.inst6.text = "H" + str(int(self.heading)) + " P" + str(int(self.pitch))
 #        self.inst7.text = str(self.player.leftLeg.thigh.getH()) + " " + str(self.player.lowerTorso.getH())
 
         
 #        if self.motionControllerConnected:
-        self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
-        '''
+#        self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
 
         # Roll in the camera would only serve to confuse
         self.camera.setR(0)

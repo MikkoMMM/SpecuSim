@@ -55,4 +55,4 @@
 13.3.2021 Removed the Wii Remote related code and changed license to MIT. Continued integration of the IK code.
 14.3.2021 More work done on the IK walking method.
 15.3.2021 Making the IK method work better on inclines
-16.3.2021 Collision with steep terrain and optimizing.
+16.3.2021 Collision with steep terrain and optimizing. A deceleration "animation".
