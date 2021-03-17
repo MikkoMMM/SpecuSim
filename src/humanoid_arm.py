@@ -4,68 +4,71 @@ from panda3d.bullet import BulletRigidBodyNode
 from panda3d.core import BitMask32, Point3, TransformState
 from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint, BulletGenericConstraint
 from panda3d.bullet import ZUp
-from src.shapes import createCapsule
+from src.shapes import create_capsule
 
 class HumanoidArm():
     # Arguments:
     # render: NodePath to render to
     # world: A BulletWorld to use for physics
-    # upperArmDiameter: upperArm's diameter
-    # forearmDiameter: forearm's diameter
+    # upper_arm_diameter: upper_arm's diameter
+    # forearm_diameter: forearm's diameter
     # height: arm's total height
-    def __init__(self, render, world, height, upperArmDiameter, forearmDiameter, rightArm, startPosition, startHeading):
+    def __init__(self, render, world, height, upper_arm_diameter, forearm_diameter, right_arm, start_position, start_heading):
         self.render = render
         self.world = world
 
-        self.upperArmLength = height*50/100
-        self.forearmLength = height*50/100
-        self.upperArmDiameter = upperArmDiameter
+        self.upper_arm_length = height*50/100
+        self.forearm_length = height*50/100
+        self.upper_arm_diameter = upper_arm_diameter
 
-        self.upperArm = createCapsule(self.render, self.upperArmDiameter, self.upperArmLength)
-        self.upperArm.node().setMass(3.0)
-        self.world.attach(self.upperArm.node())
+        self.upper_arm = create_capsule(self.render, self.upper_arm_diameter, self.upper_arm_length)
+        self.upper_arm.node().set_mass(3.0)
+        self.world.attach(self.upper_arm.node())
 
 
-        self.forearm = createCapsule(self.render, forearmDiameter, self.forearmLength)
-        self.forearm.setCollideMask(BitMask32.bit(3))
-        self.forearm.node().setMass(2.0)
+        self.forearm = create_capsule(self.render, forearm_diameter, self.forearm_length)
+        self.forearm.set_collide_mask(BitMask32.bit(3))
+        self.forearm.node().set_mass(2.0)
         self.world.attach(self.forearm.node())
 
-        frameA = TransformState.makePosHpr(Point3(0,0,-self.upperArmLength/2), Vec3(0, 0, 0))
-        frameB = TransformState.makePosHpr(Point3(0,0,self.forearmLength/2), Vec3(0, 0, 0))
+        frame_a = TransformState.make_pos_hpr(Point3(0,0,-self.upper_arm_length/2), Vec3(0, 0, 0))
+        frame_b = TransformState.make_pos_hpr(Point3(0,0,self.forearm_length/2), Vec3(0, 0, 0))
 
-        self.elbow = BulletGenericConstraint(self.upperArm.node(), self.forearm.node(), frameA, frameB, True)
+        self.elbow = BulletGenericConstraint(self.upper_arm.node(), self.forearm.node(), frame_a, frame_b, True)
 
-        self.elbow.setAngularLimit(0, -165, 0)
-        if rightArm:
-            self.elbow.setAngularLimit(1, -30, 0)
+        self.elbow.set_angular_limit(0, -165, 0)
+        if right_arm:
+            self.elbow.set_angular_limit(1, -30, 0)
         else:
-            self.elbow.setAngularLimit(1, 0, 30)
+            self.elbow.set_angular_limit(1, 0, 30)
 
-        self.elbow.setAngularLimit(2, 0, 0)
-        self.elbow.setDebugDrawSize(0.5)
-        self.world.attachConstraint(self.elbow, linked_collision=True)
+        self.elbow.set_angular_limit(2, 0, 0)
+        self.elbow.set_debug_draw_size(0.5)
+        self.world.attach_constraint(self.elbow, linked_collision=True)
 
-        self.upperArm.setPosHpr(startPosition, startHeading)
-        self.forearm.setPosHpr(startPosition, startHeading)
-    
-    def grab(self, attachmentInfo):
-        if len(attachmentInfo) >= 4:
-            self.grabForReal(attachmentInfo[1], attachmentInfo[2], grabAngle=attachmentInfo[3])
+        self.upper_arm.set_pos_hpr(start_position, start_heading)
+        self.forearm.set_pos_hpr(start_position, start_heading)
+
+    def grab(self, attachment_info):
+        if len(attachment_info) >= 4:
+            self.grab_for_real(attachment_info[1], attachment_info[2], grab_angle=attachment_info[3])
         else:
-            self.grabForReal(attachmentInfo[1], attachmentInfo[2])
+            self.grab_for_real(attachment_info[1], attachment_info[2])
 
-    def grabForReal(self, target, grabPosition, grabAngle=Vec3(0, 0, 0)):
-        frameA = TransformState.makePosHpr(Point3(0,0,-self.forearmLength/2), Vec3(0, 0, 0))
-        frameB = TransformState.makePosHpr(grabPosition, grabAngle)
+    def grab_for_real(self, target, grab_position, grab_angle=Vec3(0, 0, 0)):
+        frame_a = TransformState.make_pos_hpr(Point3(0,0,-self.forearm_length/2), Vec3(0, 0, 0))
+        frame_b = TransformState.make_pos_hpr(grab_position, grab_angle)
 
-        self.hand = BulletGenericConstraint(self.forearm.node(), target.node(), frameA, frameB, True)
-        self.hand.setDebugDrawSize(0.5)
-        self.hand.setAngularLimit(0, -180, 180)
-        self.hand.setAngularLimit(1, -180, 180)
-        self.hand.setAngularLimit(2, -180, 180)
-        self.world.attachConstraint(self.hand, linked_collision=True)
+        self.hand = BulletGenericConstraint(self.forearm.node(), target.node(), frame_a, frame_b, True)
+        self.hand.set_debug_draw_size(0.5)
+        self.hand.set_angular_limit(0, -180, 180)
+        self.hand.set_angular_limit(1, -180, 180)
+        self.hand.set_angular_limit(2, -180, 180)
+        self.world.attach_constraint(self.hand, linked_collision=True)
 
-    def setPos(self, newPos):
-        self.upperArm.setPos(newPos)
-        self.forearm.setPos(newPos)
+    def set_pos(self, new_pos):
+        self.upper_arm.set_pos(new_pos)
+        self.forearm.set_pos(new_pos)
+
+    def get_mass(self):
+        return self.upper_arm.node().get_mass() + self.forearm.node().get_mass()

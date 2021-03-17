@@ -2,150 +2,152 @@ import random
 from src.InverseKinematics.IKChain import IKChain
 from src.InverseKinematics.WalkCycle import WalkCycle
 from src.InverseKinematics.Utils import *
-from src.shapes import createPhysicsRoundedBox, createRoundedBox, createSphere
+from src.shapes import create_rounded_box, create_sphere
 from src.humanoid_arm import HumanoidArm
-from src.utils import angleDiff, normalizeAngle, getGroundZPos, getObjectGroundZPos
+from src.utils import angle_diff, normalize_angle, get_ground_Z_pos, get_object_ground_Z_pos
 from math import cos, sin, radians, degrees
 from panda3d.bullet import BulletSphereShape, BulletConeTwistConstraint, BulletGenericConstraint
 
 class Humanoid():
-    def __init__( self, render, world, terrainBulletNode, x, y, height=1.7, startHeading=Vec3(0,0,0), debug = False, debugTextNode = None ):
+    """
+    A class for humanoid creatures. 
+    """
+    def __init__( self, render, world, terrain_bullet_node, x, y, height=1.7, start_heading=Vec3(0,0,0), debug = False, debug_text_node = None ):
         self.render = render
         self.world = world
-        self.terrainBulletNode = terrainBulletNode
+        self.terrain_bullet_node = terrain_bullet_node
         self.debug = debug
 
         # Initialize body proportions
         self.height = height
-        self.headHeight = self.height/7
-        self.chestWidth = 0.38
-        self.pelvisWidth = 0.38
-        self.lowerTorsoHeight = 1.5*(self.height/7)
-        self.chestHeight = 1.5*(self.height/7)
+        self.head_height = self.height/7
+        self.chest_width = 0.38
+        self.pelvis_width = 0.38
+        self.lower_torso_height = 1.5*(self.height/7)
+        self.chest_height = 1.5*(self.height/7)
 
-        self.legHeight = self.height - self.headHeight - self.lowerTorsoHeight - self.chestHeight
-        self.thighLength = self.legHeight*59/109
-        thighDiameter = self.pelvisWidth/2-0.01
-        self.lowerLegLength = self.legHeight*40/109
-        lowerLegDiameter = (self.pelvisWidth/2-0.01)*self.legHeight
-        self.footHeight = self.legHeight - self.thighLength - self.lowerLegLength
-        self.footLength = lowerLegDiameter*2.2
+        self.leg_height = self.height - self.head_height - self.lower_torso_height - self.chest_height
+        self.thigh_length = self.leg_height*59/109
+        thigh_diameter = self.pelvis_width/2-0.01
+        self.lower_leg_length = self.leg_height*40/109
+        lower_leg_diameter = (self.pelvis_width/2-0.01)*self.leg_height
+        self.foot_height = self.leg_height - self.thigh_length - self.lower_leg_length
+        self.foot_length = lower_leg_diameter*2.2
 
-        self.armHeight = self.legHeight*1
-        self.upperArmLength = self.armHeight*50/100
-        upperArmDiameter = self.chestWidth/3-0.01
-        self.forearmLength = self.armHeight*50/100
-        forearmDiameter = (self.chestWidth/3-0.01)*self.armHeight
+        self.arm_height = self.leg_height*1
+        self.upper_arm_length = self.arm_height*50/100
+        upper_arm_diameter = self.chest_width/3-0.01
+        self.forearm_length = self.arm_height*50/100
+        forearm_diameter = (self.chest_width/3-0.01)*self.arm_height
 
-        self.targetHeight = self.legHeight + self.lowerTorsoHeight/2
+        self.target_height = self.leg_height + self.lower_torso_height/2
 
         # Control node and the whole body collision box
-        self.lowerTorso = createRoundedBox(self.render, self.chestWidth, 0.2, self.chestHeight)
-        startPosition = Vec3(x,y,self.targetHeight+getGroundZPos(x, y, self.world, self.terrainBulletNode))
-        self.lowerTorso.setPosHpr(startPosition, startHeading)
-        self.lowerTorso.node().setMass(70.0)
-        self.lowerTorso.node().setAngularFactor(Vec3(0,0,0.1))
-        self.lowerTorso.node().setLinearDamping(0.8)
-        self.lowerTorso.node().setAngularSleepThreshold(0) # Sleep would freeze the whole character if still
-        self.lowerTorso.setCollideMask(BitMask32.bit(3))
-        self.world.attach(self.lowerTorso.node())
+        self.lower_torso = create_rounded_box(self.render, self.chest_width, 0.2, self.chest_height)
+        start_position = Vec3(x,y,self.target_height+get_ground_Z_pos(x, y, self.world, self.terrain_bullet_node))
+        self.lower_torso.set_pos_hpr(start_position, start_heading)
+        self.lower_torso.node().set_mass(30.0)
+        self.lower_torso.node().set_angular_factor(Vec3(0,0,0.1))
+        self.lower_torso.node().set_linear_damping(0.8)
+        self.lower_torso.node().set_angular_sleep_threshold(0) # Sleep would freeze the whole character if still
+        self.lower_torso.set_collide_mask(BitMask32.bit(3))
+        self.world.attach(self.lower_torso.node())
 
-        self.chest = createRoundedBox(self.render, self.chestWidth, 0.2, self.chestHeight)
-        self.chest.node().setMass(40.0)
-        self.chest.node().setAngularFactor(Vec3(0.15,0.05,0.1))
-        self.chest.node().setLinearDamping(0.5)
-        self.chest.setCollideMask(BitMask32.bit(3))
+        self.chest = create_rounded_box(self.render, self.chest_width, 0.2, self.chest_height)
+        self.chest.node().set_mass(30.0)
+        self.chest.node().set_angular_factor(Vec3(0.15,0.05,0.1))
+        self.chest.node().set_linear_damping(0.5)
+        self.chest.set_collide_mask(BitMask32.bit(3))
         self.world.attach(self.chest.node())
-        self.chest.node().setAngularSleepThreshold(0.05)
+        self.chest.node().set_angular_sleep_threshold(0.05)
 
-        frameA = TransformState.makePosHpr(Point3(0, 0, -self.chestHeight/2), Vec3(0, 0, 0))
-        frameB = TransformState.makePosHpr(Point3(0, 0, self.lowerTorsoHeight/2), Vec3(0, 0, 0))
+        frame_a = TransformState.make_pos_hpr(Point3(0, 0, -self.chest_height/2), Vec3(0, 0, 0))
+        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.lower_torso_height/2), Vec3(0, 0, 0))
 
         swing1 = 10 # leaning forward/backward degrees
         swing2 = 5 # leaning side to side degrees
         twist = 30 # degrees
 
-        cs = BulletConeTwistConstraint(self.chest.node(), self.lowerTorso.node(), frameA, frameB)
-        cs.setDebugDrawSize(0.5)
-        cs.setLimit(twist, swing2, swing1, softness=0.1, bias=1.0, relaxation=1.0)
-        world.attachConstraint(cs, linked_collision=True)
+        cs = BulletConeTwistConstraint(self.chest.node(), self.lower_torso.node(), frame_a, frame_b)
+        cs.set_debug_draw_size(0.5)
+        cs.set_limit(twist, swing2, swing1, softness=0.1, bias=1.0, relaxation=1.0)
+        world.attach_constraint(cs, linked_collision=True)
 
 
-        self.leftArm = HumanoidArm(self.chest, self.world, self.armHeight, self.chestWidth/3-0.01, (self.chestWidth/3-0.01)*self.armHeight, False, startPosition, startHeading)
+        self.left_arm = HumanoidArm(self.chest, self.world, self.arm_height, self.chest_width/3-0.01, (self.chest_width/3-0.01)*self.arm_height, False, start_position, start_heading)
 
-        frameA = TransformState.makePosHpr(Point3(-self.chestWidth/2-self.leftArm.upperArmDiameter/2, 0, self.chestHeight/2-self.leftArm.upperArmDiameter/8), Vec3(0, 0, 0))
-        frameB = TransformState.makePosHpr(Point3(0, 0, self.leftArm.upperArmLength/2), Vec3(0, -90, 0))
+        frame_a = TransformState.make_pos_hpr(Point3(-self.chest_width/2-self.left_arm.upper_arm_diameter/2, 0, self.chest_height/2-self.left_arm.upper_arm_diameter/8), Vec3(0, 0, 0))
+        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.left_arm.upper_arm_length/2), Vec3(0, -90, 0))
 
-        self.leftArmConstraint = BulletGenericConstraint(self.chest.node(), self.leftArm.upperArm.node(), frameA, frameB, True)
-        self.leftArmConstraint.setDebugDrawSize(0.5)
-        self.leftArmConstraint.setAngularLimit(0, -95, 135) # Front and back
-        self.leftArmConstraint.setAngularLimit(1, 0, 0)     # Rotation, handled in the elbow joint because here it glitches.
-        self.leftArmConstraint.setAngularLimit(2, -120, 35) # Left and right
-        self.leftArm.upperArm.node().setAngularFactor(Vec3(0.2,0.2,0.2))
-        self.world.attachConstraint(self.leftArmConstraint, linked_collision=True)
-
-
-        self.rightArm = HumanoidArm(self.render, self.world, self.armHeight, self.chestWidth/3-0.01, (self.chestWidth/3-0.01)*self.armHeight, True, startPosition, startHeading)
-
-        frameA = TransformState.makePosHpr(Point3(self.chestWidth/2+self.rightArm.upperArmDiameter/2, 0, self.chestHeight/2-self.rightArm.upperArmDiameter/8), Vec3(0, 0, 0))
-        frameB = TransformState.makePosHpr(Point3(0, 0, self.rightArm.upperArmLength/2), Vec3(0, -90, 0))
-
-        self.rightArmConstraint = BulletGenericConstraint(self.chest.node(), self.rightArm.upperArm.node(), frameA, frameB, True)
-        self.rightArmConstraint.setDebugDrawSize(0.5)
-        self.rightArmConstraint.setAngularLimit(0, -95, 135) # Front and back
-        self.rightArmConstraint.setAngularLimit(1, 0, 0)     # Rotation, handled in the elbow joint because here it glitches.
-        self.rightArmConstraint.setAngularLimit(2, -35, 120) # Left and right
-        self.rightArm.upperArm.node().setAngularFactor(Vec3(0.2,0.2,0.2))
-        self.world.attachConstraint(self.rightArmConstraint, linked_collision=True)
+        self.left_arm_constraint = BulletGenericConstraint(self.chest.node(), self.left_arm.upper_arm.node(), frame_a, frame_b, True)
+        self.left_arm_constraint.set_debug_draw_size(0.5)
+        self.left_arm_constraint.set_angular_limit(0, -95, 135) # Front and back
+        self.left_arm_constraint.set_angular_limit(1, 0, 0)     # Rotation, handled in the elbow joint because here it glitches.
+        self.left_arm_constraint.set_angular_limit(2, -120, 35) # Left and right
+        self.left_arm.upper_arm.node().set_angular_factor(Vec3(0.2,0.2,0.2))
+        self.world.attach_constraint(self.left_arm_constraint, linked_collision=True)
 
 
-        self.head = createSphere(self.render, self.headHeight)
-        self.head.node().setMass(3.0)
-        self.head.setCollideMask(BitMask32.bit(3))
+        self.right_arm = HumanoidArm(self.render, self.world, self.arm_height, self.chest_width/3-0.01, (self.chest_width/3-0.01)*self.arm_height, True, start_position, start_heading)
+
+        frame_a = TransformState.make_pos_hpr(Point3(self.chest_width/2+self.right_arm.upper_arm_diameter/2, 0, self.chest_height/2-self.right_arm.upper_arm_diameter/8), Vec3(0, 0, 0))
+        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.right_arm.upper_arm_length/2), Vec3(0, -90, 0))
+
+        self.right_arm_constraint = BulletGenericConstraint(self.chest.node(), self.right_arm.upper_arm.node(), frame_a, frame_b, True)
+        self.right_arm_constraint.set_debug_draw_size(0.5)
+        self.right_arm_constraint.set_angular_limit(0, -95, 135) # Front and back
+        self.right_arm_constraint.set_angular_limit(1, 0, 0)     # Rotation, handled in the elbow joint because here it glitches.
+        self.right_arm_constraint.set_angular_limit(2, -35, 120) # Left and right
+        self.right_arm.upper_arm.node().set_angular_factor(Vec3(0.2,0.2,0.2))
+        self.world.attach_constraint(self.right_arm_constraint, linked_collision=True)
+
+
+        self.head = create_sphere(self.render, self.head_height)
+        self.head.node().set_mass(3.0)
+        self.head.set_collide_mask(BitMask32.bit(3))
         self.world.attach(self.head.node())
 
-        frameA = TransformState.makePosHpr(Point3(0,0,self.headHeight/2), Vec3(0, 0, 0))
-        frameB = TransformState.makePosHpr(Point3(0,0,-self.chestHeight/2), Vec3(0, 0, 0))
+        frame_a = TransformState.make_pos_hpr(Point3(0,0,self.head_height/2), Vec3(0, 0, 0))
+        frame_b = TransformState.make_pos_hpr(Point3(0,0,-self.chest_height/2), Vec3(0, 0, 0))
 
-        self.neck = BulletGenericConstraint(self.chest.node(), self.head.node(), frameA, frameB, True)
+        self.neck = BulletGenericConstraint(self.chest.node(), self.head.node(), frame_a, frame_b, True)
 
-        self.neck.setDebugDrawSize(0.5)
-        self.neck.setAngularLimit(0, -10, 10)
-        self.neck.setAngularLimit(1, 0, 0)
-        self.neck.setAngularLimit(2, -10, 10)
-        self.world.attachConstraint(self.neck, linked_collision=True)
+        self.neck.set_debug_draw_size(0.5)
+        self.neck.set_angular_limit(0, -10, 10)
+        self.neck.set_angular_limit(1, 0, 0)
+        self.neck.set_angular_limit(2, -10, 10)
+        self.world.attach_constraint(self.neck, linked_collision=True)
 
         ##################################
         # Set up body movement:
-        self.walkSpeed = 2  # m/s
-        self.turnSpeed = 300
+        self.walk_speed = 2  # m/s
 
 
         # Set up information needed by inverse kinematics
         thigh = []
-        lowerLeg = []
+        lower_leg = []
         self.foot = []
         self.leg = []
-        self.footTarget = []
-        self.plannedFootTarget = []
+        self.foot_target = []
+        self.planned_foot_target = []
 
         for i in range(2):
             if i == 0:
-                horizontalPlacement = -1
+                horizontal_placement = -1
             else:
-                horizontalPlacement = 1
+                horizontal_placement = 1
 
-            hip = self.lowerTorso.attachNewNode("Hip")
-            hip.setPos(Vec3(horizontalPlacement*self.pelvisWidth/4,0,-self.lowerTorsoHeight/2))
+            hip = self.lower_torso.attach_new_node("Hip")
+            hip.set_pos(Vec3(horizontal_placement*self.pelvis_width/4,0,-self.lower_torso_height/2))
             self.leg.append(IKChain( hip ))
 
-            thigh.append(self.leg[i].addBone( offset=Vec3(0,0,-self.thighLength),
+            thigh.append(self.leg[i].addBone( offset=Vec3(0,0,-self.thigh_length),
                     minAng = -math.pi*0.25,
                     maxAng = math.pi*0.25,
                     rotAxis = None,
                     ))
 
-            lowerLeg.append(self.leg[i].addBone( offset=Vec3(0,0,-self.lowerLegLength),
+            lower_leg.append(self.leg[i].addBone( offset=Vec3(0,0,-self.lower_leg_length),
                     minAng = -math.pi*0.5,
                     maxAng = 0,
                     rotAxis = LVector3f.unitX(),
@@ -153,8 +155,8 @@ class Humanoid():
                     ))
 
             self.leg[i].finalize()
-            self.foot.append(lowerLeg[i].ikNode.attachNewNode("Foot"))
-            self.foot[i].setPosHpr(Vec3(0,lowerLegDiameter/2,-self.lowerLegLength-self.footHeight/2), Vec3(0,0,0))
+            self.foot.append(lower_leg[i].ikNode.attach_new_node("Foot"))
+            self.foot[i].set_pos_hpr(Vec3(0,lower_leg_diameter/2,-self.lower_leg_length-self.foot_height/2), Vec3(0,0,0))
 
             if self.debug:
                 self.leg[i].debugDisplay()
@@ -164,194 +166,200 @@ class Humanoid():
             # Foot targets:
 
             # Set up a target that the foot should reach:
-            self.footTarget.append(self.render.attachNewNode("FootTarget"))
-            self.footTarget[i].setZ(self.targetHeight+getObjectGroundZPos(self.footTarget[i], self.world, self.terrainBulletNode))
-            self.leg[i].setTarget( self.footTarget[i] )
+            self.foot_target.append(self.render.attach_new_node("FootTarget"))
+            self.foot_target[i].setZ(self.target_height+get_object_ground_Z_pos(self.foot_target[i], self.world, self.terrain_bullet_node))
+            self.leg[i].setTarget( self.foot_target[i] )
 
             # Set up nodes which stay (rigidly) infront of the body, on the floor.
             # Whenever a leg needs to take a step, the target will be placed on this position:
-            self.plannedFootTarget.append(self.lowerTorso.attachNewNode( "PlannedFootTarget" ))
-            stepDist = 0.15
-            self.plannedFootTarget[i].setPos( horizontalPlacement*self.pelvisWidth/4, stepDist, -self.targetHeight )
+            self.planned_foot_target.append(self.lower_torso.attach_new_node( "PlannedFootTarget" ))
+            step_dist = 0.15
+            self.planned_foot_target[i].set_pos( horizontal_placement*self.pelvis_width/4, step_dist, -self.target_height )
 
             if self.debug:
                 geom = createAxes( 0.2 )
-                self.footTarget[i].attachNewNode( geom )
-                self.plannedFootTarget[i].attachNewNode( geom )
+                self.foot_target[i].attach_new_node( geom )
+                self.planned_foot_target[i].attach_new_node( geom )
 
 
         # Add visuals to the bones. These MUST be after finalize().
 
         for i in range(2):
-            visual = loader.loadModel("models/unit_cylinder.bam")
-            visual.setScale(Vec3(thighDiameter, thighDiameter, self.thighLength))
-            visual.reparentTo(thigh[i].ikNode)
-            visual.setPos( (visual.getPos() + thigh[i].offset)/2 )
+            visual = loader.load_model("models/unit_cylinder.bam")
+            visual.set_scale(Vec3(thigh_diameter, thigh_diameter, self.thigh_length))
+            visual.reparent_to(thigh[i].ikNode)
+            visual.set_pos( (visual.get_pos() + thigh[i].offset)/2 )
 
-            visual = loader.loadModel("models/unit_cylinder.bam")
-            visual.setScale(Vec3(lowerLegDiameter, lowerLegDiameter, self.lowerLegLength))
-            visual.reparentTo(lowerLeg[i].ikNode)
-            visual.setPos( (visual.getPos() + lowerLeg[i].offset)/2 )
+            visual = loader.load_model("models/unit_cylinder.bam")
+            visual.set_scale(Vec3(lower_leg_diameter, lower_leg_diameter, self.lower_leg_length))
+            visual.reparent_to(lower_leg[i].ikNode)
+            visual.set_pos( (visual.get_pos() + lower_leg[i].offset)/2 )
 
-            footVisual = loader.loadModel("models/unit_cube.bam")
-            footVisual.reparentTo(self.foot[i])
-            footVisual.setScale(Vec3(lowerLegDiameter, self.footLength, self.footHeight))
+            footVisual = loader.load_model("models/unit_cube.bam")
+            footVisual.reparent_to(self.foot[i])
+            footVisual.set_scale(Vec3(lower_leg_diameter, self.foot_length, self.foot_height))
 
 
-        self.head.setPosHpr(startPosition, startHeading)
-#        self.lowerTorso.setPosHpr(startPosition, startHeading)
-        self.chest.setPosHpr(startPosition, startHeading)
+        self.head.set_pos_hpr(start_position, start_heading)
+        self.chest.set_pos_hpr(start_position, start_heading)
 
-        self.legMovementSpeed = self.walkSpeed*3
+        # To reduce the harmful effects of gravity on custom ground collision, have a net zero gravity
+        counteract_mass = self.left_arm.get_mass() + self.right_arm.get_mass()
+        self.head.node().set_gravity(Vec3(0, 0, 0))
+        self.lower_torso.node().set_gravity(Vec3(0, 0, 9.81*counteract_mass/self.lower_torso.node().get_mass()))
+        self.chest.node().set_gravity(Vec3(0, 0, 0))
 
-        self.stepLeft = False
-        self.stepRight = False
+        self.leg_movement_speed = self.walk_speed*3
+
+        self.step_left = False
+        self.step_right = False
         
-        self.walkCycle = WalkCycle( 2, 0.75 )
-        self.desiredHeading = self.lowerTorso.getH()
+        self.walk_cycle = WalkCycle( 2, 0.75 )
+        self.desired_heading = self.lower_torso.getH()
 
 
-    def speedUp( self ):
-        self.walkSpeed += 0.1
-        self.walkSpeed = min(self.walkSpeed, 9)
-        self.legMovementSpeed = self.walkSpeed*3
+    def speed_up( self ):
+        self.walk_speed += 0.1
+        self.walk_speed = min(self.walk_speed, 9)
+        self.leg_movement_speed = self.walk_speed*3
 
-    def slowDown( self ):
-        self.walkSpeed -= 0.1
-        self.walkSpeed = max(self.walkSpeed, 0)
-        self.legMovementSpeed = self.walkSpeed*3
+    def slow_down( self ):
+        self.walk_speed -= 0.1
+        self.walk_speed = max(self.walk_speed, 0)
+        self.leg_movement_speed = self.walk_speed*3
 
 
-    def getCorrectZVelocity(self, currentZPos=None):
+    def get_correct_Z_velocity(self, current_Z_pos=None):
         # Too high and you'll get massive jittering at sharp points in the terrain physics node
-        vector = self.lowerTorso.node().getLinearVelocity()
-        maxZChange = 4*globalClock.getDt()*min(self.walkSpeed, Vec3(vector.getX(), vector.getY(), 0).length())
-        if currentZPos:
-            return -min(maxZChange,max(currentZPos,-maxZChange))/globalClock.getDt()
-        return -min(maxZChange,max(self.getFeetAveragedGroundZPos(),-maxZChange))/globalClock.getDt()
+        vector = self.lower_torso.node().get_linear_velocity()
+        # Determine some Z change that is allowed. It's got to be low enough to reduce jitter.
+        max_Z_change = 4*globalClock.get_dt()*min(self.walk_speed, 4*Vec3(vector.getX(), vector.getY(), 0).length())
+        if current_Z_pos:
+            return -min(max_Z_change,max(current_Z_pos,-max_Z_change))/globalClock.get_dt()
+        return -min(max_Z_change,max(self.get_feet_averaged_ground_Z_pos(),-max_Z_change))/globalClock.get_dt()
 
 
-    def getFeetAveragedGroundZPos(self, offsetX=0, offsetY=0):
-        averageX = 0
-        averageY = 0
-        averageZ = 0
+    def get_feet_averaged_ground_Z_pos(self, offset_x=0, offset_y=0):
+        average_x = 0
+        average_y = 0
+        average_z = 0
         for foot in self.foot:
-            averageX += foot.getX(self.render)
-            averageY += foot.getY(self.render)
-            averageZ += foot.getZ(self.render)-self.footHeight/2
-        averageX /= len(self.foot)
-        averageY /= len(self.foot)
-        averageZ /= len(self.foot)
-        averageZ -= getGroundZPos(averageX+offsetX, averageY+offsetY, self.world, self.terrainBulletNode)
-        return averageZ
+            average_x += foot.getX(self.render)
+            average_y += foot.getY(self.render)
+            average_z += foot.getZ(self.render)-self.foot_height/2
+        average_x /= len(self.foot)
+        average_y /= len(self.foot)
+        average_z /= len(self.foot)
+        average_z -= get_ground_Z_pos(average_x+offset_x, average_y+offset_y, self.world, self.terrain_bullet_node)
+        return average_z
 
 
-    def standStill(self):
-        self.walkInDir(self.lowerTorso.getH(),decelerate=True)
-        
+    def stand_still(self):
+        self.walk_in_dir(self.lower_torso.getH(), decelerate=True)
 
-    def walkInDir( self, angle=0, visuals=True, decelerate=False ):
+
+    def walk_in_dir( self, angle=0, visuals=True, decelerate=False ):
         if not decelerate:
-            mathAngle = radians(angle+90)
-            diff = Vec3(-cos(mathAngle),sin(mathAngle),0)
-            diffN = diff.normalized()
-            step = diffN*self.walkSpeed
+            math_angle = radians(angle+90)
+            diff = Vec3(-cos(math_angle),sin(math_angle),0)
+            diff_n = diff.normalized()
+            step = diff_n*self.walk_speed
 
-        currentZPos = self.getFeetAveragedGroundZPos()
-        preliminaryZVelocity = self.getCorrectZVelocity(currentZPos)
+        current_Z_pos = self.get_feet_averaged_ground_Z_pos()
+        preliminary_Z_velocity = self.get_correct_Z_velocity(current_Z_pos)
         if decelerate:
-            newVector = Vec3(self.lowerTorso.node().getLinearVelocity().getX(), self.lowerTorso.node().getLinearVelocity().getY(), preliminaryZVelocity)
+            new_vector = Vec3(self.lower_torso.node().get_linear_velocity().getX(), self.lower_torso.node().get_linear_velocity().getY(), preliminary_Z_velocity)
         else:
-            ca = cos(radians(self.lowerTorso.getH()))
-            sa = sin(radians(self.lowerTorso.getH()))
-            newVector = Vec3(ca*step.getX() - sa*step.getY(), sa*step.getX() + ca*step.getY(), preliminaryZVelocity)
-        zDiff = currentZPos - self.getFeetAveragedGroundZPos(offsetX=newVector.getX()*0.01, offsetY=newVector.getY()*0.01)
+            ca = cos(radians(self.lower_torso.getH()))
+            sa = sin(radians(self.lower_torso.getH()))
+            new_vector = Vec3(ca*step.getX() - sa*step.getY(), sa*step.getX() + ca*step.getY(), preliminary_Z_velocity)
+        z_diff = current_Z_pos - self.get_feet_averaged_ground_Z_pos(offset_x=new_vector.getX()*0.01, offset_y=new_vector.getY()*0.01)
 
-        multMin = 0.01
-        if zDiff > multMin:
-            multMax = 0.02
-            mult = ((1/multMax)*(multMax-multMin - (min(multMax,zDiff)-multMin)))
-            self.lowerTorso.node().setLinearVelocity(Vec3(newVector.getX()*mult, newVector.getY()*mult, preliminaryZVelocity))
-            if zDiff >= multMax:
+        mult_min = 0.01
+        if z_diff > mult_min:
+            mult_max = 0.02
+            mult = ((1/mult_max)*(mult_max-mult_min - (min(mult_max,z_diff)-mult_min)))
+            self.lower_torso.node().set_linear_velocity(Vec3(new_vector.getX()*mult, new_vector.getY()*mult, preliminary_Z_velocity))
+            if z_diff >= mult_max:
                 return
         else:
-            self.lowerTorso.node().setLinearVelocity(newVector)
+            self.lower_torso.node().set_linear_velocity(new_vector)
 
         # Negligible speed; assume we've come to a halt and save on resources
-        if self.lowerTorso.node().getLinearVelocity().length() < 0.2 and abs(self.lowerTorso.node().getAngularVelocity().getZ()) < 0.1:
-            self.lowerTorso.node().setLinearVelocity(Vec3(0,0,self.lowerTorso.node().getLinearVelocity().getZ()))
+        if self.lower_torso.node().get_linear_velocity().length() < 0.2 and abs(self.lower_torso.node().get_angular_velocity().getZ()) < 0.1:
+            self.lower_torso.node().set_linear_velocity(Vec3(0,0,self.lower_torso.node().get_linear_velocity().getZ()))
             return
 
         if visuals:
             # Calculate how far we've walked this frame:
-            curWalkDist = self.lowerTorso.node().getLinearVelocity().length()*globalClock.getDt()
-            self._walkingVisuals( curWalkDist, 0 )
+            cur_walk_dist = self.lower_torso.node().get_linear_velocity().length()*globalClock.get_dt()
+            self._walkingVisuals( cur_walk_dist, 0 )
 
 
-    def _walkingVisuals( self, curWalkDist, angClamped ):
+    def _walkingVisuals( self, cur_walk_dist, ang_clamped ):
         #############################
         # Update legs:
 
         # Move planned foot target further forward (longer steps) when character is
         # walking faster:
-        stepDist = curWalkDist*0.1/globalClock.getDt()
+        step_dist = cur_walk_dist*0.1/globalClock.get_dt()
         left = 0
         right = 1
-        self.plannedFootTarget[left].setPos( -self.pelvisWidth/4, stepDist, -self.targetHeight )
-        self.plannedFootTarget[left].setZ( self.render, getGroundZPos(self.plannedFootTarget[left].getX(self.render), self.plannedFootTarget[left].getY(self.render), self.world, self.terrainBulletNode) )
-        self.plannedFootTarget[right].setPos( self.pelvisWidth/4, stepDist, -self.targetHeight )
-        self.plannedFootTarget[right].setZ( self.render, getGroundZPos(self.plannedFootTarget[right].getX(self.render), self.plannedFootTarget[right].getY(self.render), self.world, self.terrainBulletNode) )
+        self.planned_foot_target[left].set_pos( -self.pelvis_width/4, step_dist, -self.target_height )
+        self.planned_foot_target[left].setZ( self.render, get_ground_Z_pos(self.planned_foot_target[left].getX(self.render), self.planned_foot_target[left].getY(self.render), self.world, self.terrain_bullet_node) )
+        self.planned_foot_target[right].set_pos( self.pelvis_width/4, step_dist, -self.target_height )
+        self.planned_foot_target[right].setZ( self.render, get_ground_Z_pos(self.planned_foot_target[right].getX(self.render), self.planned_foot_target[right].getY(self.render), self.world, self.terrain_bullet_node) )
 
         # Update the walkcycle to determine if a step needs to be taken:
-        update = curWalkDist
-        update += angClamped*0.5
-        self.walkCycle.updateTime( update )
+        update = cur_walk_dist
+        update += ang_clamped*0.5
+        self.walk_cycle.updateTime( update )
 
-        if self.walkCycle.stepRequired[0]:
-            self.walkCycle.step( 0 )
-            self.stepLeft = True
-        if self.walkCycle.stepRequired[1]:
-            self.walkCycle.step( 1 )
-            self.stepRight = True
+        if self.walk_cycle.stepRequired[0]:
+            self.walk_cycle.step( 0 )
+            self.step_left = True
+        if self.walk_cycle.stepRequired[1]:
+            self.walk_cycle.step( 1 )
+            self.step_right = True
 
-        if self.stepLeft:
-            diff = self.plannedFootTarget[left].getPos(self.render) - self.footTarget[left].getPos()
-            legMoveDist = self.legMovementSpeed*globalClock.getDt()
-            if diff.length() < legMoveDist:
-                self.footTarget[left].setPos( self.plannedFootTarget[left].getPos( self.render ) )
-                self.stepLeft = False
+        if self.step_left:
+            diff = self.planned_foot_target[left].get_pos(self.render) - self.foot_target[left].get_pos()
+            leg_move_dist = self.leg_movement_speed*globalClock.get_dt()
+            if diff.length() < leg_move_dist:
+                self.foot_target[left].set_pos( self.planned_foot_target[left].get_pos( self.render ) )
+                self.step_left = False
             else:
-                moved = self.footTarget[left].getPos() + diff.normalized()*legMoveDist
-                self.footTarget[left].setPos( moved )
+                moved = self.foot_target[left].get_pos() + diff.normalized()*leg_move_dist
+                self.foot_target[left].set_pos( moved )
 
-        if self.stepRight:
-            diff = self.plannedFootTarget[right].getPos(self.render) - self.footTarget[right].getPos()
-            legMoveDist = self.legMovementSpeed*globalClock.getDt()
-            if diff.length() < legMoveDist:
-                self.footTarget[right].setPos( self.plannedFootTarget[right].getPos( self.render ) )
-                self.stepRight = False
+        if self.step_right:
+            diff = self.planned_foot_target[right].get_pos(self.render) - self.foot_target[right].get_pos()
+            leg_move_dist = self.leg_movement_speed*globalClock.get_dt()
+            if diff.length() < leg_move_dist:
+                self.foot_target[right].set_pos( self.planned_foot_target[right].get_pos( self.render ) )
+                self.step_right = False
             else:
-                moved = self.footTarget[right].getPos() + diff.normalized()*legMoveDist
-                self.footTarget[right].setPos( moved )
+                moved = self.foot_target[right].get_pos() + diff.normalized()*leg_move_dist
+                self.foot_target[right].set_pos( moved )
 
         self.leg[left].updateIK()
         self.leg[right].updateIK()
 
 
-    def turnLeft(self):
-        if abs(angleDiff(-self.lowerTorso.getH(), self.desiredHeading)) > 170:
+    def turn_left(self):
+        if abs(angle_diff(-self.lower_torso.getH(), self.desired_heading)) > 170:
             return
-        self.desiredHeading -= globalClock.getDt()*450
-        self.desiredHeading = normalizeAngle(self.desiredHeading)
-        self.updateHeading()
+        self.desired_heading -= globalClock.get_dt()*450
+        self.desired_heading = normalize_angle(self.desired_heading)
+        self.update_heading()
 
-    def turnRight(self):
-        if abs(angleDiff(-self.lowerTorso.getH(), self.desiredHeading)) > 170:
+    def turn_right(self):
+        if abs(angle_diff(-self.lower_torso.getH(), self.desired_heading)) > 170:
             return
-        self.desiredHeading += globalClock.getDt()*450
-        self.desiredHeading = normalizeAngle(self.desiredHeading)
-        self.updateHeading()
+        self.desired_heading += globalClock.get_dt()*450
+        self.desired_heading = normalize_angle(self.desired_heading)
+        self.update_heading()
 
-    def updateHeading(self):
-        diff = radians(angleDiff(-self.desiredHeading, self.lowerTorso.getH()))
-        self.lowerTorso.node().setAngularVelocity(Vec3(0,0,-diff*8))
+    def update_heading(self):
+        diff = radians(angle_diff(-self.desired_heading, self.lower_torso.getH()))
+        self.lower_torso.node().set_angular_velocity(Vec3(0,0,-diff*8))

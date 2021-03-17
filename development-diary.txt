@@ -56,3 +56,4 @@
 14.3.2021 More work done on the IK walking method.
 15.3.2021 Making the IK method work better on inclines
 16.3.2021 Collision with steep terrain and optimizing. A deceleration "animation".
+17.3.2021 Returned the upper body as a ragdoll. Also some reading up on docstrings and deciding upon some style conventions and writing some information about contributing.

@@ -18,9 +18,8 @@ from panda3d.bullet import getBulletVersion
 from panda3d.core import BitMask32, TransformState, NodePath, PandaNode
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import ZUp
-from src.utils import angleDiff
 from src.menu import Menu
-from src.weapons.sword import Sword
+#from src.weapons.sword import Sword
 
 
 def timediff(time1, time2):
@@ -72,8 +71,8 @@ class MyApp(ShowBase):
             print()
 
         if self.performanceAnalysis:
-            loadPrcFileData("", "task-timer-verbose 1")
-            loadPrcFileData("", "pstats-tasks 1")
+            load_prc_file_data("", "task-timer-verbose 1")
+            load_prc_file_data("", "pstats-tasks 1")
 
             base.setFrameRateMeter(True)
             PStatClient.connect()
@@ -101,8 +100,8 @@ class MyApp(ShowBase):
 
         # Physics setup
         self.world = BulletWorld()
-        # Let's NOT enable gravity globally. The custom ground collision doesn't go well along with it currently.
-#        self.world.setGravity(Vec3(0, 0, -9.81))
+        # The custom ground collision doesn't go well along with gravity, but some aesthetics depend on it.
+        self.world.setGravity(Vec3(0, 0, -9.81))
 
         #Collision groups:
         # 0: ground
@@ -199,11 +198,11 @@ class MyApp(ShowBase):
                 self.doppelgangers.append(Humanoid(self.render, self.world, self.terrainBulletNode, i-(self.doppelgangerNum-1)/2, j-(self.doppelgangerNum-1)/2))
 
 
-        self.camera.reparentTo(self.player.lowerTorso)
+        self.camera.reparentTo(self.player.lower_torso)
         self.camera.setPos(0, -10, 0)
         self.oldCameraZ = self.camera.getZ(self.render)
 
-#        self.weapon = Sword(self.render, self.world, self.player.lowerTorso)
+#        self.weapon = Sword(self.render, self.world, self.player.lower_torso)
 #        self.player.grabRight(self.weapon.getAttachmentInfo())
 
         self.inst1 = addInstructions(0.06, "[WASD]: Move")
@@ -255,69 +254,69 @@ class MyApp(ShowBase):
 
         if inputState.isSet('forward'):
             if inputState.isSet('left'):
-                self.player.walkInDir(-45)
+                self.player.walk_in_dir(-45)
                 for doppelganger in self.doppelgangers:
-                    doppelganger.walkInDir(-45)
+                    doppelganger.walk_in_dir(-45)
             elif inputState.isSet('right'):
-                self.player.walkInDir(45)
+                self.player.walk_in_dir(45)
                 for doppelganger in self.doppelgangers:
-                    doppelganger.walkInDir(45)
+                    doppelganger.walk_in_dir(45)
             else:
-                self.player.walkInDir(0)
+                self.player.walk_in_dir(0)
                 for doppelganger in self.doppelgangers:
-                    doppelganger.walkInDir(0)
+                    doppelganger.walk_in_dir(0)
             stepping = True
         elif inputState.isSet('backward'):
             if inputState.isSet('left'):
-                self.player.walkInDir(-135)
+                self.player.walk_in_dir(-135)
                 for doppelganger in self.doppelgangers:
-                    doppelganger.walkInDir(-135)
+                    doppelganger.walk_in_dir(-135)
             elif inputState.isSet('right'):
-                self.player.walkInDir(135)
+                self.player.walk_in_dir(135)
                 for doppelganger in self.doppelgangers:
-                    doppelganger.walkInDir(135)
+                    doppelganger.walk_in_dir(135)
             else:
-                self.player.walkInDir(180)
+                self.player.walk_in_dir(180)
                 for doppelganger in self.doppelgangers:
-                    doppelganger.walkInDir(180)
+                    doppelganger.walk_in_dir(180)
             stepping = True
         elif inputState.isSet('left'):
-            self.player.walkInDir(-90)
+            self.player.walk_in_dir(-90)
             for doppelganger in self.doppelgangers:
-                doppelganger.walkInDir(-90)
+                doppelganger.walk_in_dir(-90)
             stepping = True
         elif inputState.isSet('right'):
-            self.player.walkInDir(90)
+            self.player.walk_in_dir(90)
             for doppelganger in self.doppelgangers:
-                doppelganger.walkInDir(90)
+                doppelganger.walk_in_dir(90)
             stepping = True
 
         if not stepping:
-            self.player.standStill()
+            self.player.stand_still()
             for doppelganger in self.doppelgangers:
-                doppelganger.standStill()
+                doppelganger.stand_still()
 
         if inputState.isSet('turnleft'):
-            self.player.turnLeft()
+            self.player.turn_left()
             for doppelganger in self.doppelgangers:
-                doppelganger.turnLeft()
+                doppelganger.turn_left()
         if inputState.isSet('turnright'):
-            self.player.turnRight()
+            self.player.turn_right()
             for doppelganger in self.doppelgangers:
-                doppelganger.turnRight()
+                doppelganger.turn_right()
 
         if inputState.isSet('speedup'):
-            self.player.speedUp()
+            self.player.speed_up()
             for doppelganger in self.doppelgangers:
-                doppelganger.speedUp()
+                doppelganger.speed_up()
         if inputState.isSet('speeddown'):
-            self.player.slowDown()
+            self.player.slow_down()
             for doppelganger in self.doppelgangers:
-                doppelganger.slowDown()
+                doppelganger.slow_down()
 
-        self.inst5.text = "Speed " + str(round(sqrt(pow(self.player.lowerTorso.node().getLinearVelocity()[0], 2) + pow(self.player.lowerTorso.node().getLinearVelocity()[1], 2)),2)) + " / " + str(round(self.player.walkSpeed,1)) + " m/s"
+        self.inst5.text = "Speed " + str(round(sqrt(pow(self.player.lower_torso.node().getLinearVelocity()[0], 2) + pow(self.player.lower_torso.node().getLinearVelocity()[1], 2)),2)) + " / " + str(round(self.player.walk_speed,1)) + " m/s"
 #        self.inst6.text = "H" + str(int(self.heading)) + " P" + str(int(self.pitch))
-#        self.inst7.text = str(self.player.leftLeg.thigh.getH()) + " " + str(self.player.lowerTorso.getH())
+#        self.inst7.text = str(self.player.leftLeg.thigh.getH()) + " " + str(self.player.lower_torso.getH())
 
         
 #        if self.motionControllerConnected:
@@ -332,9 +331,9 @@ class MyApp(ShowBase):
             self.camera.setZ(self.render, (self.oldCameraZ*2 + self.camera.getZ(self.render))/3)
         self.oldCameraZ = self.camera.getZ(self.render)
 
-        self.player.updateHeading()
+        self.player.update_heading()
         for doppelganger in self.doppelgangers:
-            doppelganger.updateHeading()
+            doppelganger.update_heading()
 
         return task.cont
 

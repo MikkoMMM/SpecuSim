@@ -4,103 +4,103 @@ from panda3d.core import BitMask32
 from panda3d.bullet import ZUp
 from panda3d.core import Vec3, TransformState, Point3
 
-def createPhysicsCapsule(render, diameter, height):
+def create_physics_capsule(render, diameter, height):
     shape = BulletCapsuleShape(diameter/2, height-diameter, ZUp)
-    nodePath = render.attachNewNode(BulletRigidBodyNode())
-    nodePath.setCollideMask(BitMask32.bit(1))
-    nodePath.node().addShape(shape)
-    nodePath.node().setAngularDamping(0.9)
-    nodePath.node().setFriction(0.8)
-    nodePath.node().setRestitution(0.0)
-    return nodePath
+    node_path = render.attach_new_node(BulletRigidBodyNode())
+    node_path.set_collide_mask(BitMask32.bit(1))
+    node_path.node().add_shape(shape)
+    node_path.node().set_angular_damping(0.9)
+    node_path.node().set_friction(0.8)
+    node_path.node().set_restitution(0.0)
+    return node_path
 
-def createCapsule(render, diameter, height, r=1, g=1, b=1, a=1):
-    nodePath = createPhysicsCapsule(render, diameter, height)
-    visual = loader.loadModel("models/unit_cylinder.bam")
-    visual.setScale(Vec3(diameter, diameter, height))
-    visual.reparentTo(nodePath)
-    visual.setColor(r, g, b, a)
-    return nodePath
+def create_capsule(render, diameter, height, r=1, g=1, b=1, a=1):
+    node_path = create_physics_capsule(render, diameter, height)
+    visual = loader.load_model("models/unit_cylinder.bam")
+    visual.set_scale(Vec3(diameter, diameter, height))
+    visual.reparent_to(node_path)
+    visual.set_color(r, g, b, a)
+    return node_path
 
 
-def createPhysicsCone(render, diameter, height):
+def create_physics_cone(render, diameter, height):
     shape = BulletConeShape(diameter/2, height, ZUp)
-    nodePath = render.attachNewNode(BulletRigidBodyNode())
-    nodePath.setCollideMask(BitMask32.bit(1))
-    nodePath.node().addShape(shape)
-    nodePath.node().setAngularDamping(0.9)
-    nodePath.node().setFriction(0.8)
-    nodePath.node().setRestitution(0.0)
-    return nodePath
+    node_path = render.attach_new_node(BulletRigidBodyNode())
+    node_path.set_collide_mask(BitMask32.bit(1))
+    node_path.node().add_shape(shape)
+    node_path.node().set_angular_damping(0.9)
+    node_path.node().set_friction(0.8)
+    node_path.node().set_restitution(0.0)
+    return node_path
 
-def createCone(render, diameter, height, r=1, g=1, b=1, a=1):
-    nodePath = createPhysicsCone(render, diameter, height)
-    visual = loader.loadModel("models/unit_cone.bam")
-    visual.setScale(Vec3(diameter, diameter, height))
-    visual.reparentTo(nodePath)
-    visual.setColor(r, g, b, a)
-    return nodePath
+def create_cone(render, diameter, height, r=1, g=1, b=1, a=1):
+    node_path = create_physics_cone(render, diameter, height)
+    visual = loader.load_model("models/unit_cone.bam")
+    visual.set_scale(Vec3(diameter, diameter, height))
+    visual.reparent_to(node_path)
+    visual.set_color(r, g, b, a)
+    return node_path
 
 
 # A cuboid rounded from two sides
 # NOTE: width has to be greater than depth
-def createPhysicsRoundedBox(render, width, depth, height):
-    nodePath = render.attachNewNode(BulletRigidBodyNode())
+def create_physics_rounded_box(render, width, depth, height):
+    node_path = render.attach_new_node(BulletRigidBodyNode())
 
     shape = BulletBoxShape(Vec3((width-depth)/2, depth/2, height/2))
-    nodePath.node().addShape(shape)
+    node_path.node().add_shape(shape)
     shape = BulletCylinderShape(depth/2, height, ZUp)
-    nodePath.node().addShape(shape, TransformState.makePos(Point3((-width+depth)/2, 0, 0)))
-    nodePath.node().addShape(shape, TransformState.makePos(Point3((width-depth)/2, 0, 0)))
+    node_path.node().add_shape(shape, TransformState.make_pos(Point3((-width+depth)/2, 0, 0)))
+    node_path.node().add_shape(shape, TransformState.make_pos(Point3((width-depth)/2, 0, 0)))
 
-    nodePath.setCollideMask(BitMask32.bit(1))
-    nodePath.node().setAngularDamping(0.9)
-    nodePath.node().setFriction(0.8)
-    nodePath.node().setRestitution(0.0)
-    return nodePath
+    node_path.set_collide_mask(BitMask32.bit(1))
+    node_path.node().set_angular_damping(0.9)
+    node_path.node().set_friction(0.8)
+    node_path.node().set_restitution(0.0)
+    return node_path
 
-def createRoundedBox(render, width, depth, height, r=1, g=1, b=1, a=1):
-    nodePath = createPhysicsRoundedBox(render, width, depth, height)
-    visual = loader.loadModel("models/unit_cylinder.bam")
-    visual.setScale(Vec3(width, depth, height))
-    visual.reparentTo(nodePath)
-    visual.setColor(r, g, b, a)
-    return nodePath
+def create_rounded_box(render, width, depth, height, r=1, g=1, b=1, a=1):
+    node_path = create_physics_rounded_box(render, width, depth, height)
+    visual = loader.load_model("models/unit_cylinder.bam")
+    visual.set_scale(Vec3(width, depth, height))
+    visual.reparent_to(node_path)
+    visual.set_color(r, g, b, a)
+    return node_path
 
 
-def createPhysicsBox(render, dx, dy, dz):
+def create_physics_box(render, dx, dy, dz):
     shape = BulletBoxShape(Vec3(dx/2, dy/2, dz/2))
-    nodePath = render.attachNewNode(BulletRigidBodyNode())
-    nodePath.setCollideMask(BitMask32.bit(1))
-    nodePath.node().addShape(shape)
-    nodePath.node().setAngularDamping(0.9)
-    nodePath.node().setFriction(0.8)
-    nodePath.node().setRestitution(0.0)
-    return nodePath
+    node_path = render.attach_new_node(BulletRigidBodyNode())
+    node_path.set_collide_mask(BitMask32.bit(1))
+    node_path.node().add_shape(shape)
+    node_path.node().set_angular_damping(0.9)
+    node_path.node().set_friction(0.8)
+    node_path.node().set_restitution(0.0)
+    return node_path
 
-def createBox(render, dx, dy, dz, r=1, g=1, b=1, a=1):
-    nodePath = createPhysicsBox(render, dx, dy, dz)
-    visual = loader.loadModel("models/unit_cube.bam")
-    visual.setScale(Vec3(dx, dy, dz))
-    visual.reparentTo(nodePath)
-    visual.setColor(r, g, b, a)
-    return nodePath
+def create_box(render, dx, dy, dz, r=1, g=1, b=1, a=1):
+    node_path = create_physics_box(render, dx, dy, dz)
+    visual = loader.load_model("models/unit_cube.bam")
+    visual.set_scale(Vec3(dx, dy, dz))
+    visual.reparent_to(node_path)
+    visual.set_color(r, g, b, a)
+    return node_path
 
 
-def createPhysicsSphere(render, diameter):
+def create_physics_sphere(render, diameter):
     shape = BulletSphereShape(diameter/2)
-    nodePath = render.attachNewNode(BulletRigidBodyNode())
-    nodePath.setCollideMask(BitMask32.bit(1))
-    nodePath.node().addShape(shape)
-    nodePath.node().setAngularDamping(0.9)
-    nodePath.node().setFriction(0.8)
-    nodePath.node().setRestitution(0.0)
-    return nodePath
+    node_path = render.attach_new_node(BulletRigidBodyNode())
+    node_path.set_collide_mask(BitMask32.bit(1))
+    node_path.node().add_shape(shape)
+    node_path.node().set_angular_damping(0.9)
+    node_path.node().set_friction(0.8)
+    node_path.node().set_restitution(0.0)
+    return node_path
 
-def createSphere(render, diameter, r=1, g=1, b=1, a=1):
-    nodePath = createPhysicsSphere(render, diameter)
-    visual = loader.loadModel("models/unit_sphere.bam")
-    visual.setScale(Vec3(diameter, diameter, diameter))
-    visual.reparentTo(nodePath)
-    visual.setColor(r, g, b, a)
-    return nodePath
+def create_sphere(render, diameter, r=1, g=1, b=1, a=1):
+    node_path = create_physics_sphere(render, diameter)
+    visual = loader.load_model("models/unit_sphere.bam")
+    visual.set_scale(Vec3(diameter, diameter, diameter))
+    visual.reparent_to(node_path)
+    visual.set_color(r, g, b, a)
+    return node_path
