@@ -15,44 +15,41 @@ class Menu(object):
     def __init__(self,main): 
         self.main=main
 
-        wx = base.win.getXSize()
-        wy = base.win.getYSize()
+        wx = base.win.get_x_size()
+        wy = base.win.get_y_size()
         kx = 1920
         
         ky = 1080
-#        self.myFrame = DirectFrame(frameColor=(1, 1, 1, 1),
-#                      frameSize=(-base.getAspectRatio(), base.getAspectRatio(), -1, 1),
+#        self.my_frame = DirectFrame(frameColor=(1, 1, 1, 1),
+#                      frameSize=(-base.get_aspect_ratio(), base.get_aspect_ratio(), -1, 1),
 #                      pos=(0, 0, 0))
-        self.myFrame = DirectFrame(frameColor=(1,1,1,1),
+        self.my_frame = DirectFrame(frameColor=(1,1,1,1),
             frameSize=(0, kx,0, ky))
 
-        menu_tex = loader.loadTexture("textures/menu.jpg")
+        menu_tex = loader.load_texture("textures/menu.jpg")
         menu_tex.set_minfilter(SamplerState.FT_nearest)
         menu_tex.set_magfilter(SamplerState.FT_linear)
-        self.myFrame["frameTexture"] = menu_tex
-        self.myFrame.reparentTo(base.pixel2d)
-#        self.myFrame.reparentTo(base.aspect2d)
-        self.myFrame.set_pos( (wx-kx) / 2, 0, -(wy+ky) / 2)
-#        self.myFrame.set_pos( -kx / 2, 0, -ky / 2)
-#        self.myFrame.set_pos( -kx / 2, 0, -ky / 2)
-        self.myFrame.set_transparency(True)
+        self.my_frame["frameTexture"] = menu_tex
+        self.my_frame.reparent_to(base.pixel2d)
+        self.my_frame.set_pos( (wx-kx) / 2, 0, -(wy+ky) / 2)
+        self.my_frame.set_transparency(True)
 
-        self.exitButton = DirectButton(
+        self.no_mc_button = DirectButton(
                     frameTexture="textures/empty_button.png",
                     frameColor=(1,1,1,1),
                     frameSize=(-64, 64, -20, 20),
-                    command=self.main.startGame,
+                    command=self.main.start_game,
                     relief=DGG.FLAT,
                     rolloverSound=None,
                     clickSound=None,
-                    parent=self.myFrame,
+                    parent=self.my_frame,
                     scale=2.0,
                     pos=(kx/2, 0, ky/2 + 50)
                     )
-        self.setCenteredText(self.exitButton, "No Motion Control")
-        self.exitButton.setTransparency(1)
+        self.set_centered_text(self.no_mc_button, "No Motion Control")
+        self.no_mc_button.set_transparency(1)
         
-        self.resumeButton = DirectButton(
+        self.exit_button = DirectButton(
                     frameTexture="textures/empty_button.png",
                     frameColor=(1,1,1,1),
                     frameSize=(-64, 64, -20, 20),
@@ -60,33 +57,33 @@ class Menu(object):
                     relief=DGG.FLAT,
                     rolloverSound=None,
                     clickSound=None,
-                    parent=self.myFrame,
+                    parent=self.my_frame,
                     scale=2.0,
                     pos=(kx/2, 0, ky/2 - 50)
                     )
         
-        self.resumeButton.setTransparency(1)
-        self.setCenteredText(self.resumeButton, "Exit Game")
-#        self.resumeButton.hide()
+        self.exit_button.set_transparency(1)
+        self.set_centered_text(self.exit_button, "Exit Game")
+#        self.exit_button.hide()
         
-        self.selectFrame= DirectFrame( frameColor=(1,1,1,1) , frameSize=(-64, 64, -20, 20) , frameTexture="textures/select.png")
-        self.selectFrame.setTransparency(1)
-        self.selectFrame.reparentTo(self.exitButton)
-        self.entries = [self.exitButton,self.resumeButton]
-        self.activeEntry = 0
+        self.select_frame= DirectFrame( frameColor=(1,1,1,1) , frameSize=(-64, 64, -20, 20) , frameTexture="textures/select.png")
+        self.select_frame.set_transparency(1)
+        self.select_frame.reparent_to(self.no_mc_button)
+        self.entries = [self.no_mc_button,self.exit_button]
+        self.active_entry = 0
 
 
-    def setCenteredText(self, guiObject, text, scale=14, fg=(0.2,0.2,0.2,1)):
-        textObject = DirectLabel(text = text,
+    def set_centered_text(self, gui_object, text, scale=14, fg=(0.2,0.2,0.2,1)):
+        text_object = DirectLabel(text = text,
         text_fg = fg,
         relief=None,
         text_align = TextNode.ACenter, text_scale = scale,
-        parent = guiObject)
+        parent = gui_object)
 
-        textObject.setPos(0,0,-textObject.getHeight()/2)
+        text_object.set_pos(0,0,-text_object.getHeight()/2)
 
 
-    def clearKeys(self):
+    def clear_keys(self):
         base.ignore("arrow_up")
         base.ignore("arrow_down")
         base.ignore("arrow_left")
@@ -96,55 +93,55 @@ class Menu(object):
         base.ignore("escape")
         base.ignore("enter")
     
-    def execSelection(self):
-        self.entries[self.activeEntry]["command"]()
+    def exec_selection(self):
+        self.entries[self.active_entry]["command"]()
       
         
-    def selectDown(self):
-        if self.activeEntry == 0:
-            self.activeEntry = len(self.entries)-1
+    def select_down(self):
+        if self.active_entry == 0:
+            self.active_entry = len(self.entries)-1
         else:
-            self.activeEntry -=1
+            self.active_entry -=1
         
-        if self.entries[self.activeEntry].isHidden():
-            self.selectDown()
+        if self.entries[self.active_entry].is_hidden():
+            self.select_down()
             return   
-        self.selectFrame.reparentTo(self.entries[self.activeEntry])
+        self.select_frame.reparent_to(self.entries[self.active_entry])
 
-    def selectUp(self):
+    def select_up(self):
 
-        if self.activeEntry == len(self.entries)-1:
-            self.activeEntry=0
+        if self.active_entry == len(self.entries)-1:
+            self.active_entry=0
         else:
-            self.activeEntry +=1
-        if self.entries[self.activeEntry].isHidden() :
-            self.selectUp()
+            self.active_entry +=1
+        if self.entries[self.active_entry].is_hidden() :
+            self.select_up()
             return
-        self.selectFrame.reparentTo(self.entries[self.activeEntry])
+        self.select_frame.reparent_to(self.entries[self.active_entry])
 
-    def hideMenu(self):
-        self.clearKeys()
-        self.myFrame.hide()
-#        seq= Sequence( LerpColorScaleInterval(self.myFrame, 0.4 ,(1,1,1,0)) , Func(self.myFrame.hide) )
+    def hide_menu(self):
+        self.clear_keys()
+        self.my_frame.hide()
+#        seq= Sequence( LerpColorScaleInterval(self.my_frame, 0.4 ,(1,1,1,0)) , Func(self.my_frame.hide) )
 #        seq.start()
 
-    def hideResume(self):
-        seq= Sequence( LerpColorScaleInterval(self.resumeButton, .5 ,(1,1,1,0)) , Func(self.resumeButton.hide))
+    def hide_resume(self):
+        seq= Sequence( LerpColorScaleInterval(self.exit_button, .5 ,(1,1,1,0)) , Func(self.exit_button.hide))
         seq.start()
 
-    def showResume(self):
-        self.resumeButton.show()
-        #seq= Sequence(  LerpColorScaleInterval(self.resumeButton, 1 ,(1,1,1,1)) )
+    def show_resume(self):
+        self.exit_button.show()
+        #seq= Sequence(  LerpColorScaleInterval(self.exit_button, 1 ,(1,1,1,1)) )
         #seq.start()
 
-    def showMenu(self): 
-        self.clearKeys()
-        base.accept("arrow_up" , self.selectUp )
-        base.accept("arrow_down" , self.selectDown )
-        base.accept("w" , self.selectUp )
-        base.accept("s" , self.selectDown )
+    def show_menu(self): 
+        self.clear_keys()
+        base.accept("arrow_up" , self.select_up )
+        base.accept("arrow_down" , self.select_down )
+        base.accept("w" , self.select_up )
+        base.accept("s" , self.select_down )
         base.accept("escape", exit)
-        base.accept("enter",self.execSelection)  
-        self.myFrame.show()
-        seq= Sequence( LerpColorScaleInterval(self.myFrame, .5 ,(1,1,1,1)) )
+        base.accept("enter",self.exec_selection)  
+        self.my_frame.show()
+        seq= Sequence( LerpColorScaleInterval(self.my_frame, .5 ,(1,1,1,1)) )
         seq.start()

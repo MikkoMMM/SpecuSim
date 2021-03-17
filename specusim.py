@@ -14,7 +14,7 @@ from direct.task import Task
 from panda3d.bullet import BulletWorld
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.bullet import BulletDebugNode
-from panda3d.bullet import getBulletVersion
+from panda3d.bullet import get_bullet_version
 from panda3d.core import BitMask32, TransformState, NodePath, PandaNode
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import ZUp
@@ -27,7 +27,7 @@ def timediff(time1, time2):
 
 
 # Function to put instructions on the screen.
-def addInstructions(pos, msg):
+def add_instructions(pos, msg):
     return OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1), scale=.05,
                         shadow=(0, 0, 0, 1), parent=base.a2dTopLeft,
                         pos=(0.08, -pos - 0.04), align=TextNode.ALeft)
@@ -59,25 +59,25 @@ class MyApp(ShowBase):
         # Initialize the showbase
         ShowBase.__init__(self)
         # In case window size would be at first detected incorrectly, buy a bit of time.
-        base.graphicsEngine.renderFrame() 
+        base.graphicsEngine.render_frame() 
 
         self.gui = True                 # A toggle for the GUI for testing puposes
-        self.performanceAnalysis = True # Enable pstat support and show frame rate
-        self.physicsDebug = False        # Show wireframes for the physics objects.
-        self.debugMessages = False       # Some extraneous information
+        self.performance_analysis = True # Enable pstat support and show frame rate
+        self.physics_debug = False        # Show wireframes for the physics objects.
+        self.debug_messages = False       # Some extraneous information
 
-        if self.debugMessages:
-            print("Using Bullet Physics version ", getBulletVersion())
+        if self.debug_messages:
+            print("Using Bullet Physics version ", get_bullet_version())
             print()
 
-        if self.performanceAnalysis:
+        if self.performance_analysis:
             load_prc_file_data("", "task-timer-verbose 1")
             load_prc_file_data("", "pstats-tasks 1")
 
-            base.setFrameRateMeter(True)
+            base.set_frame_rate_meter(True)
             PStatClient.connect()
 
-        self.doppelgangerNum = 0      # Actual number will be doppelgangerNum^2-1
+        self.doppelganger_num = 0      # Actual number will be doppelganger_num^2-1
 
         # For calculating motion controller orientation
         self.heading = 0
@@ -87,7 +87,7 @@ class MyApp(ShowBase):
         #self.fuse = Fusion(10, timediff) # A fairly large GyroMeansError so erroneous values are quickly resolved
 
         self.menu = Menu(self)
-        self.menu.showMenu()
+        self.menu.show_menu()
 
         # Increase camera FOV as well as the far plane
         self.camLens.set_fov(90)
@@ -96,48 +96,45 @@ class MyApp(ShowBase):
         #Heightfield's height
         self.height = 25.0
 
-        self.motionControllerAccuracy = 40 # The motion controller's orientation is to be updated 100 times this number per second
-
         # Physics setup
         self.world = BulletWorld()
         # The custom ground collision doesn't go well along with gravity, but some aesthetics depend on it.
-        self.world.setGravity(Vec3(0, 0, -9.81))
+        self.world.set_gravity(Vec3(0, 0, -9.81))
 
         #Collision groups:
         # 0: ground
         # 1: "ghost" body parts, for weapon hits
         # 2: feet
         # 3: mutually colliding parts of characters
-        self.world.setGroupCollisionFlag(1, 0, False)
-        self.world.setGroupCollisionFlag(1, 1, False)
-        self.world.setGroupCollisionFlag(2, 0, True)
-        self.world.setGroupCollisionFlag(2, 1, False)
-        self.world.setGroupCollisionFlag(2, 2, False)
-        self.world.setGroupCollisionFlag(3, 0, False)
-        self.world.setGroupCollisionFlag(3, 1, False)
-        self.world.setGroupCollisionFlag(3, 2, False)
-        self.world.setGroupCollisionFlag(3, 3, True)
+        self.world.set_group_collision_flag(1, 0, False)
+        self.world.set_group_collision_flag(1, 1, False)
+        self.world.set_group_collision_flag(2, 0, True)
+        self.world.set_group_collision_flag(2, 1, False)
+        self.world.set_group_collision_flag(2, 2, False)
+        self.world.set_group_collision_flag(3, 0, False)
+        self.world.set_group_collision_flag(3, 1, False)
+        self.world.set_group_collision_flag(3, 2, False)
+        self.world.set_group_collision_flag(3, 3, True)
 
-        self.motionControllerConnected = False
-        self.disableMouse()
+        self.disable_mouse()
         
        
-        if self.physicsDebug:
+        if self.physics_debug:
             # We have to use a smaller heightfield image for debugging
             elevation_img = PNMImage(Filename('worldmaps/seed_16783_grayscale_tiny.png'))
-            self.worldNP = render.attachNewNode('World')
-            self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
-            self.debugNP.node().showNormals(True)
-            self.debugNP.node().showBoundingBoxes(False)
-            self.debugNP.node().showConstraints(True)
-            self.debugNP.show()
-            self.world.setDebugNode(self.debugNP.node())
+            self.world_np = render.attach_new_node('World')
+            self.debug_np = self.world_np.attach_new_node(BulletDebugNode('Debug'))
+            self.debug_np.node().show_normals(True)
+            self.debug_np.node().show_bounding_boxes(False)
+            self.debug_np.node().show_constraints(True)
+            self.debug_np.show()
+            self.world.set_debug_node(self.debug_np.node())
         else:
             # Set a heightfield, the heightfield should be a 16-bit png and
             # have a quadratic size of a power of two.
             elevation_img = PNMImage(Filename('worldmaps/seed_16783_grayscale.png'))
 
-        elevation_img_size = elevation_img.getXSize()
+        elevation_img_size = elevation_img.get_x_size()
         elevation_img_offset = elevation_img_size / 2.0
         heightfield = Texture("heightfield")
         heightfield.load(elevation_img)
@@ -175,89 +172,88 @@ class MyApp(ShowBase):
 
         # Collision detection for the terrain
         terrain_colshape = BulletHeightfieldShape(elevation_img, self.height, ZUp)
-        terrain_colshape.setUseDiamondSubdivision(True)
+        terrain_colshape.set_use_diamond_subdivision(True)
 
-        self.terrainBulletNode = BulletRigidBodyNode("terrainBodyNode")
-        self.terrainBulletNode.addShape(terrain_colshape)
-        self.terrainNp0 = render.attachNewNode(self.terrainBulletNode)
-        self.terrainNp0.setCollideMask(BitMask32.bit(0))
-        #self.terrainNp0.setCollideMask(BitMask32.bit(1))
-        self.terrainNp0.setPos(0, 0, 0)
+        self.terrain_bullet_node = BulletRigidBodyNode("terrainBodyNode")
+        self.terrain_bullet_node.add_shape(terrain_colshape)
+        self.terrain_np = render.attach_new_node(self.terrain_bullet_node)
+        self.terrain_np.set_collide_mask(BitMask32.bit(0))
+        self.terrain_np.set_pos(0, 0, 0)
 
 
-    def startGame(self):
-        self.menu.hideMenu()
-        self.world.attach(self.terrainNp0.node())
-#        self.player = Humanoid(self.render, self.world, self.terrainBulletNode, Vec3(0,0,-8), Vec3(0,0,0))
-        self.player = Humanoid(self.render, self.world, self.terrainBulletNode, 0, 0, debug=self.physicsDebug)
+    def start_game(self):
+        self.menu.hide_menu()
+        self.world.attach(self.terrain_np.node())
+#        self.player = Humanoid(self.render, self.world, self.terrain_bullet_node, Vec3(0,0,-8), Vec3(0,0,0))
+        self.player = Humanoid(self.render, self.world, self.terrain_bullet_node, 0, 0, debug=self.physics_debug)
         
         self.doppelgangers = []
-        for i in range(self.doppelgangerNum):
-            for j in range(self.doppelgangerNum):
-                if i == (self.doppelgangerNum-1)/2 and j == (self.doppelgangerNum-1)/2: continue
-                self.doppelgangers.append(Humanoid(self.render, self.world, self.terrainBulletNode, i-(self.doppelgangerNum-1)/2, j-(self.doppelgangerNum-1)/2))
+        for i in range(self.doppelganger_num):
+            for j in range(self.doppelganger_num):
+                if i == (self.doppelganger_num-1)/2 and j == (self.doppelganger_num-1)/2: continue
+                self.doppelgangers.append(Humanoid(self.render, self.world, self.terrain_bullet_node, i-(self.doppelganger_num-1)/2, j-(self.doppelganger_num-1)/2))
 
 
-        self.camera.reparentTo(self.player.lower_torso)
-        self.camera.setPos(0, -10, 0)
-        self.oldCameraZ = self.camera.getZ(self.render)
+        self.camera.reparent_to(self.player.lower_torso)
+        self.camera.set_pos(0, -10, 0)
+        self.old_camera_z = self.camera.getZ(self.render)
 
 #        self.weapon = Sword(self.render, self.world, self.player.lower_torso)
 #        self.player.grabRight(self.weapon.getAttachmentInfo())
 
-        self.inst1 = addInstructions(0.06, "[WASD]: Move")
-        self.inst2 = addInstructions(0.12, "[QE]: Rotate")
-        self.inst2 = addInstructions(0.18, "[+-]: Change speed")
-        self.inst3 = addInstructions(0.24, "Middle mouse button: Rotate camera")
-        self.inst4 = addInstructions(0.30, "Right mouse button: Adjust zoom")
-        self.inst5 = addInstructions(0.36, "")
-        self.inst6 = addInstructions(0.42, "")
-        self.inst7 = addInstructions(0.48, "")
+        self.inst1 = add_instructions(0.06, "[WASD]: Move")
+        self.inst2 = add_instructions(0.12, "[QE]: Rotate")
+        self.inst2 = add_instructions(0.18, "[+-]: Change speed")
+        self.inst3 = add_instructions(0.24, "Middle mouse button: Rotate camera")
+        self.inst4 = add_instructions(0.30, "Right mouse button: Adjust zoom")
+        self.inst5 = add_instructions(0.36, "")
+        self.inst6 = add_instructions(0.42, "")
+        self.inst7 = add_instructions(0.48, "")
 
-        self.accept('mouse1',self.disableMouse)
-        self.accept('mouse2',self.reEnableMouse)
-        self.accept('mouse3',self.reEnableMouse)
-        self.accept('f1', self.toggleWireframe)
-        self.accept('f2', self.toggleTexture)
-        inputState.watchWithModifiers('forward', 'w')
-        inputState.watchWithModifiers('left', 'a')
-        inputState.watchWithModifiers('backward', 's')
-        inputState.watchWithModifiers('right', 'd')
-        inputState.watchWithModifiers('turnleft', 'q')
-        inputState.watchWithModifiers('turnright', 'e')
-        inputState.watchWithModifiers('speedup', '+')
-        inputState.watchWithModifiers('speeddown', '-')
+        self.accept('mouse1',self.disable_mouse)
+        self.accept('mouse2',self.re_enable_mouse)
+        self.accept('mouse3',self.re_enable_mouse)
+        self.accept('f1', self.toggle_wireframe)
+        self.accept('f2', self.toggle_texture)
+        inputState.watch_with_modifiers('forward', 'w')
+        inputState.watch_with_modifiers('left', 'a')
+        inputState.watch_with_modifiers('backward', 's')
+        inputState.watch_with_modifiers('right', 'd')
+        inputState.watch_with_modifiers('turnleft', 'q')
+        inputState.watch_with_modifiers('turnright', 'e')
+        inputState.watch_with_modifiers('speedup', '+')
+        inputState.watch_with_modifiers('speeddown', '-')
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
-        if self.debugMessages:
+        if self.debug_messages:
             self.render.analyze()
 
 
-    def reEnableMouse(self):
-        base.disableMouse()
-        mat = Mat4(self.camera.getMat())
-        mat.invertInPlace()
-        base.mouseInterfaceNode.setMat(mat)
-        base.enableMouse()
+    def re_enable_mouse(self):
+        base.disable_mouse()
+        mat = Mat4(self.camera.get_mat())
+        mat.invert_in_place()
+        base.mouseInterfaceNode.set_mat(mat)
+        base.enable_mouse()
 
     # Everything that needs to be done every frame goes here.
     # Physics updates and movement and stuff.
     def update(self, task):
-        dt = globalClock.getDt()
+        dt = globalClock.get_dt()
 
-        self.world.doPhysics(dt, 5, 1.0/80.0)
+        self.world.do_physics(dt, 5, 1.0/80.0)
 
         # Define controls
         stepping = False
 
 
-        if inputState.isSet('forward'):
-            if inputState.isSet('left'):
+        if inputState.is_set('forward'):
+            if inputState.is_set('left'):
                 self.player.walk_in_dir(-45)
                 for doppelganger in self.doppelgangers:
                     doppelganger.walk_in_dir(-45)
-            elif inputState.isSet('right'):
+            elif inputState.is_set('right'):
                 self.player.walk_in_dir(45)
                 for doppelganger in self.doppelgangers:
                     doppelganger.walk_in_dir(45)
@@ -266,12 +262,12 @@ class MyApp(ShowBase):
                 for doppelganger in self.doppelgangers:
                     doppelganger.walk_in_dir(0)
             stepping = True
-        elif inputState.isSet('backward'):
-            if inputState.isSet('left'):
+        elif inputState.is_set('backward'):
+            if inputState.is_set('left'):
                 self.player.walk_in_dir(-135)
                 for doppelganger in self.doppelgangers:
                     doppelganger.walk_in_dir(-135)
-            elif inputState.isSet('right'):
+            elif inputState.is_set('right'):
                 self.player.walk_in_dir(135)
                 for doppelganger in self.doppelgangers:
                     doppelganger.walk_in_dir(135)
@@ -280,12 +276,12 @@ class MyApp(ShowBase):
                 for doppelganger in self.doppelgangers:
                     doppelganger.walk_in_dir(180)
             stepping = True
-        elif inputState.isSet('left'):
+        elif inputState.is_set('left'):
             self.player.walk_in_dir(-90)
             for doppelganger in self.doppelgangers:
                 doppelganger.walk_in_dir(-90)
             stepping = True
-        elif inputState.isSet('right'):
+        elif inputState.is_set('right'):
             self.player.walk_in_dir(90)
             for doppelganger in self.doppelgangers:
                 doppelganger.walk_in_dir(90)
@@ -296,40 +292,37 @@ class MyApp(ShowBase):
             for doppelganger in self.doppelgangers:
                 doppelganger.stand_still()
 
-        if inputState.isSet('turnleft'):
+        if inputState.is_set('turnleft'):
             self.player.turn_left()
             for doppelganger in self.doppelgangers:
                 doppelganger.turn_left()
-        if inputState.isSet('turnright'):
+        if inputState.is_set('turnright'):
             self.player.turn_right()
             for doppelganger in self.doppelgangers:
                 doppelganger.turn_right()
 
-        if inputState.isSet('speedup'):
+        if inputState.is_set('speedup'):
             self.player.speed_up()
             for doppelganger in self.doppelgangers:
                 doppelganger.speed_up()
-        if inputState.isSet('speeddown'):
+        if inputState.is_set('speeddown'):
             self.player.slow_down()
             for doppelganger in self.doppelgangers:
                 doppelganger.slow_down()
 
-        self.inst5.text = "Speed " + str(round(sqrt(pow(self.player.lower_torso.node().getLinearVelocity()[0], 2) + pow(self.player.lower_torso.node().getLinearVelocity()[1], 2)),2)) + " / " + str(round(self.player.walk_speed,1)) + " m/s"
-#        self.inst6.text = "H" + str(int(self.heading)) + " P" + str(int(self.pitch))
-#        self.inst7.text = str(self.player.leftLeg.thigh.getH()) + " " + str(self.player.lower_torso.getH())
+        self.inst5.text = "Speed " + str(round(sqrt(pow(self.player.lower_torso.node().get_linear_velocity()[0], 2) + pow(self.player.lower_torso.node().get_linear_velocity()[1], 2)),2)) + " / " + str(round(self.player.walk_speed,1)) + " m/s"
 
-        
-#        if self.motionControllerConnected:
+
 #        self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
 
         # Roll in the camera would only serve to confuse
         self.camera.setR(0)
         # Reduce camera's bounciness
-        if abs(self.camera.getZ(self.render)-self.oldCameraZ) < 0.1:
-            self.camera.setZ(self.render, self.oldCameraZ)
+        if abs(self.camera.getZ(self.render)-self.old_camera_z) < 0.1:
+            self.camera.setZ(self.render, self.old_camera_z)
         else:
-            self.camera.setZ(self.render, (self.oldCameraZ*2 + self.camera.getZ(self.render))/3)
-        self.oldCameraZ = self.camera.getZ(self.render)
+            self.camera.setZ(self.render, (self.old_camera_z*2 + self.camera.getZ(self.render))/3)
+        self.old_camera_z = self.camera.getZ(self.render)
 
         self.player.update_heading()
         for doppelganger in self.doppelgangers:
