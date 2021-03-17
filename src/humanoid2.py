@@ -2,13 +2,14 @@ import random
 from src.InverseKinematics.IKChain import IKChain
 from src.InverseKinematics.WalkCycle import WalkCycle
 from src.InverseKinematics.Utils import *
-from src.shapes import createPhysicsRoundedBox
+from src.shapes import createPhysicsRoundedBox, createRoundedBox, createSphere
+from src.humanoid_arm import HumanoidArm
 from src.utils import angleDiff, normalizeAngle, getGroundZPos, getObjectGroundZPos
 from math import cos, sin, radians, degrees
-from panda3d.bullet import BulletSphereShape
+from panda3d.bullet import BulletSphereShape, BulletConeTwistConstraint, BulletGenericConstraint
 
 class Humanoid():
-    def __init__( self, render, world, terrainBulletNode, x, y, height=1.7, debug = False, debugTextNode = None ):
+    def __init__( self, render, world, terrainBulletNode, x, y, height=1.7, startHeading=Vec3(0,0,0), debug = False, debugTextNode = None ):
         self.render = render
         self.world = world
         self.terrainBulletNode = terrainBulletNode
@@ -39,16 +40,80 @@ class Humanoid():
         self.targetHeight = self.legHeight + self.lowerTorsoHeight/2
 
         # Control node and the whole body collision box
-        self.lowerTorso = createPhysicsRoundedBox(self.render, self.chestWidth, 0.2, self.chestHeight)
-        self.lowerTorso.setPos(Vec3(x,y,self.targetHeight+getGroundZPos(x, y, self.world, self.terrainBulletNode)))
+        self.lowerTorso = createRoundedBox(self.render, self.chestWidth, 0.2, self.chestHeight)
+        startPosition = Vec3(x,y,self.targetHeight+getGroundZPos(x, y, self.world, self.terrainBulletNode))
+        self.lowerTorso.setPosHpr(startPosition, startHeading)
         self.lowerTorso.node().setMass(70.0)
         self.lowerTorso.node().setAngularFactor(Vec3(0,0,0.1))
         self.lowerTorso.node().setLinearDamping(0.8)
         self.lowerTorso.node().setAngularSleepThreshold(0) # Sleep would freeze the whole character if still
         self.lowerTorso.setCollideMask(BitMask32.bit(3))
         self.world.attach(self.lowerTorso.node())
-        self.lowerTorso.node().setGravity(Vec3(0,0,0))
 
+        self.chest = createRoundedBox(self.render, self.chestWidth, 0.2, self.chestHeight)
+        self.chest.node().setMass(40.0)
+        self.chest.node().setAngularFactor(Vec3(0.15,0.05,0.1))
+        self.chest.node().setLinearDamping(0.5)
+        self.chest.setCollideMask(BitMask32.bit(3))
+        self.world.attach(self.chest.node())
+        self.chest.node().setAngularSleepThreshold(0.05)
+
+        frameA = TransformState.makePosHpr(Point3(0, 0, -self.chestHeight/2), Vec3(0, 0, 0))
+        frameB = TransformState.makePosHpr(Point3(0, 0, self.lowerTorsoHeight/2), Vec3(0, 0, 0))
+
+        swing1 = 10 # leaning forward/backward degrees
+        swing2 = 5 # leaning side to side degrees
+        twist = 30 # degrees
+
+        cs = BulletConeTwistConstraint(self.chest.node(), self.lowerTorso.node(), frameA, frameB)
+        cs.setDebugDrawSize(0.5)
+        cs.setLimit(twist, swing2, swing1, softness=0.1, bias=1.0, relaxation=1.0)
+        world.attachConstraint(cs, linked_collision=True)
+
+
+        self.leftArm = HumanoidArm(self.chest, self.world, self.armHeight, self.chestWidth/3-0.01, (self.chestWidth/3-0.01)*self.armHeight, False, startPosition, startHeading)
+
+        frameA = TransformState.makePosHpr(Point3(-self.chestWidth/2-self.leftArm.upperArmDiameter/2, 0, self.chestHeight/2-self.leftArm.upperArmDiameter/8), Vec3(0, 0, 0))
+        frameB = TransformState.makePosHpr(Point3(0, 0, self.leftArm.upperArmLength/2), Vec3(0, -90, 0))
+
+        self.leftArmConstraint = BulletGenericConstraint(self.chest.node(), self.leftArm.upperArm.node(), frameA, frameB, True)
+        self.leftArmConstraint.setDebugDrawSize(0.5)
+        self.leftArmConstraint.setAngularLimit(0, -95, 135) # Front and back
+        self.leftArmConstraint.setAngularLimit(1, 0, 0)     # Rotation, handled in the elbow joint because here it glitches.
+        self.leftArmConstraint.setAngularLimit(2, -120, 35) # Left and right
+        self.leftArm.upperArm.node().setAngularFactor(Vec3(0.2,0.2,0.2))
+        self.world.attachConstraint(self.leftArmConstraint, linked_collision=True)
+
+
+        self.rightArm = HumanoidArm(self.render, self.world, self.armHeight, self.chestWidth/3-0.01, (self.chestWidth/3-0.01)*self.armHeight, True, startPosition, startHeading)
+
+        frameA = TransformState.makePosHpr(Point3(self.chestWidth/2+self.rightArm.upperArmDiameter/2, 0, self.chestHeight/2-self.rightArm.upperArmDiameter/8), Vec3(0, 0, 0))
+        frameB = TransformState.makePosHpr(Point3(0, 0, self.rightArm.upperArmLength/2), Vec3(0, -90, 0))
+
+        self.rightArmConstraint = BulletGenericConstraint(self.chest.node(), self.rightArm.upperArm.node(), frameA, frameB, True)
+        self.rightArmConstraint.setDebugDrawSize(0.5)
+        self.rightArmConstraint.setAngularLimit(0, -95, 135) # Front and back
+        self.rightArmConstraint.setAngularLimit(1, 0, 0)     # Rotation, handled in the elbow joint because here it glitches.
+        self.rightArmConstraint.setAngularLimit(2, -35, 120) # Left and right
+        self.rightArm.upperArm.node().setAngularFactor(Vec3(0.2,0.2,0.2))
+        self.world.attachConstraint(self.rightArmConstraint, linked_collision=True)
+
+
+        self.head = createSphere(self.render, self.headHeight)
+        self.head.node().setMass(3.0)
+        self.head.setCollideMask(BitMask32.bit(3))
+        self.world.attach(self.head.node())
+
+        frameA = TransformState.makePosHpr(Point3(0,0,self.headHeight/2), Vec3(0, 0, 0))
+        frameB = TransformState.makePosHpr(Point3(0,0,-self.chestHeight/2), Vec3(0, 0, 0))
+
+        self.neck = BulletGenericConstraint(self.chest.node(), self.head.node(), frameA, frameB, True)
+
+        self.neck.setDebugDrawSize(0.5)
+        self.neck.setAngularLimit(0, -10, 10)
+        self.neck.setAngularLimit(1, 0, 0)
+        self.neck.setAngularLimit(2, -10, 10)
+        self.world.attachConstraint(self.neck, linked_collision=True)
 
         ##################################
         # Set up body movement:
@@ -116,10 +181,6 @@ class Humanoid():
 
 
         # Add visuals to the bones. These MUST be after finalize().
-        lowerTorsoVisual = loader.loadModel("models/unit_cylinder.bam")
-        lowerTorsoVisual.setScale(Vec3(self.chestWidth, 0.2, self.lowerTorsoHeight))
-        lowerTorsoVisual.reparentTo(self.lowerTorso)
-
 
         for i in range(2):
             visual = loader.loadModel("models/unit_cylinder.bam")
@@ -136,6 +197,10 @@ class Humanoid():
             footVisual.reparentTo(self.foot[i])
             footVisual.setScale(Vec3(lowerLegDiameter, self.footLength, self.footHeight))
 
+
+        self.head.setPosHpr(startPosition, startHeading)
+#        self.lowerTorso.setPosHpr(startPosition, startHeading)
+        self.chest.setPosHpr(startPosition, startHeading)
 
         self.legMovementSpeed = self.walkSpeed*3
 

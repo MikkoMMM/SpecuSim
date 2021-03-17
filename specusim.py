@@ -55,11 +55,6 @@ class MyApp(ShowBase):
             transform-cache 0
 
             bullet-filter-algorithm groups-mask
-
-            # These are enabled for debugging purposes. For production use, disable them.
-            task-timer-verbose 1
-            pstats-tasks 1
-#            direct-gui-edit 1
         """)
 
         # Initialize the showbase
@@ -67,6 +62,7 @@ class MyApp(ShowBase):
         # In case window size would be at first detected incorrectly, buy a bit of time.
         base.graphicsEngine.renderFrame() 
 
+        self.gui = True                 # A toggle for the GUI for testing puposes
         self.performanceAnalysis = True # Enable pstat support and show frame rate
         self.physicsDebug = False        # Show wireframes for the physics objects.
         self.debugMessages = False       # Some extraneous information
@@ -76,6 +72,9 @@ class MyApp(ShowBase):
             print()
 
         if self.performanceAnalysis:
+            loadPrcFileData("", "task-timer-verbose 1")
+            loadPrcFileData("", "pstats-tasks 1")
+
             base.setFrameRateMeter(True)
             PStatClient.connect()
 
@@ -102,7 +101,8 @@ class MyApp(ShowBase):
 
         # Physics setup
         self.world = BulletWorld()
-        self.world.setGravity(Vec3(0, 0, -9.81))
+        # Let's NOT enable gravity globally. The custom ground collision doesn't go well along with it currently.
+#        self.world.setGravity(Vec3(0, 0, -9.81))
 
         #Collision groups:
         # 0: ground
