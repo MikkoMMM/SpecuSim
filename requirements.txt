@@ -1,1 +1,3 @@
 panda3d
+torch
+transformers==2.3.0

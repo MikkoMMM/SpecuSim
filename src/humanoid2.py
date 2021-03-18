@@ -185,17 +185,17 @@ class Humanoid():
         # Add visuals to the bones. These MUST be after finalize().
 
         for i in range(2):
-            visual = loader.load_model("models/unit_cylinder.bam")
+            visual = loader.load_model("3d-assets/unit_cylinder.bam")
             visual.set_scale(Vec3(thigh_diameter, thigh_diameter, self.thigh_length))
             visual.reparent_to(thigh[i].ikNode)
             visual.set_pos( (visual.get_pos() + thigh[i].offset)/2 )
 
-            visual = loader.load_model("models/unit_cylinder.bam")
+            visual = loader.load_model("3d-assets/unit_cylinder.bam")
             visual.set_scale(Vec3(lower_leg_diameter, lower_leg_diameter, self.lower_leg_length))
             visual.reparent_to(lower_leg[i].ikNode)
             visual.set_pos( (visual.get_pos() + lower_leg[i].offset)/2 )
 
-            footVisual = loader.load_model("models/unit_cube.bam")
+            footVisual = loader.load_model("3d-assets/unit_cube.bam")
             footVisual.reparent_to(self.foot[i])
             footVisual.set_scale(Vec3(lower_leg_diameter, self.foot_length, self.foot_height))
 

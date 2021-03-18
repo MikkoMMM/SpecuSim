@@ -50,3 +50,8 @@ The MIT License
 https://github.com/Germanunkol/CCD-IK-Panda3D
 Copyright (c) 2021 Germanunkol
 The MIT License
+
+
+https://github.com/cloveranon/Clover-Edition/
+Copyright (c) 2019 Nick Walton
+The MIT License

@@ -1,6 +1,7 @@
 # Custom ignores
-models/unit_*.blend
+3d-assets/unit_*.blend
 *.kate-swp
+/models/*
 
 
 

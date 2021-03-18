@@ -20,9 +20,6 @@ class Menu(object):
         kx = 1920
         
         ky = 1080
-#        self.my_frame = DirectFrame(frameColor=(1, 1, 1, 1),
-#                      frameSize=(-base.get_aspect_ratio(), base.get_aspect_ratio(), -1, 1),
-#                      pos=(0, 0, 0))
         self.my_frame = DirectFrame(frameColor=(1,1,1,1),
             frameSize=(0, kx,0, ky))
 
@@ -34,7 +31,9 @@ class Menu(object):
         self.my_frame.set_pos( (wx-kx) / 2, 0, -(wy+ky) / 2)
         self.my_frame.set_transparency(True)
 
-        self.no_mc_button = DirectButton(
+        self.entries = []
+
+        self.entries.append(DirectButton(
                     frameTexture="textures/empty_button.png",
                     frameColor=(1,1,1,1),
                     frameSize=(-64, 64, -20, 20),
@@ -45,11 +44,11 @@ class Menu(object):
                     parent=self.my_frame,
                     scale=2.0,
                     pos=(kx/2, 0, ky/2 + 50)
-                    )
-        self.set_centered_text(self.no_mc_button, "No Motion Control")
-        self.no_mc_button.set_transparency(1)
+                    ))
+        self.set_centered_text(self.entries[-1], "No Motion Control")
+        self.entries[-1].set_transparency(1)
         
-        self.exit_button = DirectButton(
+        self.entries.append(DirectButton(
                     frameTexture="textures/empty_button.png",
                     frameColor=(1,1,1,1),
                     frameSize=(-64, 64, -20, 20),
@@ -60,16 +59,14 @@ class Menu(object):
                     parent=self.my_frame,
                     scale=2.0,
                     pos=(kx/2, 0, ky/2 - 50)
-                    )
-        
-        self.exit_button.set_transparency(1)
-        self.set_centered_text(self.exit_button, "Exit Game")
-#        self.exit_button.hide()
-        
+                    ))
+
+        self.entries[-1].set_transparency(1)
+        self.set_centered_text(self.entries[-1], "Exit Game")
+
         self.select_frame= DirectFrame( frameColor=(1,1,1,1) , frameSize=(-64, 64, -20, 20) , frameTexture="textures/select.png")
         self.select_frame.set_transparency(1)
-        self.select_frame.reparent_to(self.no_mc_button)
-        self.entries = [self.no_mc_button,self.exit_button]
+        self.select_frame.reparent_to(self.entries[0])
         self.active_entry = 0
 
 
