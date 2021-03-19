@@ -3,7 +3,7 @@ from src.humanoid2 import Humanoid
 from math import pi, sin, cos, radians, sqrt, degrees
 
 from direct.showbase.InputStateGlobal import inputState
-from direct.gui.DirectGui import DirectFrame
+from direct.gui.DirectGui import DirectFrame, DirectLabel
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
 from panda3d.core import Vec3, Vec4, ShaderTerrainMesh, Shader, load_prc_file_data, PStatClient
@@ -179,11 +179,26 @@ class MyApp(ShowBase):
         self.terrain_np = render.attach_new_node(self.terrain_bullet_node)
         self.terrain_np.set_collide_mask(BitMask32.bit(0))
         self.terrain_np.set_pos(0, 0, 0)
+        self.world.attach(self.terrain_np.node())
+
+    def start_with_nlp(self):
+        self.npc1 = Humanoid(self.render, self.world, self.terrain_bullet_node, -2, 2)
+
+        self.speech_bubble=DirectLabel(parent=self.npc1.lower_torso, text="'Ello, 'ello, 'ello!", text_wordwrap=10,
+                        relief = None, text_scale=(.5,.5),
+                        pos = (0,0,2),
+                        frameColor=(.3,.2,.1,.5),
+                        text_frame=(0,0,0,1),
+                        text_bg=(1,1,1,0.4))
+        self.speech_bubble.component('text0').textNode.set_card_decal(1)
+#        self.speech_bubble['text'] = "Why, hello there!"
+        self.speech_bubble.set_billboard_point_eye()
+
+        self.start_game()
 
 
     def start_game(self):
         self.menu.hide_menu()
-        self.world.attach(self.terrain_np.node())
 #        self.player = Humanoid(self.render, self.world, self.terrain_bullet_node, Vec3(0,0,-8), Vec3(0,0,0))
         self.player = Humanoid(self.render, self.world, self.terrain_bullet_node, 0, 0, debug=self.physics_debug)
         
@@ -312,6 +327,12 @@ class MyApp(ShowBase):
 
         self.inst5.text = "Speed " + str(round(sqrt(pow(self.player.lower_torso.node().get_linear_velocity()[0], 2) + pow(self.player.lower_torso.node().get_linear_velocity()[1], 2)),2)) + " / " + str(round(self.player.walk_speed,1)) + " m/s"
 
+#        if self.npc1:
+        self.npc1.stand_still()
+        self.npc1.update_heading()
+#        self.speech_bubble['text'] += "."
+#        if len(self.speech_bubble['text']) > 30:
+#            self.speech_bubble['text'] = ""
 
 #        self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
 
@@ -325,6 +346,7 @@ class MyApp(ShowBase):
         self.old_camera_z = self.camera.getZ(self.render)
 
         self.player.update_heading()
+        self.npc1.update_heading()
         for doppelganger in self.doppelgangers:
             doppelganger.update_heading()
 

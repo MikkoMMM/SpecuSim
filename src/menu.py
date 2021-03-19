@@ -43,9 +43,24 @@ class Menu(object):
                     clickSound=None,
                     parent=self.my_frame,
                     scale=2.0,
+                    pos=(kx/2, 0, ky/2 + 150)
+                    ))
+        self.set_centered_text(self.entries[-1], "No Add-Ons")
+        self.entries[-1].set_transparency(1)
+
+        self.entries.append(DirectButton(
+                    frameTexture="textures/empty_button.png",
+                    frameColor=(1,1,1,1),
+                    frameSize=(-64, 64, -20, 20),
+                    command=self.main.start_with_nlp,
+                    relief=DGG.FLAT,
+                    rolloverSound=None,
+                    clickSound=None,
+                    parent=self.my_frame,
+                    scale=2.0,
                     pos=(kx/2, 0, ky/2 + 50)
                     ))
-        self.set_centered_text(self.entries[-1], "No Motion Control")
+        self.set_centered_text(self.entries[-1], "Language AI")
         self.entries[-1].set_transparency(1)
         
         self.entries.append(DirectButton(
@@ -61,8 +76,8 @@ class Menu(object):
                     pos=(kx/2, 0, ky/2 - 50)
                     ))
 
-        self.entries[-1].set_transparency(1)
         self.set_centered_text(self.entries[-1], "Exit Game")
+        self.entries[-1].set_transparency(1)
 
         self.select_frame= DirectFrame( frameColor=(1,1,1,1) , frameSize=(-64, 64, -20, 20) , frameTexture="textures/select.png")
         self.select_frame.set_transparency(1)
@@ -95,10 +110,10 @@ class Menu(object):
       
         
     def select_down(self):
-        if self.active_entry == 0:
-            self.active_entry = len(self.entries)-1
+        if self.active_entry == len(self.entries)-1:
+            self.active_entry=0
         else:
-            self.active_entry -=1
+            self.active_entry +=1
         
         if self.entries[self.active_entry].is_hidden():
             self.select_down()
@@ -107,10 +122,10 @@ class Menu(object):
 
     def select_up(self):
 
-        if self.active_entry == len(self.entries)-1:
-            self.active_entry=0
+        if self.active_entry == 0:
+            self.active_entry = len(self.entries)-1
         else:
-            self.active_entry +=1
+            self.active_entry -=1
         if self.entries[self.active_entry].is_hidden() :
             self.select_up()
             return

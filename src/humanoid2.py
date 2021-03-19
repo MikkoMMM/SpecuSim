@@ -161,6 +161,8 @@ class Humanoid():
             if self.debug:
                 self.leg[i].debugDisplay()
 
+            self.leg[i].updateIK()
+
 
             #################################################
             # Foot targets:
@@ -173,7 +175,7 @@ class Humanoid():
             # Set up nodes which stay (rigidly) infront of the body, on the floor.
             # Whenever a leg needs to take a step, the target will be placed on this position:
             self.planned_foot_target.append(self.lower_torso.attach_new_node( "PlannedFootTarget" ))
-            step_dist = 0.15
+            step_dist = 0.35
             self.planned_foot_target[i].set_pos( horizontal_placement*self.pelvis_width/4, step_dist, -self.target_height )
 
             if self.debug:
@@ -293,10 +295,10 @@ class Humanoid():
         if visuals:
             # Calculate how far we've walked this frame:
             cur_walk_dist = self.lower_torso.node().get_linear_velocity().length()*globalClock.get_dt()
-            self._walkingVisuals( cur_walk_dist, 0 )
+            self._walking_visuals( cur_walk_dist, 0 )
 
 
-    def _walkingVisuals( self, cur_walk_dist, ang_clamped ):
+    def _walking_visuals( self, cur_walk_dist, ang_clamped ):
         #############################
         # Update legs:
 
