@@ -212,7 +212,7 @@ class Humanoid():
 
             self.leg[i].finalize()
             self.foot.append(bone.ikNode.attach_new_node("Foot"))
-            self.foot[i].set_pos_hpr(Vec3(0,lower_leg_diameter/2,0), Vec3(0,-90,0))
+            self.foot[i].set_pos_hpr(Vec3(0,lower_leg_diameter/2-self.foot_height/2,lower_leg_diameter/2), Vec3(0,-90,0))
 
             if self.debug:
                 self.leg[i].debugDisplay()
@@ -257,7 +257,6 @@ class Humanoid():
 
             footVisual = loader.load_model("3d-assets/unit_cube.bam")
             footVisual.reparent_to(self.foot[i])
-            footVisual.set_hpr( 0, 0, 0 )
             footVisual.set_scale(Vec3(lower_leg_diameter, self.foot_length, self.foot_height))
 
 
