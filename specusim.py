@@ -63,7 +63,7 @@ class MyApp(ShowBase):
 
         self.gui = True                 # A toggle for the GUI for testing puposes
         self.performance_analysis = True # Enable pstat support and show frame rate
-        self.physics_debug = False        # Show wireframes for the physics objects.
+        self.physics_debug = True        # Show wireframes for the physics objects.
         self.debug_messages = False       # Some extraneous information
 
         if self.debug_messages:
@@ -327,9 +327,10 @@ class MyApp(ShowBase):
 
         self.inst5.text = "Speed " + str(round(sqrt(pow(self.player.lower_torso.node().get_linear_velocity()[0], 2) + pow(self.player.lower_torso.node().get_linear_velocity()[1], 2)),2)) + " / " + str(round(self.player.walk_speed,1)) + " m/s"
 
-#        if self.npc1:
-        self.npc1.stand_still()
-        self.npc1.update_heading()
+        if hasattr(self, 'npc1'):
+            self.npc1.stand_still()
+            self.npc1.update_heading()
+            self.npc1.update_heading()
 #        self.speech_bubble['text'] += "."
 #        if len(self.speech_bubble['text']) > 30:
 #            self.speech_bubble['text'] = ""
@@ -346,7 +347,6 @@ class MyApp(ShowBase):
         self.old_camera_z = self.camera.getZ(self.render)
 
         self.player.update_heading()
-        self.npc1.update_heading()
         for doppelganger in self.doppelgangers:
             doppelganger.update_heading()
 

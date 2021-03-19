@@ -53,7 +53,7 @@ def createAxes( size, bothways=False, thickness=1 ):
     else:
         lines.moveTo( 0, 0, 0 )
     lines.drawTo( 0, 0, size )
-    
+
     geom = lines.create()
     return geom
 

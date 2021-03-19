@@ -124,7 +124,7 @@ class Humanoid():
 
 
         # Set up information needed by inverse kinematics
-        thigh = []
+        self.thigh = []
         lower_leg = []
         self.foot = []
         self.leg = []
@@ -137,26 +137,82 @@ class Humanoid():
             else:
                 horizontal_placement = 1
 
-            hip = self.lower_torso.attach_new_node("Hip")
-            hip.set_pos(Vec3(horizontal_placement*self.pelvis_width/4,0,-self.lower_torso_height/2))
-            self.leg.append(IKChain( hip ))
+#            hip = self.lower_torso.attach_new_node("Hip")
+#            hip.set_pos(Vec3(horizontal_placement*self.pelvis_width/4,0,-self.lower_torso_height/2))
 
+            # Place the hip
+            legRootLeft = self.lower_torso.attach_new_node( "LegRootLeft" )
+            legRootLeft.setPosHpr( Vec3(horizontal_placement*self.pelvis_width/4,0,-self.lower_torso_height/2), Vec3(0, 0, 0) )
+            self.leg.append(IKChain( legRootLeft ))
+
+            # Hip:
+            self.thigh.append(self.leg[i].addBone( offset=LVector3f.zero(),
+                    minAng = math.pi/2-math.pi*0.2,
+                    maxAng = math.pi/2+math.pi*0.2,
+                    rotAxis = None
+                    ))
+
+            # Knee:
+            lower_leg.append(self.leg[i].addBone( offset=LVector3f.unitY()*self.thigh_length,
+                    minAng = -math.pi*0.7,
+                    maxAng = 0,
+                    rotAxis = LVector3f.unitZ(),
+                    parentBone = self.thigh[i]
+                    ))
+
+            # End of the lower leg:
+            bone = self.leg[i].addBone( offset=LVector3f.unitY()*self.lower_leg_length,
+                    minAng = 0,
+                    maxAng = math.pi*0.6,
+                    rotAxis = None,
+                    parentBone = lower_leg[i]
+                    )
+
+            # We want a fixed 90° angle between the hip node and the thigh, so
+            # rotate down:
+#            bone = self.leg[i].addBone( offset=LVector3f.zero(),
+#                    minAng = -math.pi*0.5,
+#                    maxAng = -math.pi*0.5,
+#                    rotAxis = LVector3f.unitX(),
+#                    parentBone = bone
+#                    )
+
+            # Thigh:
+#            thigh.append(self.leg[i].addBone( offset=Vec3(0,self.thigh_length,0),
+#                    minAng = 0,
+#                    maxAng = math.pi*0.7,
+#                    rotAxis = None,
+#                    parentBone = bone
+#                    ))
+            # Shin:
+#            lower_leg.append(self.leg[i].addBone( offset=Vec3(0,-self.lower_leg_length,0),
+#                    minAng = 0,
+#                    maxAng = 0,
+#                    rotAxis = None,
+#                    parentBone = thigh[i]
+#                    ))
+
+            '''
             thigh.append(self.leg[i].addBone( offset=Vec3(0,0,-self.thigh_length),
-                    minAng = -math.pi*0.25,
-                    maxAng = math.pi*0.25,
+#                    minAng = -math.pi*0.25,
+#                    maxAng = math.pi*0.25,
+                    minAng = 0,
+                    maxAng = 0,
                     rotAxis = None,
                     ))
 
-            lower_leg.append(self.leg[i].addBone( offset=Vec3(0,0,-self.lower_leg_length),
+            lower_leg.append(self.leg[i].addBone( offset=Vec3(0,0,-self.lower_leg_length*1.5),
                     minAng = -math.pi*0.5,
-                    maxAng = 0,
-                    rotAxis = LVector3f.unitX(),
+#                    minAng = 0,
+                    maxAng = math.pi*0.5,
+                    rotAxis = None,
                     parentBone = thigh[i]
                     ))
+            '''
 
             self.leg[i].finalize()
-            self.foot.append(lower_leg[i].ikNode.attach_new_node("Foot"))
-            self.foot[i].set_pos_hpr(Vec3(0,lower_leg_diameter/2,-self.lower_leg_length-self.foot_height/2), Vec3(0,0,0))
+            self.foot.append(bone.ikNode.attach_new_node("Foot"))
+            self.foot[i].set_pos_hpr(Vec3(0,lower_leg_diameter/2,0), Vec3(0,-90,0))
 
             if self.debug:
                 self.leg[i].debugDisplay()
@@ -186,19 +242,22 @@ class Humanoid():
 
         # Add visuals to the bones. These MUST be after finalize().
 
-        for i in range(2):
+        for i in range(len(self.leg)):
             visual = loader.load_model("3d-assets/unit_cylinder.bam")
             visual.set_scale(Vec3(thigh_diameter, thigh_diameter, self.thigh_length))
-            visual.reparent_to(thigh[i].ikNode)
-            visual.set_pos( (visual.get_pos() + thigh[i].offset)/2 )
+            visual.reparent_to(self.thigh[i].ikNode)
+            visual.set_pos( (visual.get_pos() + lower_leg[i].offset)/2 )
+            visual.set_hpr( 0, -90, 0 )
 
             visual = loader.load_model("3d-assets/unit_cylinder.bam")
             visual.set_scale(Vec3(lower_leg_diameter, lower_leg_diameter, self.lower_leg_length))
             visual.reparent_to(lower_leg[i].ikNode)
-            visual.set_pos( (visual.get_pos() + lower_leg[i].offset)/2 )
+            visual.set_pos( (visual.get_pos() + bone.offset)/2 )
+            visual.set_hpr( 0, -90, 0 )
 
             footVisual = loader.load_model("3d-assets/unit_cube.bam")
             footVisual.reparent_to(self.foot[i])
+            footVisual.set_hpr( 0, 0, 0 )
             footVisual.set_scale(Vec3(lower_leg_diameter, self.foot_length, self.foot_height))
 
 
@@ -261,6 +320,8 @@ class Humanoid():
 
 
     def walk_in_dir( self, angle=0, visuals=True, decelerate=False ):
+#        for i in range(len(self.leg)):
+#            self.thigh[i].ikNode.setR(0)
         if not decelerate:
             math_angle = radians(angle+90)
             diff = Vec3(-cos(math_angle),sin(math_angle),0)
