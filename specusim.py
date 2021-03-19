@@ -77,7 +77,7 @@ class MyApp(ShowBase):
             base.set_frame_rate_meter(True)
             PStatClient.connect()
 
-        self.doppelganger_num = 0      # Actual number will be doppelganger_num^2-1
+        self.doppelganger_num = 0      # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         # For calculating motion controller orientation
         self.heading = 0
