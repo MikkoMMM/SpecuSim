@@ -142,13 +142,13 @@ class Humanoid():
 
             # Place the hip
             legRootLeft = self.lower_torso.attach_new_node( "LegRootLeft" )
-            legRootLeft.setPosHpr( Vec3(horizontal_placement*self.pelvis_width/4,0,-self.lower_torso_height/2), Vec3(0, 0, 0) )
+            legRootLeft.setPosHpr( Vec3(horizontal_placement*self.pelvis_width/4,0,-self.lower_torso_height/2), Vec3(0, -90, 0) )
             self.leg.append(IKChain( legRootLeft ))
 
             # Hip:
             self.thigh.append(self.leg[i].addBone( offset=LVector3f.zero(),
-                    minAng = math.pi/2-math.pi*0.2,
-                    maxAng = math.pi/2+math.pi*0.2,
+                    minAng = -math.pi*0.2,
+                    maxAng = math.pi*0.2,
                     rotAxis = None
                     ))
 
@@ -156,7 +156,7 @@ class Humanoid():
             lower_leg.append(self.leg[i].addBone( offset=LVector3f.unitY()*self.thigh_length,
                     minAng = -math.pi*0.7,
                     maxAng = 0,
-                    rotAxis = LVector3f.unitZ(),
+                    rotAxis = LVector3f.unitX(),
                     parentBone = self.thigh[i]
                     ))
 

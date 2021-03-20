@@ -48,7 +48,7 @@ python specusim.py
 # Contributing
 We do accept contributions, but there's currently very little English guidance on the project's goals. So probably talk first before trying to submit major changes.
 
-All changes must be compatible with the MIT License. Indicate whether the work is your own. If it isn't, please write where you got the code snippet from, its license, and any necessary information required by the license to NOTICE.txt.
+All changes must be compatible with the MIT License. Refer to [here](https://github.com/MikkoMMM/SpecuSim/blob/main/.github/pull_request_template.md) for further details.
 
 
 ## Style guide
