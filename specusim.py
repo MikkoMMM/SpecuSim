@@ -117,8 +117,8 @@ class MyApp(ShowBase):
         self.world.set_group_collision_flag(3, 3, True)
 
         self.disable_mouse()
-        
-       
+
+
         if self.physics_debug:
             # We have to use a smaller heightfield image for debugging
             elevation_img = PNMImage(Filename('worldmaps/seed_16783_grayscale_tiny.png'))
