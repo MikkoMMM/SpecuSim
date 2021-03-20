@@ -3,7 +3,6 @@ from src.humanoid2 import Humanoid
 from math import pi, sin, cos, radians, sqrt, degrees
 
 from direct.showbase.InputStateGlobal import inputState
-from direct.gui.DirectGui import DirectFrame, DirectLabel
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
 from panda3d.core import Vec3, Vec4, ShaderTerrainMesh, Shader, load_prc_file_data, PStatClient
@@ -19,6 +18,7 @@ from panda3d.core import BitMask32, TransformState, NodePath, PandaNode
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import ZUp
 from src.menu import Menu
+from direct.gui.DirectGui import DirectFrame, DirectEntry, DirectLabel
 #from src.weapons.sword import Sword
 
 
@@ -239,11 +239,29 @@ class MyApp(ShowBase):
         inputState.watch_with_modifiers('speedup', '+')
         inputState.watch_with_modifiers('speeddown', '-')
 
+        if self.gui:
+            wx = base.win.get_x_size()
+            wy = base.win.get_y_size()
+            self.bar_start = -0.8
+            self.gui_bar = DirectFrame(frameColor=(0, 0, 0, 1),
+                                frameSize=(-wx/2, wx/2, -1, self.bar_start),
+                                pos=(0, -1, 0))
+            # Each width unit seems to be a 2/scale'th of a screen on a rectangular aspect ratio
+            scale = 0.05
+            self.text_field = DirectEntry(text = "", scale=scale, command=print, parent=self.gui_bar,
+                        width = 30, pos=(-15*scale, 0, self.bar_start),
+                        initialText="Type Something", numLines = 2, focus=0, focusInCommand=self.clearText)
+            #self.text_field.reparent_to(self.gui_bar)
+            #self.text_field.set_pos(Vec3(0,-1,0))
+            
+
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
         if self.debug_messages:
             self.render.analyze()
 
+    def clearText(self):
+        self.text_field.enterText('')
 
     def re_enable_mouse(self):
         base.disable_mouse()
