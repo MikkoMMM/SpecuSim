@@ -121,7 +121,7 @@ class MyApp(ShowBase):
 
         if self.physics_debug:
             # We have to use a smaller heightfield image for debugging
-            elevation_img = PNMImage(Filename('worldmaps/seed_16783_grayscale_tiny.png'))
+            elevation_img = PNMImage(Filename('worldmaps/debug_heightmap.png'))
             self.world_np = render.attach_new_node('World')
             self.debug_np = self.world_np.attach_new_node(BulletDebugNode('Debug'))
             self.debug_np.node().show_normals(True)
@@ -169,6 +169,8 @@ class MyApp(ShowBase):
         terrain_tex.set_minfilter(SamplerState.FT_linear_mipmap_linear)
         terrain_tex.set_anisotropic_degree(16)
         self.terrain.set_texture(terrain_tex)
+        if self.physics_debug:
+            self.terrain.hide()
 
         # Collision detection for the terrain
         terrain_colshape = BulletHeightfieldShape(elevation_img, self.height, ZUp)
@@ -199,8 +201,18 @@ class MyApp(ShowBase):
 
     def start_game(self):
         self.menu.hide_menu()
+
+        self.inst1 = add_instructions(0.06, "[WASD]: Move")
+        self.inst2 = add_instructions(0.12, "[QE]: Rotate")
+        self.inst2 = add_instructions(0.18, "[+-]: Change speed")
+        self.inst3 = add_instructions(0.24, "Middle mouse button: Rotate camera")
+        self.inst4 = add_instructions(0.30, "Right mouse button: Adjust zoom")
+        self.inst5 = add_instructions(0.36, "")
+        self.inst6 = add_instructions(0.42, "")
+        self.inst7 = add_instructions(0.48, "")
+
 #        self.player = Humanoid(self.render, self.world, self.terrain_bullet_node, Vec3(0,0,-8), Vec3(0,0,0))
-        self.player = Humanoid(self.render, self.world, self.terrain_bullet_node, 0, 0, debug=self.physics_debug)
+        self.player = Humanoid(self.render, self.world, self.terrain_bullet_node, 0, 0, debug=self.physics_debug, debug_text_node=self.inst6)
         
         self.doppelgangers = []
         for i in range(self.doppelganger_num):
@@ -215,15 +227,6 @@ class MyApp(ShowBase):
 
 #        self.weapon = Sword(self.render, self.world, self.player.lower_torso)
 #        self.player.grabRight(self.weapon.getAttachmentInfo())
-
-        self.inst1 = add_instructions(0.06, "[WASD]: Move")
-        self.inst2 = add_instructions(0.12, "[QE]: Rotate")
-        self.inst2 = add_instructions(0.18, "[+-]: Change speed")
-        self.inst3 = add_instructions(0.24, "Middle mouse button: Rotate camera")
-        self.inst4 = add_instructions(0.30, "Right mouse button: Adjust zoom")
-        self.inst5 = add_instructions(0.36, "")
-        self.inst6 = add_instructions(0.42, "")
-        self.inst7 = add_instructions(0.48, "")
 
         self.accept('mouse1',self.disable_mouse)
         self.accept('mouse2',self.re_enable_mouse)

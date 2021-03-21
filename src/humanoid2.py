@@ -235,7 +235,7 @@ class Humanoid(Animal):
         self.walk_cycle = WalkCycle( 2, 0.75 )
         self.desired_heading = self.lower_torso.getH()
 
-        super().__init__(render, world, terrain_bullet_node, body_node=self.lower_torso, feet=self.foot, slope_difficult=0.01, slope_max=0.02)
+        super().__init__(render, world, terrain_bullet_node, body_node=self.lower_torso, feet=self.foot, slope_difficult=20, slope_max=50, debug_text_node = debug_text_node)
 
 
     def speed_up( self ):
