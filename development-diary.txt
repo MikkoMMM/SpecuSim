@@ -60,3 +60,4 @@
 18.3.2021 Thought about which AI Dungeon fork to integrate. Started preparations for that. A speech bubble.
 19.3.2021 Some work moving on to a new version of CCD-IK-Panda3D.
 20.3.2021 Working on the GUI, and sending a message to the supervisor. Wrote a pull request template.
+21.3.2021 Refactoring some of the general code from the Humanoid class to the Creature class.

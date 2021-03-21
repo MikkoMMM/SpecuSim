@@ -165,11 +165,11 @@ class IKChain():
         self.endEffector = self.bones[-1].ikNode.attachNewNode( "EndEffector" )
         #self.endEffector.setPos( self.bones[-1].offset )
 
-    def updateIK( self ):
+    def updateIK( self, threshold = 1e-2, minIterations=1, maxIterations=10 ):
 
         # Solve the IK chain for the IK nodes:
         if self.target:
-            self.inverseKinematicsCCD()
+            self.inverseKinematicsCCD( threshold, minIterations, maxIterations )
 
         # Copy the data from the IK chain to the actual bones.
         # This will end up affecting the actual mesh.
@@ -199,7 +199,7 @@ class IKChain():
                 if bone.parent:
                     parentNode = bone.parent.ikNode
                 else:
-                    parentNode = self.charNodePath
+                    parentNode = self.actor
 
                 target = self.target.getPos( boneNode )
 
@@ -298,7 +298,7 @@ class IKChain():
             if bone.parent:
                 parentNode = bone.parent.exposedNode
             else:
-                parentNode = self.charNodePath
+                parentNode = self.actor
 
             # Draw my offset in parent space
             lines = LineSegs()
@@ -322,16 +322,20 @@ class IKChain():
                     qMax = Quat()
                     qMax.setFromAxisAngleRad( bone.maxAng, bone.axis )
                     l = bone.offset*0.5
+                    if l.lengthSquared() < 1e-9:
+                        l = LVector3f.unitY()
                     lines.moveTo( myPos )
                     lines.drawTo( myPos + qMin.xform( l ) )
                     lines.moveTo( myPos )
                     lines.drawTo( myPos + qMax.xform( l ) )
                 else:
                     qMin = Quat()
-                    qMin.setFromAxisAngleRad( bone.minAng, LVector3f.unitY() )
+                    qMin.setFromAxisAngleRad( bone.minAng, LVector3f.unitX() )
                     qMax = Quat()
-                    qMax.setFromAxisAngleRad( bone.maxAng, LVector3f.unitY() )
+                    qMax.setFromAxisAngleRad( bone.maxAng, LVector3f.unitX() )
                     l = bone.offset*0.5
+                    if l.lengthSquared() < 1e-9:
+                        l = LVector3f.unitY()
                     lines.moveTo( myPos )
                     lines.drawTo( myPos + qMin.xform( l ) )
                     lines.moveTo( myPos )

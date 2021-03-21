@@ -2,15 +2,16 @@ import random
 from src.InverseKinematics.IKChain import IKChain
 from src.InverseKinematics.WalkCycle import WalkCycle
 from src.InverseKinematics.Utils import *
+from src.animal import Animal
 from src.shapes import create_rounded_box, create_sphere
 from src.humanoid_arm import HumanoidArm
 from src.utils import angle_diff, normalize_angle, get_ground_Z_pos, get_object_ground_Z_pos
 from math import cos, sin, radians, degrees
 from panda3d.bullet import BulletSphereShape, BulletConeTwistConstraint, BulletGenericConstraint
 
-class Humanoid():
+class Humanoid(Animal):
     """
-    A class for humanoid creatures. 
+    A class for humanoid animals.
     """
     def __init__( self, render, world, terrain_bullet_node, x, y, height=1.7, start_heading=Vec3(0,0,0), debug = False, debug_text_node = None ):
         self.render = render
@@ -137,8 +138,6 @@ class Humanoid():
             else:
                 horizontal_placement = 1
 
-#            hip = self.lower_torso.attach_new_node("Hip")
-#            hip.set_pos(Vec3(horizontal_placement*self.pelvis_width/4,0,-self.lower_torso_height/2))
 
             # Place the hip
             legRootLeft = self.lower_torso.attach_new_node( "LegRootLeft" )
@@ -168,47 +167,6 @@ class Humanoid():
                     parentBone = lower_leg[i]
                     )
 
-            # We want a fixed 90° angle between the hip node and the thigh, so
-            # rotate down:
-#            bone = self.leg[i].addBone( offset=LVector3f.zero(),
-#                    minAng = -math.pi*0.5,
-#                    maxAng = -math.pi*0.5,
-#                    rotAxis = LVector3f.unitX(),
-#                    parentBone = bone
-#                    )
-
-            # Thigh:
-#            thigh.append(self.leg[i].addBone( offset=Vec3(0,self.thigh_length,0),
-#                    minAng = 0,
-#                    maxAng = math.pi*0.7,
-#                    rotAxis = None,
-#                    parentBone = bone
-#                    ))
-            # Shin:
-#            lower_leg.append(self.leg[i].addBone( offset=Vec3(0,-self.lower_leg_length,0),
-#                    minAng = 0,
-#                    maxAng = 0,
-#                    rotAxis = None,
-#                    parentBone = thigh[i]
-#                    ))
-
-            '''
-            thigh.append(self.leg[i].addBone( offset=Vec3(0,0,-self.thigh_length),
-#                    minAng = -math.pi*0.25,
-#                    maxAng = math.pi*0.25,
-                    minAng = 0,
-                    maxAng = 0,
-                    rotAxis = None,
-                    ))
-
-            lower_leg.append(self.leg[i].addBone( offset=Vec3(0,0,-self.lower_leg_length*1.5),
-                    minAng = -math.pi*0.5,
-#                    minAng = 0,
-                    maxAng = math.pi*0.5,
-                    rotAxis = None,
-                    parentBone = thigh[i]
-                    ))
-            '''
 
             self.leg[i].finalize()
             self.foot.append(bone.ikNode.attach_new_node("Foot"))
@@ -277,6 +235,8 @@ class Humanoid():
         self.walk_cycle = WalkCycle( 2, 0.75 )
         self.desired_heading = self.lower_torso.getH()
 
+        super().__init__(render, world, terrain_bullet_node, body_node=self.lower_torso, feet=self.foot, slope_difficult=0.01, slope_max=0.02)
+
 
     def speed_up( self ):
         self.walk_speed += 0.1
@@ -289,70 +249,13 @@ class Humanoid():
         self.leg_movement_speed = self.walk_speed*3
 
 
-    def get_correct_Z_velocity(self, current_Z_pos=None):
-        # Too high and you'll get massive jittering at sharp points in the terrain physics node
-        vector = self.lower_torso.node().get_linear_velocity()
-        # Determine some Z change that is allowed. It's got to be low enough to reduce jitter.
-        max_Z_change = 4*globalClock.get_dt()*min(self.walk_speed, 4*Vec3(vector.getX(), vector.getY(), 0).length())
-        if current_Z_pos:
-            return -min(max_Z_change,max(current_Z_pos,-max_Z_change))/globalClock.get_dt()
-        return -min(max_Z_change,max(self.get_feet_averaged_ground_Z_pos(),-max_Z_change))/globalClock.get_dt()
-
-
-    def get_feet_averaged_ground_Z_pos(self, offset_x=0, offset_y=0):
-        average_x = 0
-        average_y = 0
-        average_z = 0
-        for foot in self.foot:
-            average_x += foot.getX(self.render)
-            average_y += foot.getY(self.render)
-            average_z += foot.getZ(self.render)-self.foot_height/2
-        average_x /= len(self.foot)
-        average_y /= len(self.foot)
-        average_z /= len(self.foot)
-        average_z -= get_ground_Z_pos(average_x+offset_x, average_y+offset_y, self.world, self.terrain_bullet_node)
-        return average_z
-
-
     def stand_still(self):
         self.walk_in_dir(self.lower_torso.getH(), decelerate=True)
 
 
     def walk_in_dir( self, angle=0, visuals=True, decelerate=False ):
-#        for i in range(len(self.leg)):
-#            self.thigh[i].ikNode.setR(0)
-        if not decelerate:
-            math_angle = radians(angle+90)
-            diff = Vec3(-cos(math_angle),sin(math_angle),0)
-            diff_n = diff.normalized()
-            step = diff_n*self.walk_speed
-
-        current_Z_pos = self.get_feet_averaged_ground_Z_pos()
-        preliminary_Z_velocity = self.get_correct_Z_velocity(current_Z_pos)
-        if decelerate:
-            new_vector = Vec3(self.lower_torso.node().get_linear_velocity().getX(), self.lower_torso.node().get_linear_velocity().getY(), preliminary_Z_velocity)
-        else:
-            ca = cos(radians(self.lower_torso.getH()))
-            sa = sin(radians(self.lower_torso.getH()))
-            new_vector = Vec3(ca*step.getX() - sa*step.getY(), sa*step.getX() + ca*step.getY(), preliminary_Z_velocity)
-        z_diff = current_Z_pos - self.get_feet_averaged_ground_Z_pos(offset_x=new_vector.getX()*0.01, offset_y=new_vector.getY()*0.01)
-
-        mult_min = 0.01
-        if z_diff > mult_min:
-            mult_max = 0.02
-            mult = ((1/mult_max)*(mult_max-mult_min - (min(mult_max,z_diff)-mult_min)))
-            self.lower_torso.node().set_linear_velocity(Vec3(new_vector.getX()*mult, new_vector.getY()*mult, preliminary_Z_velocity))
-            if z_diff >= mult_max:
-                return
-        else:
-            self.lower_torso.node().set_linear_velocity(new_vector)
-
-        # Negligible speed; assume we've come to a halt and save on resources
-        if self.lower_torso.node().get_linear_velocity().length() < 0.2 and abs(self.lower_torso.node().get_angular_velocity().getZ()) < 0.1:
-            self.lower_torso.node().set_linear_velocity(Vec3(0,0,self.lower_torso.node().get_linear_velocity().getZ()))
-            return
-
-        if visuals:
+        did_move = self.walk_physics( self.walk_speed, angle=angle, decelerate=decelerate )
+        if did_move and visuals:
             # Calculate how far we've walked this frame:
             cur_walk_dist = self.lower_torso.node().get_linear_velocity().length()*globalClock.get_dt()
             self._walking_visuals( cur_walk_dist, 0 )
