@@ -18,13 +18,12 @@ class Animal():
         feet (List[NodePath]): A list of feet
         slope_difficult (float): The angle in degrees at which steepness of slope the organism's movement should start slowing down
         slope_max (float): The angle in degrees which is too steep to climb
-        slope_linear_damping_moving (float): Linear damping multiplier while moving on a slope
-        slope_linear_damping_decelerating (float): Linear damping multiplier while decelerating on a slope
+        slope_linear_damping (float): Linear damping exponent while climbing
         negligible_speed (float, optional): Speed in m/s below which it's assumed the organism is at halt
         debug_text_node (OnscreenText, optional): A place in the GUI to write debug information to
     """
 
-    def __init__( self, render, world, terrain_bullet_node, body_node, feet, slope_difficult, slope_max, slope_linear_damping_moving = 30, slope_linear_damping_decelerating = 3, negligible_speed = 0.2, debug_text_node = None ):
+    def __init__( self, render, world, terrain_bullet_node, body_node, feet, slope_difficult, slope_max, slope_linear_damping = 0.6, negligible_speed = 0.2, debug_text_node = None ):
         self.render = render
         self.world = world
         self.terrain_bullet_node = terrain_bullet_node
@@ -34,8 +33,7 @@ class Animal():
         self.negligible_speed = negligible_speed
         self.feet = feet
         self.debug_text_node = debug_text_node
-        self.slope_linear_damping_moving = slope_linear_damping_moving
-        self.slope_linear_damping_decelerating = slope_linear_damping_decelerating
+        self.slope_linear_damping = slope_linear_damping
 
 
     def get_ground_z_velocity(self, current_z_pos=None):
@@ -75,10 +73,11 @@ class Animal():
 
     def walk_physics( self, speed, angle=0, decelerate=False ):
         """Sets the linear velocity of the creature while keeping it on the ground.
-            TODO: Finish documentation
 
         Args:
             speed (float): Movement speed in m/s, assuming flat ground.
+            angle (float): The absolute angle in which to move, in degrees
+            decelerate (bool, optional): Whether to actively move (False) or to let movement come to a natural halt over time (True)
         """
         if not decelerate:
             math_angle = radians(angle+90)
@@ -108,18 +107,18 @@ class Animal():
             vertical_angle = 0
 
         if vertical_angle > self.slope_difficult:
-            # Returns near 0 when nearing max slope
-            one_minus_damping = ((1/self.slope_max)*(self.slope_max-self.slope_difficult - (min(self.slope_max,vertical_angle)-self.slope_difficult)))
+            if vertical_angle >= self.slope_max:
+                self.body.node().set_linear_velocity(Vec3(0, 0, preliminary_Z_velocity))
+                return False
+
+            normalized = (vertical_angle-self.slope_difficult)/(self.slope_max-self.slope_difficult)
             # Bullet's code has this regarding linear damping:
             # m_linearVelocity *= btPow(btScalar(1) - m_linearDamping, timeStep);
-#            self.body.node().set_linear_velocity(Vec3(new_vector.getX()*mult, new_vector.getY()*mult, preliminary_Z_velocity))
+
+            mult = pow(1-normalized, self.slope_linear_damping)
             if decelerate:
-                power = pow(one_minus_damping,globalClock.get_dt()*self.slope_linear_damping_decelerating)
-            else:
-                power = pow(one_minus_damping,globalClock.get_dt()*self.slope_linear_damping_moving)
-            self.body.node().set_linear_velocity(Vec3(new_vector.getX()*power, new_vector.getY()*power, preliminary_Z_velocity))
-            if vertical_angle >= self.slope_max:
-                return False
+                mult = pow(1-mult, globalClock.get_dt())
+            self.body.node().set_linear_velocity(Vec3(new_vector.getX()*mult, new_vector.getY()*mult, preliminary_Z_velocity))
         else:
             self.body.node().set_linear_velocity(new_vector)
 

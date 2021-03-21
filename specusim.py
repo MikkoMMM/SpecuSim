@@ -63,7 +63,7 @@ class MyApp(ShowBase):
 
         self.gui = True                 # A toggle for the GUI for testing puposes
         self.performance_analysis = True # Enable pstat support and show frame rate
-        self.physics_debug = True        # Show wireframes for the physics objects.
+        self.physics_debug = False        # Show wireframes for the physics objects.
         self.debug_messages = False       # Some extraneous information
 
         if self.debug_messages:
