@@ -4,6 +4,7 @@
 !*.gitkeep
 ai
 /ai/*
+*.walk
 
 
 

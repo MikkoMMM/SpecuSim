@@ -7,7 +7,7 @@ from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
 from panda3d.core import Vec3, Vec4, ShaderTerrainMesh, Shader, load_prc_file_data, PStatClient
 from panda3d.core import SamplerState, TextNode
-from panda3d.core import Texture, Mat4
+from panda3d.core import Texture, Mat4, LMatrix4
 from panda3d.core import PNMImage, Filename
 from direct.task import Task
 from panda3d.bullet import BulletWorld
@@ -19,6 +19,7 @@ from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import ZUp
 from src.menu import Menu
 from direct.gui.DirectGui import DirectFrame, DirectEntry, DirectLabel
+from src.utils import create_or_load_walk_map
 #from src.weapons.sword import Sword
 
 
@@ -121,7 +122,7 @@ class MyApp(ShowBase):
 
         if self.physics_debug:
             # We have to use a smaller heightfield image for debugging
-            elevation_img = PNMImage(Filename('worldmaps/debug_heightmap.png'))
+            elevation_img = PNMImage(Filename("worldmaps/debug_heightmap.png"))
             self.world_np = render.attach_new_node('World')
             self.debug_np = self.world_np.attach_new_node(BulletDebugNode('Debug'))
             self.debug_np.node().show_normals(True)
@@ -132,7 +133,7 @@ class MyApp(ShowBase):
         else:
             # Set a heightfield, the heightfield should be a 16-bit png and
             # have a quadratic size of a power of two.
-            elevation_img = PNMImage(Filename('worldmaps/seed_16783_grayscale.png'))
+            elevation_img = PNMImage(Filename("worldmaps/seed_16783_grayscale.png"))
 
         elevation_img_size = elevation_img.get_x_size()
         elevation_img_offset = elevation_img_size / 2.0
@@ -173,7 +174,10 @@ class MyApp(ShowBase):
             self.terrain.hide()
 
         # Collision detection for the terrain
-        terrain_colshape = BulletHeightfieldShape(elevation_img, self.height, ZUp)
+        if self.physics_debug:
+            terrain_colshape = BulletHeightfieldShape(elevation_img, self.height, ZUp)
+        else:
+            terrain_colshape = BulletHeightfieldShape(create_or_load_walk_map("worldmaps/seed_16783_grayscale.png", "worldmaps/seed_16783_ocean.png"), self.height, ZUp)
         terrain_colshape.set_use_diamond_subdivision(True)
 
         self.terrain_bullet_node = BulletRigidBodyNode("terrainBodyNode")

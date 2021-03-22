@@ -1,5 +1,6 @@
 from math import floor
 from panda3d.core import Point3, BitMask32, TransformState
+from panda3d.core import PNMImage, Filename, PNMFileTypeRegistry
 
 # TODO: compare speed to angleDeg in Panda's Vec3
 def angle_diff(angle1, angle2):
@@ -44,3 +45,19 @@ def normalize_angle(angle):
     if angle > 180:
         angle -= 360
     return angle
+
+
+def create_or_load_walk_map(file_name_prefix, ocean_map_file):
+    file_name = file_name_prefix + ".walk"
+    new_file = Filename(file_name)
+    if new_file.exists():
+        return PNMImage(new_file)
+    image = PNMImage(Filename(file_name_prefix))
+    ocean_map = PNMImage(Filename(ocean_map_file))
+    for x in range(ocean_map.get_x_size()):
+        for y in range(ocean_map.get_y_size()):
+            if ocean_map.get_green(x,y) == 0:
+                image.set_gray(x,y,1)
+    PNG_TYPE = PNMFileTypeRegistry.get_global_ptr().get_type_from_extension('.png')
+    image.write(new_file, PNG_TYPE)
+    return image
