@@ -209,7 +209,8 @@ class MyApp(ShowBase):
         self.doppelgangers = []
         for i in range(self.doppelganger_num):
             for j in range(self.doppelganger_num):
-                if i == (self.doppelganger_num - 1) / 2 and j == (self.doppelganger_num - 1) / 2: continue
+                if i == (self.doppelganger_num - 1) / 2 and j == (self.doppelganger_num - 1) / 2:
+                    continue
                 self.doppelgangers.append(
                     Humanoid(self.world, self.terrain_bullet_node, i - (self.doppelganger_num - 1) / 2,
                              j - (self.doppelganger_num - 1) / 2))
@@ -248,7 +249,7 @@ class MyApp(ShowBase):
                                           text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 1), width=30,
                                           pos=(-15 * scale, 0, (self.bar_start - 1) / 2),
                                           initialText="Press Enter to start talking", numLines=2, focus=0,
-                                          focusInCommand=self.clearText)
+                                          focusInCommand=self.clear_text)
             # self.text_field.reparent_to(self.gui_bar)
             # self.text_field.set_pos(Vec3(0,-1,0))
 
@@ -257,7 +258,7 @@ class MyApp(ShowBase):
         if self.debug_messages:
             render.analyze()
 
-    def clearText(self):
+    def clear_text(self):
         self.text_field.enterText('')
 
     # Everything that needs to be done every frame goes here.

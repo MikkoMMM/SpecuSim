@@ -8,8 +8,8 @@ def angle_diff(angle1, angle2):
 
 
 def test_if_near_ground(bodypart, world, terrain_bullet_node, distance=1000):
-    pFrom = bodypart.get_pos()
-    rc_result = world.ray_test_all(pFrom + Point3(0, 0, distance), pFrom - Point3(0, 0, distance))
+    p_from = bodypart.get_pos()
+    rc_result = world.ray_test_all(p_from + Point3(0, 0, distance), p_from - Point3(0, 0, distance))
 
     for hit in rc_result.get_hits():
         if hit.get_node() == terrain_bullet_node:
@@ -27,7 +27,7 @@ def get_ground_z_pos(x, y, world, terrain_bullet_node, distance=1000):
 
 
 # Warning: SLOW! (Use only if absolutely must.)
-def get_collision_shape_ground_z_pos(shape, x, y, world, terrain_bullet_node, distance=1000):
+def get_collision_shape_ground_z_pos(shape, x, y, world, distance=1000):
     # It would be beneficial to take heading and pitch into account and this is indeed supported.
     # However, at 90 degree pitch the collision was sometimes at a really high place.
     ts_from = TransformState.make_pos(Point3(x, y, distance))
@@ -57,6 +57,6 @@ def create_or_load_walk_map(file_name_prefix, ocean_map_file):
         for y in range(ocean_map.get_y_size()):
             if ocean_map.get_green(x, y) == 0:
                 image.set_gray(x, y, 1)
-    PNG_TYPE = PNMFileTypeRegistry.get_global_ptr().get_type_from_extension('.png')
-    image.write(new_file, PNG_TYPE)
+    png_type = PNMFileTypeRegistry.get_global_ptr().get_type_from_extension('.png')
+    image.write(new_file, png_type)
     return image

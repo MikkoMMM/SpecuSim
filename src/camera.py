@@ -98,7 +98,7 @@ class CameraControl:
 
         radius = self.zoom
         self.angY = max(0, min(math.pi * 0.5, self.angY))
-        rY = math.sin(self.angY)
+        r_y = math.sin(self.angY)
         if self.attached:
             # Reduce camera's bounciness
             #        if abs(self.camera.getZ(self.render)-self.old_camera_z) < 0.1:
@@ -106,14 +106,14 @@ class CameraControl:
             #        else:
             #            self.camera.setZ(self.render, (self.old_camera_z*2 + self.camera.getZ(self.render))/3)
             #        self.old_camera_z = self.camera.getZ(self.render)
-            self.node_pos = LVector3f(rY * math.cos(self.ang) * radius, -rY * math.sin(self.ang) * radius,
+            node_pos = LVector3f(r_y * math.cos(self.ang) * radius, -r_y * math.sin(self.ang) * radius,
                                       radius * math.cos(self.angY))
         else:  # Could also be used when reparented to render but there is a focus point
-            self.node_pos = self.focus_point + LVector3f(rY * math.cos(self.ang) * radius,
-                                                         -rY * math.sin(self.ang) * radius,
+            node_pos = self.focus_point + LVector3f(r_y * math.cos(self.ang) * radius,
+                                                         -r_y * math.sin(self.ang) * radius,
                                                          radius * math.cos(self.angY))
 
-        self.node.set_pos(self.node_pos)
+        self.node.set_pos(node_pos)
         self.node.look_at(self.focus_node)
 
         return Task.cont

@@ -142,9 +142,9 @@ class Humanoid(Animal):
                 horizontal_placement = 1
 
             # Place the hip
-            legRootLeft = self.lower_torso.attach_new_node("LegRootLeft")
-            legRootLeft.setPosHpr(Vec3(horizontal_placement * self.pelvis_width / 4, 0, -self.lower_torso_height / 2), Vec3(0, -90, 0))
-            self.leg.append(IKChain(legRootLeft))
+            leg_root_left = self.lower_torso.attach_new_node("LegRootLeft")
+            leg_root_left.setPosHpr(Vec3(horizontal_placement * self.pelvis_width / 4, 0, -self.lower_torso_height / 2), Vec3(0, -90, 0))
+            self.leg.append(IKChain(leg_root_left))
 
             # Hip:
             self.thigh.append(self.leg[i].addBone(offset=LVector3f.zero(),
@@ -213,9 +213,9 @@ class Humanoid(Animal):
             visual.set_pos((visual.get_pos() + bone.offset) / 2)
             visual.set_hpr(0, -90, 0)
 
-            footVisual = loader.load_model("3d-assets/unit_cube.bam")
-            footVisual.reparent_to(self.foot[i])
-            footVisual.set_scale(Vec3(lower_leg_diameter, self.foot_length, self.foot_height))
+            foot_visual = loader.load_model("3d-assets/unit_cube.bam")
+            foot_visual.reparent_to(self.foot[i])
+            foot_visual.set_scale(Vec3(lower_leg_diameter, self.foot_length, self.foot_height))
 
         self.head.set_pos_hpr(start_position, start_heading)
         self.chest.set_pos_hpr(start_position, start_heading)

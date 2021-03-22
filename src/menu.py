@@ -12,6 +12,16 @@ from direct.interval.MetaInterval import Sequence
 from panda3d.core import SamplerState, TextNode
 
 
+def set_centered_text(gui_object, text, scale=14, fg=(0.2, 0.2, 0.2, 1)):
+    text_object = DirectLabel(text=text,
+                              text_fg=fg,
+                              relief=None,
+                              text_align=TextNode.ACenter, text_scale=scale,
+                              parent=gui_object)
+
+    text_object.set_pos(0, 0, -text_object.getHeight() / 2)
+
+
 class Menu(object):
     def __init__(self, main):
         self.main = main
@@ -46,7 +56,7 @@ class Menu(object):
             scale=2.0,
             pos=(kx / 2, 0, ky / 2 + 150)
         ))
-        self.set_centered_text(self.entries[-1], "No Add-Ons")
+        set_centered_text(self.entries[-1], "No Add-Ons")
         self.entries[-1].set_transparency(1)
 
         self.entries.append(DirectButton(
@@ -61,7 +71,7 @@ class Menu(object):
             scale=2.0,
             pos=(kx / 2, 0, ky / 2 + 50)
         ))
-        self.set_centered_text(self.entries[-1], "Language AI")
+        set_centered_text(self.entries[-1], "Language AI")
         self.entries[-1].set_transparency(1)
 
         self.entries.append(DirectButton(
@@ -77,22 +87,13 @@ class Menu(object):
             pos=(kx / 2, 0, ky / 2 - 50)
         ))
 
-        self.set_centered_text(self.entries[-1], "Exit Game")
+        set_centered_text(self.entries[-1], "Exit Game")
         self.entries[-1].set_transparency(1)
 
         self.active_entry = 1
         self.select_frame = DirectFrame(frameColor=(1, 1, 1, 1), frameSize=(-64, 64, -20, 20), frameTexture="textures/select.png")
         self.select_frame.set_transparency(1)
         self.select_frame.reparent_to(self.entries[self.active_entry])
-
-    def set_centered_text(self, gui_object, text, scale=14, fg=(0.2, 0.2, 0.2, 1)):
-        text_object = DirectLabel(text=text,
-                                  text_fg=fg,
-                                  relief=None,
-                                  text_align=TextNode.ACenter, text_scale=scale,
-                                  parent=gui_object)
-
-        text_object.set_pos(0, 0, -text_object.getHeight() / 2)
 
     def clear_keys(self):
         base.ignore("arrow_up")
@@ -135,15 +136,6 @@ class Menu(object):
 
     #        seq= Sequence( LerpColorScaleInterval(self.my_frame, 0.4 ,(1,1,1,0)) , Func(self.my_frame.hide) )
     #        seq.start()
-
-    def hide_resume(self):
-        seq = Sequence(LerpColorScaleInterval(self.exit_button, .5, (1, 1, 1, 0)), Func(self.exit_button.hide))
-        seq.start()
-
-    def show_resume(self):
-        self.exit_button.show()
-        # seq= Sequence(  LerpColorScaleInterval(self.exit_button, 1 ,(1,1,1,1)) )
-        # seq.start()
 
     def show_menu(self):
         self.clear_keys()

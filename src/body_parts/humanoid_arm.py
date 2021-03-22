@@ -5,7 +5,7 @@ from panda3d.core import Vec3
 from src.shapes import create_capsule
 
 
-class HumanoidArm():
+class HumanoidArm:
     # Arguments:
     # world: A BulletWorld to use for physics
     # upper_arm_diameter: upper_arm's diameter

@@ -10,7 +10,7 @@ from panda3d.core import Vec2, Vec3
 from src.utils import get_ground_z_pos
 
 
-class Animal():
+class Animal:
     """A parent class for animals.
 
     Args:
@@ -76,10 +76,10 @@ class Animal():
         # Too high and you'll get massive jittering at sharp points in the terrain physics node
         vector = self.body.node().get_linear_velocity()
         # Determine some Z change that is allowed. It's got to be low enough to reduce jitter.
-        max_Z_change = 4 * globalClock.get_dt() * 4 * Vec3(vector.getX(), vector.getY(), 0).length()
+        max_z_change = 4 * globalClock.get_dt() * 4 * Vec3(vector.getX(), vector.getY(), 0).length()
         if current_z_pos:
-            return -min(max_Z_change, max(current_z_pos, -max_Z_change)) / globalClock.get_dt()
-        return -min(max_Z_change, max(self.get_body_ground_z_pos(), -max_Z_change)) / globalClock.get_dt()
+            return -min(max_z_change, max(current_z_pos, -max_z_change)) / globalClock.get_dt()
+        return -min(max_z_change, max(self.get_body_ground_z_pos(), -max_z_change)) / globalClock.get_dt()
 
     def get_body_ground_z_pos(self, offset_x=0, offset_y=0):
         """Calculates where the body should be located on the Z axis
