@@ -20,6 +20,7 @@ from panda3d.bullet import ZUp
 from src.menu import Menu
 from direct.gui.DirectGui import DirectFrame, DirectEntry, DirectLabel
 from src.utils import create_or_load_walk_map
+from src.camera import CameraControl
 #from src.weapons.sword import Sword
 
 
@@ -64,7 +65,7 @@ class MyApp(ShowBase):
 
         self.gui = True                 # A toggle for the GUI for testing puposes
         self.performance_analysis = True # Enable pstat support and show frame rate
-        self.physics_debug = False        # Show wireframes for the physics objects.
+        self.physics_debug = True        # Show wireframes for the physics objects.
         self.debug_messages = False       # Some extraneous information
 
         if self.debug_messages:
@@ -226,15 +227,15 @@ class MyApp(ShowBase):
 
 
         self.camera.reparent_to(self.player.lower_torso)
-        self.camera.set_pos(0, -10, 0)
-        self.old_camera_z = self.camera.getZ(self.render)
 
-#        self.weapon = Sword(self.render, self.world, self.player.lower_torso)
-#        self.player.grabRight(self.weapon.getAttachmentInfo())
+        self.cam_control = CameraControl( camera, self.mouseWatcherNode )
+        self.cam_control.attach_to(self.player.lower_torso)
 
-        self.accept('mouse1',self.disable_mouse)
-        self.accept('mouse2',self.re_enable_mouse)
-        self.accept('mouse3',self.re_enable_mouse)
+        self.taskMgr.add( self.cam_control.move_camera, "MoveCameraTask")
+
+        self.accept( "wheel_down", self.cam_control.wheel_down )
+        self.accept( "wheel_up", self.cam_control.wheel_up )
+
         self.accept('f1', self.toggle_wireframe)
         self.accept('f2', self.toggle_texture)
         inputState.watch_with_modifiers('forward', 'w')
@@ -269,13 +270,6 @@ class MyApp(ShowBase):
 
     def clearText(self):
         self.text_field.enterText('')
-
-    def re_enable_mouse(self):
-        base.disable_mouse()
-        mat = Mat4(self.camera.get_mat())
-        mat.invert_in_place()
-        base.mouseInterfaceNode.set_mat(mat)
-        base.enable_mouse()
 
     # Everything that needs to be done every frame goes here.
     # Physics updates and movement and stuff.
@@ -361,15 +355,6 @@ class MyApp(ShowBase):
 #            self.speech_bubble['text'] = ""
 
 #        self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
-
-        # Roll in the camera would only serve to confuse
-        self.camera.setR(0)
-        # Reduce camera's bounciness
-        if abs(self.camera.getZ(self.render)-self.old_camera_z) < 0.1:
-            self.camera.setZ(self.render, self.old_camera_z)
-        else:
-            self.camera.setZ(self.render, (self.old_camera_z*2 + self.camera.getZ(self.render))/3)
-        self.old_camera_z = self.camera.getZ(self.render)
 
         self.player.update_heading()
         for doppelganger in self.doppelgangers:
