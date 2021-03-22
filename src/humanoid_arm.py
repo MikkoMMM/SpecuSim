@@ -8,25 +8,23 @@ from src.shapes import create_capsule
 
 class HumanoidArm():
     # Arguments:
-    # render: NodePath to render to
     # world: A BulletWorld to use for physics
     # upper_arm_diameter: upper_arm's diameter
     # forearm_diameter: forearm's diameter
     # height: arm's total height
-    def __init__(self, render, world, height, upper_arm_diameter, forearm_diameter, right_arm, start_position, start_heading):
-        self.render = render
+    def __init__(self, world, height, upper_arm_diameter, forearm_diameter, right_arm, start_position, start_heading):
         self.world = world
 
         self.upper_arm_length = height*50/100
         self.forearm_length = height*50/100
         self.upper_arm_diameter = upper_arm_diameter
 
-        self.upper_arm = create_capsule(self.render, self.upper_arm_diameter, self.upper_arm_length)
+        self.upper_arm = create_capsule(self.upper_arm_diameter, self.upper_arm_length)
         self.upper_arm.node().set_mass(3.0)
         self.world.attach(self.upper_arm.node())
 
 
-        self.forearm = create_capsule(self.render, forearm_diameter, self.forearm_length)
+        self.forearm = create_capsule(forearm_diameter, self.forearm_length)
         self.forearm.set_collide_mask(BitMask32.bit(3))
         self.forearm.node().set_mass(2.0)
         self.world.attach(self.forearm.node())

@@ -11,7 +11,6 @@ class Animal():
     """A parent class for animals.
 
     Args:
-        render (NodePath): A NodePath to get relative positions for
         world (BulletWorld): A BulletWorld to use for physics
         terrain_bullet_node (BulletRigidBodyNode): A Bullet node that has elevation information in its collision shape
         body_node (NodePath): A NodePath to apply velocity to, and whose velocity is treated as the whole organism's velocity
@@ -23,8 +22,7 @@ class Animal():
         debug_text_node (OnscreenText, optional): A place in the GUI to write debug information to
     """
 
-    def __init__( self, render, world, terrain_bullet_node, body_node, feet, slope_difficult, slope_max, slope_linear_damping = 0.6, negligible_speed = 0.2, debug_text_node = None ):
-        self.render = render
+    def __init__( self, world, terrain_bullet_node, body_node, feet, slope_difficult, slope_max, slope_linear_damping = 0.6, negligible_speed = 0.2, debug_text_node = None ):
         self.world = world
         self.terrain_bullet_node = terrain_bullet_node
         self.body = body_node
@@ -34,6 +32,35 @@ class Animal():
         self.feet = feet
         self.debug_text_node = debug_text_node
         self.slope_linear_damping = slope_linear_damping
+        self.speech_field = None
+
+
+    def get_body(self):
+        """Gets the organism's main body node
+
+        Returns:
+            NodePath: the main body node
+        """
+        return self.body
+
+
+    def set_speech_field(self, speech_field):
+        """Sets where to output what this animal says.
+
+        Args:
+            speech_field: Any object that has a set_text method
+        """
+        self.speech_field = speech_field
+
+
+    def say(self, text):
+        """Sets the speech field's (if it exists) text to the given argument
+
+        Args:
+            text (str): The text to say
+        """
+        if self.speech_field:
+            self.speech_field.set_text(text)
 
 
     def get_ground_z_velocity(self, current_z_pos=None):
@@ -64,7 +91,7 @@ class Animal():
         """
         average_z = 0
         for foot in self.feet:
-            average_z += foot.getZ(self.render)-self.foot_height/2
+            average_z += foot.getZ(render)-self.foot_height/2
         average_z /= len(self.feet)
 
         average_z -= get_ground_Z_pos(self.body.getX()+offset_x, self.body.getY()+offset_y, self.world, self.terrain_bullet_node)
@@ -78,6 +105,9 @@ class Animal():
             speed (float): Movement speed in m/s, assuming flat ground.
             angle (float): The absolute angle in which to move, in degrees
             decelerate (bool, optional): Whether to actively move (False) or to let movement come to a natural halt over time (True)
+
+        Returns:
+            bool: Whether the organism actually moved at all.
         """
         if not decelerate:
             math_angle = radians(angle+90)

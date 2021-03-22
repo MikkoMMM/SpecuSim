@@ -79,10 +79,10 @@ class Menu(object):
         self.set_centered_text(self.entries[-1], "Exit Game")
         self.entries[-1].set_transparency(1)
 
+        self.active_entry = 1
         self.select_frame= DirectFrame( frameColor=(1,1,1,1) , frameSize=(-64, 64, -20, 20) , frameTexture="textures/select.png")
         self.select_frame.set_transparency(1)
-        self.select_frame.reparent_to(self.entries[0])
-        self.active_entry = 0
+        self.select_frame.reparent_to(self.entries[self.active_entry])
 
 
     def set_centered_text(self, gui_object, text, scale=14, fg=(0.2,0.2,0.2,1)):

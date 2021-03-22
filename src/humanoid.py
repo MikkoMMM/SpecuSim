@@ -8,13 +8,13 @@ from src.humanoid_arm import HumanoidArm
 from src.utils import angle_diff, normalize_angle, get_ground_Z_pos, get_object_ground_Z_pos
 from math import cos, sin, radians, degrees
 from panda3d.bullet import BulletSphereShape, BulletConeTwistConstraint, BulletGenericConstraint
+from src.speech_bubble import SpeechBubble
 
 class Humanoid(Animal):
     """
     A class for humanoid animals.
     """
-    def __init__( self, render, world, terrain_bullet_node, x, y, height=1.7, start_heading=Vec3(0,0,0), debug = False, debug_text_node = None ):
-        self.render = render
+    def __init__( self, world, terrain_bullet_node, x, y, height=1.7, start_heading=Vec3(0,0,0), debug = False, debug_text_node = None ):
         self.world = world
         self.terrain_bullet_node = terrain_bullet_node
         self.debug = debug
@@ -44,17 +44,17 @@ class Humanoid(Animal):
         self.target_height = self.leg_height + self.lower_torso_height/2
 
         # Control node and the whole body collision box
-        self.lower_torso = create_rounded_box(self.render, self.chest_width, 0.2, self.chest_height)
+        self.lower_torso = create_rounded_box(self.chest_width, 0.2, self.chest_height)
         start_position = Vec3(x,y,self.target_height+get_ground_Z_pos(x, y, self.world, self.terrain_bullet_node))
         self.lower_torso.set_pos_hpr(start_position, start_heading)
         self.lower_torso.node().set_mass(30.0)
         self.lower_torso.node().set_angular_factor(Vec3(0,0,0.1))
         self.lower_torso.node().set_linear_damping(0.8)
         self.lower_torso.node().set_angular_sleep_threshold(0) # Sleep would freeze the whole character if still
-        self.lower_torso.set_collide_mask(BitMask32.bit(3))
+        self.lower_torso.set_collide_mask(BitMask32.bit(0|3)) # Enable ground collision too, to help with avoiding ascending map boundaries
         self.world.attach(self.lower_torso.node())
 
-        self.chest = create_rounded_box(self.render, self.chest_width, 0.2, self.chest_height)
+        self.chest = create_rounded_box(self.chest_width, 0.2, self.chest_height)
         self.chest.node().set_mass(30.0)
         self.chest.node().set_angular_factor(Vec3(0.15,0.05,0.1))
         self.chest.node().set_linear_damping(0.5)
@@ -75,7 +75,7 @@ class Humanoid(Animal):
         world.attach_constraint(cs, linked_collision=True)
 
 
-        self.left_arm = HumanoidArm(self.chest, self.world, self.arm_height, self.chest_width/3-0.01, (self.chest_width/3-0.01)*self.arm_height, False, start_position, start_heading)
+        self.left_arm = HumanoidArm(self.world, self.arm_height, self.chest_width/3-0.01, (self.chest_width/3-0.01)*self.arm_height, False, start_position, start_heading)
 
         frame_a = TransformState.make_pos_hpr(Point3(-self.chest_width/2-self.left_arm.upper_arm_diameter/2, 0, self.chest_height/2-self.left_arm.upper_arm_diameter/8), Vec3(0, 0, 0))
         frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.left_arm.upper_arm_length/2), Vec3(0, -90, 0))
@@ -89,7 +89,7 @@ class Humanoid(Animal):
         self.world.attach_constraint(self.left_arm_constraint, linked_collision=True)
 
 
-        self.right_arm = HumanoidArm(self.render, self.world, self.arm_height, self.chest_width/3-0.01, (self.chest_width/3-0.01)*self.arm_height, True, start_position, start_heading)
+        self.right_arm = HumanoidArm(self.world, self.arm_height, self.chest_width/3-0.01, (self.chest_width/3-0.01)*self.arm_height, True, start_position, start_heading)
 
         frame_a = TransformState.make_pos_hpr(Point3(self.chest_width/2+self.right_arm.upper_arm_diameter/2, 0, self.chest_height/2-self.right_arm.upper_arm_diameter/8), Vec3(0, 0, 0))
         frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.right_arm.upper_arm_length/2), Vec3(0, -90, 0))
@@ -103,7 +103,7 @@ class Humanoid(Animal):
         self.world.attach_constraint(self.right_arm_constraint, linked_collision=True)
 
 
-        self.head = create_sphere(self.render, self.head_height)
+        self.head = create_sphere(self.head_height)
         self.head.node().set_mass(3.0)
         self.head.set_collide_mask(BitMask32.bit(3))
         self.world.attach(self.head.node())
@@ -182,7 +182,7 @@ class Humanoid(Animal):
             # Foot targets:
 
             # Set up a target that the foot should reach:
-            self.foot_target.append(self.render.attach_new_node("FootTarget"))
+            self.foot_target.append(render.attach_new_node("FootTarget"))
             self.foot_target[i].setZ(self.target_height+get_object_ground_Z_pos(self.foot_target[i], self.world, self.terrain_bullet_node))
             self.leg[i].setTarget( self.foot_target[i] )
 
@@ -235,7 +235,10 @@ class Humanoid(Animal):
         self.walk_cycle = WalkCycle( 2, 0.75 )
         self.desired_heading = self.lower_torso.getH()
 
-        super().__init__(render, world, terrain_bullet_node, body_node=self.lower_torso, feet=self.foot, slope_difficult=20, slope_max=50, debug_text_node = debug_text_node)
+        super().__init__(world, terrain_bullet_node, body_node=self.lower_torso, feet=self.foot, slope_difficult=20, slope_max=50, debug_text_node = debug_text_node)
+
+        # Humanoids automatically come equipped with a speaking capability. Neat, huh?
+        self.set_speech_field(SpeechBubble(self.get_body(), self.lower_torso_height+self.chest_height+self.head_height+self.height*0.2))
 
 
     def speed_up( self ):
@@ -271,9 +274,9 @@ class Humanoid(Animal):
         left = 0
         right = 1
         self.planned_foot_target[left].set_pos( -self.pelvis_width/4, step_dist, -self.target_height )
-        self.planned_foot_target[left].setZ( self.render, get_ground_Z_pos(self.planned_foot_target[left].getX(self.render), self.planned_foot_target[left].getY(self.render), self.world, self.terrain_bullet_node) )
+        self.planned_foot_target[left].setZ( render, get_ground_Z_pos(self.planned_foot_target[left].getX(render), self.planned_foot_target[left].getY(render), self.world, self.terrain_bullet_node) )
         self.planned_foot_target[right].set_pos( self.pelvis_width/4, step_dist, -self.target_height )
-        self.planned_foot_target[right].setZ( self.render, get_ground_Z_pos(self.planned_foot_target[right].getX(self.render), self.planned_foot_target[right].getY(self.render), self.world, self.terrain_bullet_node) )
+        self.planned_foot_target[right].setZ( render, get_ground_Z_pos(self.planned_foot_target[right].getX(render), self.planned_foot_target[right].getY(render), self.world, self.terrain_bullet_node) )
 
         # Update the walkcycle to determine if a step needs to be taken:
         update = cur_walk_dist
@@ -288,20 +291,20 @@ class Humanoid(Animal):
             self.step_right = True
 
         if self.step_left:
-            diff = self.planned_foot_target[left].get_pos(self.render) - self.foot_target[left].get_pos()
+            diff = self.planned_foot_target[left].get_pos(render) - self.foot_target[left].get_pos()
             leg_move_dist = self.leg_movement_speed*globalClock.get_dt()
             if diff.length() < leg_move_dist:
-                self.foot_target[left].set_pos( self.planned_foot_target[left].get_pos( self.render ) )
+                self.foot_target[left].set_pos( self.planned_foot_target[left].get_pos( render ) )
                 self.step_left = False
             else:
                 moved = self.foot_target[left].get_pos() + diff.normalized()*leg_move_dist
                 self.foot_target[left].set_pos( moved )
 
         if self.step_right:
-            diff = self.planned_foot_target[right].get_pos(self.render) - self.foot_target[right].get_pos()
+            diff = self.planned_foot_target[right].get_pos(render) - self.foot_target[right].get_pos()
             leg_move_dist = self.leg_movement_speed*globalClock.get_dt()
             if diff.length() < leg_move_dist:
-                self.foot_target[right].set_pos( self.planned_foot_target[right].get_pos( self.render ) )
+                self.foot_target[right].set_pos( self.planned_foot_target[right].get_pos( render ) )
                 self.step_right = False
             else:
                 moved = self.foot_target[right].get_pos() + diff.normalized()*leg_move_dist

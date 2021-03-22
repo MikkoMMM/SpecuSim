@@ -61,3 +61,4 @@
 19.3.2021 Some work moving on to a new version of CCD-IK-Panda3D.
 20.3.2021 Working on the GUI, and sending a message to the supervisor. Wrote a pull request template.
 21.3.2021 Refactoring some of the general code from the Humanoid class to the Creature class. Documenting the Creature class.
+22.3.2021 Some form of collision for the ocean, a new camera controller, some cleanup and refactoring.

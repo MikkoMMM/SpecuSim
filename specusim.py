@@ -65,7 +65,7 @@ class MyApp(ShowBase):
 
         self.gui = True                 # A toggle for the GUI for testing puposes
         self.performance_analysis = True # Enable pstat support and show frame rate
-        self.physics_debug = True        # Show wireframes for the physics objects.
+        self.physics_debug = False        # Show wireframes for the physics objects.
         self.debug_messages = False       # Some extraneous information
 
         if self.debug_messages:
@@ -189,17 +189,9 @@ class MyApp(ShowBase):
         self.world.attach(self.terrain_np.node())
 
     def start_with_nlp(self):
-        self.npc1 = Humanoid(self.render, self.world, self.terrain_bullet_node, -2, 2)
+        self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
 
-        self.speech_bubble=DirectLabel(parent=self.npc1.lower_torso, text="'Ello, 'ello, 'ello!", text_wordwrap=10,
-                        relief = None, text_scale=(.5,.5),
-                        pos = (0,0,2),
-                        frameColor=(.3,.2,.1,.5),
-                        text_frame=(0,0,0,1),
-                        text_bg=(1,1,1,0.4))
-        self.speech_bubble.component('text0').textNode.set_card_decal(1)
-#        self.speech_bubble['text'] = "Why, hello there!"
-        self.speech_bubble.set_billboard_point_eye()
+        self.npc1.say("Hello World!")
 
         self.start_game()
 
@@ -216,14 +208,13 @@ class MyApp(ShowBase):
         self.inst6 = add_instructions(0.42, "")
         self.inst7 = add_instructions(0.48, "")
 
-#        self.player = Humanoid(self.render, self.world, self.terrain_bullet_node, Vec3(0,0,-8), Vec3(0,0,0))
-        self.player = Humanoid(self.render, self.world, self.terrain_bullet_node, 0, 0, debug=self.physics_debug, debug_text_node=self.inst6)
+        self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=self.physics_debug, debug_text_node=self.inst6)
         
         self.doppelgangers = []
         for i in range(self.doppelganger_num):
             for j in range(self.doppelganger_num):
                 if i == (self.doppelganger_num-1)/2 and j == (self.doppelganger_num-1)/2: continue
-                self.doppelgangers.append(Humanoid(self.render, self.world, self.terrain_bullet_node, i-(self.doppelganger_num-1)/2, j-(self.doppelganger_num-1)/2))
+                self.doppelgangers.append(Humanoid(self.world, self.terrain_bullet_node, i-(self.doppelganger_num-1)/2, j-(self.doppelganger_num-1)/2))
 
 
         self.camera.reparent_to(self.player.lower_torso)
@@ -262,11 +253,10 @@ class MyApp(ShowBase):
             #self.text_field.reparent_to(self.gui_bar)
             #self.text_field.set_pos(Vec3(0,-1,0))
 
-
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
         if self.debug_messages:
-            self.render.analyze()
+            render.analyze()
 
     def clearText(self):
         self.text_field.enterText('')
