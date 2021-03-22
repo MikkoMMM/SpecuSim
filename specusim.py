@@ -1,4 +1,3 @@
-from src.motioncontrols.fusion import Fusion, DeltaT
 from src.humanoid import Humanoid
 from math import pi, sin, cos, radians, sqrt, degrees
 
@@ -80,13 +79,6 @@ class MyApp(ShowBase):
             PStatClient.connect()
 
         self.doppelganger_num = 0      # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
-
-        # For calculating motion controller orientation
-        self.heading = 0
-        self.pitch = 0
-        self.roll = 0
-        #self.deltat = DeltaT(timediff)
-        #self.fuse = Fusion(10, timediff) # A fairly large GyroMeansError so erroneous values are quickly resolved
 
         self.menu = Menu(self)
         self.menu.show_menu()

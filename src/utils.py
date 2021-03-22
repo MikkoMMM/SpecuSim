@@ -15,11 +15,7 @@ def test_if_near_ground(bodypart, world, terrain_bullet_node, distance = 1000):
             return True
     return False
 
-def get_object_ground_Z_pos(part, world, terrain_bullet_node, distance = 1000):
-    pFrom = part.get_pos()
-    return get_ground_Z_pos(pFrom.getX(), pFrom.getY(), world, terrain_bullet_node, distance)
-
-def get_ground_Z_pos(x, y, world, terrain_bullet_node, distance = 1000):
+def get_ground_z_pos(x, y, world, terrain_bullet_node, distance = 1000):
     rc_result = world.ray_test_all(Point3(x, y, distance), Point3(x, y, -distance), BitMask32.bit(0))
 
     for hit in rc_result.get_hits():
@@ -28,7 +24,7 @@ def get_ground_Z_pos(x, y, world, terrain_bullet_node, distance = 1000):
     return 0
 
 # Warning: SLOW! (Use only if absolutely must.)
-def get_collision_shape_ground_Z_pos(shape, x, y, world, terrain_bullet_node, distance = 1000):
+def get_collision_shape_ground_z_pos(shape, x, y, world, terrain_bullet_node, distance = 1000):
     # It would be beneficial to take heading and pitch into account and this is indeed supported.
     # However, at 90 degree pitch the collision was sometimes at a really high place.
     ts_from = TransformState.make_pos(Point3(x, y, distance))

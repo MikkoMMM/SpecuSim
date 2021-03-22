@@ -1,11 +1,11 @@
 import random
-from src.InverseKinematics.IKChain import IKChain
-from src.InverseKinematics.WalkCycle import WalkCycle
-from src.InverseKinematics.Utils import *
+from src.inverse_kinematics.IKChain import IKChain
+from src.inverse_kinematics.WalkCycle import WalkCycle
+from src.inverse_kinematics.Utils import *
 from src.animal import Animal
 from src.shapes import create_rounded_box, create_sphere
-from src.humanoid_arm import HumanoidArm
-from src.utils import angle_diff, normalize_angle, get_ground_Z_pos, get_object_ground_Z_pos
+from src.body_parts.humanoid_arm import HumanoidArm
+from src.utils import angle_diff, normalize_angle, get_ground_z_pos
 from math import cos, sin, radians, degrees
 from panda3d.bullet import BulletSphereShape, BulletConeTwistConstraint, BulletGenericConstraint
 from src.speech_bubble import SpeechBubble
@@ -45,7 +45,7 @@ class Humanoid(Animal):
 
         # Control node and the whole body collision box
         self.lower_torso = create_rounded_box(self.chest_width, 0.2, self.chest_height)
-        start_position = Vec3(x,y,self.target_height+get_ground_Z_pos(x, y, self.world, self.terrain_bullet_node))
+        start_position = Vec3(x,y,self.target_height+get_ground_z_pos(x, y, self.world, self.terrain_bullet_node))
         self.lower_torso.set_pos_hpr(start_position, start_heading)
         self.lower_torso.node().set_mass(30.0)
         self.lower_torso.node().set_angular_factor(Vec3(0,0,0.1))
@@ -183,7 +183,7 @@ class Humanoid(Animal):
 
             # Set up a target that the foot should reach:
             self.foot_target.append(render.attach_new_node("FootTarget"))
-            self.foot_target[i].setZ(self.target_height+get_object_ground_Z_pos(self.foot_target[i], self.world, self.terrain_bullet_node))
+            self.foot_target[i].setZ(self.target_height+get_ground_z_pos(self.foot_target[i].getX(), self.foot_target[i].getY(), self.world, self.terrain_bullet_node))
             self.leg[i].setTarget( self.foot_target[i] )
 
             # Set up nodes which stay (rigidly) infront of the body, on the floor.
@@ -198,9 +198,8 @@ class Humanoid(Animal):
                 self.planned_foot_target[i].attach_new_node( geom )
 
 
-        # Add visuals to the bones. These MUST be after finalize().
+            # Add visuals to the bones. These MUST be after finalize().
 
-        for i in range(len(self.leg)):
             visual = loader.load_model("3d-assets/unit_cylinder.bam")
             visual.set_scale(Vec3(thigh_diameter, thigh_diameter, self.thigh_length))
             visual.reparent_to(self.thigh[i].ikNode)
@@ -274,9 +273,9 @@ class Humanoid(Animal):
         left = 0
         right = 1
         self.planned_foot_target[left].set_pos( -self.pelvis_width/4, step_dist, -self.target_height )
-        self.planned_foot_target[left].setZ( render, get_ground_Z_pos(self.planned_foot_target[left].getX(render), self.planned_foot_target[left].getY(render), self.world, self.terrain_bullet_node) )
+        self.planned_foot_target[left].setZ( render, get_ground_z_pos(self.planned_foot_target[left].getX(render), self.planned_foot_target[left].getY(render), self.world, self.terrain_bullet_node) )
         self.planned_foot_target[right].set_pos( self.pelvis_width/4, step_dist, -self.target_height )
-        self.planned_foot_target[right].setZ( render, get_ground_Z_pos(self.planned_foot_target[right].getX(render), self.planned_foot_target[right].getY(render), self.world, self.terrain_bullet_node) )
+        self.planned_foot_target[right].setZ( render, get_ground_z_pos(self.planned_foot_target[right].getX(render), self.planned_foot_target[right].getY(render), self.world, self.terrain_bullet_node) )
 
         # Update the walkcycle to determine if a step needs to be taken:
         update = cur_walk_dist

@@ -3,7 +3,7 @@
 This module handles any creature that is capable of locomotion in some form or another.
 """
 
-from src.utils import get_ground_Z_pos
+from src.utils import get_ground_z_pos
 from math import cos, sin, radians, degrees, acos, copysign
 from panda3d.core import Vec2, Vec3
 
@@ -94,7 +94,7 @@ class Animal():
             average_z += foot.getZ(render)-self.foot_height/2
         average_z /= len(self.feet)
 
-        average_z -= get_ground_Z_pos(self.body.getX()+offset_x, self.body.getY()+offset_y, self.world, self.terrain_bullet_node)
+        average_z -= get_ground_z_pos(self.body.getX()+offset_x, self.body.getY()+offset_y, self.world, self.terrain_bullet_node)
         return average_z
 
 
