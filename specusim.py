@@ -1,5 +1,5 @@
 from src.motioncontrols.fusion import Fusion, DeltaT
-from src.humanoid2 import Humanoid
+from src.humanoid import Humanoid
 from math import pi, sin, cos, radians, sqrt, degrees
 
 from direct.showbase.InputStateGlobal import inputState
@@ -257,11 +257,11 @@ class MyApp(ShowBase):
             # Each width unit seems to be a 2/scale'th of a screen on a rectangular aspect ratio
             scale = 0.05
             self.text_field = DirectEntry(text = "", scale=scale, command=print, parent=self.gui_bar,
-                        width = 30, pos=(-15*scale, 0, self.bar_start),
-                        initialText="Type Something", numLines = 2, focus=0, focusInCommand=self.clearText)
+                        text_fg=(1,1,1,1), frameColor=(0, 0, 0, 1), width = 30, pos=(-15*scale, 0, (self.bar_start-1)/2),
+                        initialText="Press Enter to start talking", numLines = 2, focus=0, focusInCommand=self.clearText)
             #self.text_field.reparent_to(self.gui_bar)
             #self.text_field.set_pos(Vec3(0,-1,0))
-            
+
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
