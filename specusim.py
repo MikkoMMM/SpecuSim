@@ -1,23 +1,23 @@
 from src.humanoid import Humanoid
-from math import pi, sin, cos, radians, sqrt, degrees
+from math import sqrt
 
 from direct.showbase.InputStateGlobal import inputState
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
-from panda3d.core import Vec3, Vec4, ShaderTerrainMesh, Shader, load_prc_file_data, PStatClient
+from panda3d.core import Vec3, ShaderTerrainMesh, Shader, load_prc_file_data, PStatClient
 from panda3d.core import SamplerState, TextNode
-from panda3d.core import Texture, Mat4, LMatrix4
+from panda3d.core import Texture
 from panda3d.core import PNMImage, Filename
-from direct.task import Task
+#from direct.task import Task
 from panda3d.bullet import BulletWorld
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.bullet import BulletDebugNode
 from panda3d.bullet import get_bullet_version
-from panda3d.core import BitMask32, TransformState, NodePath, PandaNode
+from panda3d.core import BitMask32
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import ZUp
 from src.menu import Menu
-from direct.gui.DirectGui import DirectFrame, DirectEntry, DirectLabel
+from direct.gui.DirectGui import DirectFrame, DirectEntry
 from src.utils import create_or_load_walk_map
 from src.camera import CameraControl
 #from src.weapons.sword import Sword
@@ -330,17 +330,8 @@ class MyApp(ShowBase):
 
         if hasattr(self, 'npc1'):
             self.npc1.stand_still()
-            self.npc1.update_heading()
-            self.npc1.update_heading()
-#        self.speech_bubble['text'] += "."
-#        if len(self.speech_bubble['text']) > 30:
-#            self.speech_bubble['text'] = ""
 
 #        self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
-
-        self.player.update_heading()
-        for doppelganger in self.doppelgangers:
-            doppelganger.update_heading()
 
         return task.cont
 

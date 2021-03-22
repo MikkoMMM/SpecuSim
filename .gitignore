@@ -5,6 +5,7 @@
 ai
 /ai/*
 *.walk
+.idea
 
 
 

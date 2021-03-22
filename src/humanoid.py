@@ -11,8 +11,7 @@ from panda3d.bullet import BulletSphereShape, BulletConeTwistConstraint, BulletG
 from src.speech_bubble import SpeechBubble
 
 class Humanoid(Animal):
-    """
-    A class for humanoid animals.
+    """A class for humanoid animals.
     """
     def __init__( self, world, terrain_bullet_node, x, y, height=1.7, start_heading=Vec3(0,0,0), debug = False, debug_text_node = None ):
         self.world = world
@@ -252,15 +251,21 @@ class Humanoid(Animal):
 
 
     def stand_still(self):
+        """Stand still. Please call this method if you didn't call walk_in_dir this frame.
+        """
         self.walk_in_dir(self.lower_torso.getH(), decelerate=True)
 
 
     def walk_in_dir( self, angle=0, visuals=True, decelerate=False ):
+        """Walk in the given direction. Please call this method or stand_still exactly once every frame.
+        """
         did_move = self.walk_physics( self.walk_speed, angle=angle, decelerate=decelerate )
         if did_move and visuals:
             # Calculate how far we've walked this frame:
             cur_walk_dist = self.lower_torso.node().get_linear_velocity().length()*globalClock.get_dt()
             self._walking_visuals( cur_walk_dist, 0 )
+        # The heading should be updated exactly once per frame, so let's do it here
+        self._update_heading()
 
 
     def _walking_visuals( self, cur_walk_dist, ang_clamped ):
@@ -318,15 +323,15 @@ class Humanoid(Animal):
             return
         self.desired_heading -= globalClock.get_dt()*450
         self.desired_heading = normalize_angle(self.desired_heading)
-        self.update_heading()
 
     def turn_right(self):
         if abs(angle_diff(-self.lower_torso.getH(), self.desired_heading)) > 170:
             return
         self.desired_heading += globalClock.get_dt()*450
         self.desired_heading = normalize_angle(self.desired_heading)
-        self.update_heading()
 
-    def update_heading(self):
+    def _update_heading(self):
+        """Sets the angular velocity toward the desired heading.
+        """
         diff = radians(angle_diff(-self.desired_heading, self.lower_torso.getH()))
         self.lower_torso.node().set_angular_velocity(Vec3(0,0,-diff*8))
