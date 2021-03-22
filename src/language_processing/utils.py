@@ -395,7 +395,7 @@ def get_num_options(num):
         choice = input("Enter the number of your choice: ")
         try:
             result = int(choice)
-            if result >= 0 and result < num:
+            if 0 <= result < num:
                 return result
             else:
                 print("Error invalid choice. ")

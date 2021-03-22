@@ -1,7 +1,7 @@
 from panda3d.bullet import BulletCapsuleShape, BulletBoxShape, BulletSphereShape, BulletCylinderShape, BulletConeShape
 from panda3d.bullet import BulletRigidBodyNode
-from panda3d.core import BitMask32
 from panda3d.bullet import ZUp
+from panda3d.core import BitMask32
 from panda3d.core import Vec3, TransformState, Point3
 
 

@@ -1,15 +1,15 @@
 # Credit: RenderPipeline contributors
 
-from panda3d.core import SamplerState, TextNode
-from direct.gui.OnscreenText import OnscreenText
-from direct.gui.DirectFrame import DirectFrame
-from direct.gui.DirectLabel import DirectLabel
+from sys import exit
+
 from direct.gui.DirectButton import DirectButton
+from direct.gui.DirectFrame import DirectFrame
+from direct.gui.DirectGuiBase import DGG
+from direct.gui.DirectLabel import DirectLabel
+from direct.interval.FunctionInterval import Func
 from direct.interval.LerpInterval import LerpColorScaleInterval
 from direct.interval.MetaInterval import Sequence
-from direct.interval.FunctionInterval import Func
-from direct.gui.DirectGuiBase import DGG
-from sys import exit
+from panda3d.core import SamplerState, TextNode
 
 
 class Menu(object):

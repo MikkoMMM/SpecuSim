@@ -1,6 +1,5 @@
-from math import floor
-from panda3d.core import Point3, BitMask32, TransformState
 from panda3d.core import PNMImage, Filename, PNMFileTypeRegistry
+from panda3d.core import Point3, BitMask32, TransformState
 
 
 # TODO: compare speed to angleDeg in Panda's Vec3

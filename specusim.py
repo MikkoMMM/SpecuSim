@@ -1,25 +1,26 @@
-from src.humanoid import Humanoid
 from math import sqrt
 
+from direct.gui.DirectGui import DirectFrame, DirectEntry
+from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.InputStateGlobal import inputState
 from direct.showbase.ShowBase import ShowBase
-from direct.gui.OnscreenText import OnscreenText
-from panda3d.core import Vec3, ShaderTerrainMesh, Shader, load_prc_file_data, PStatClient
-from panda3d.core import SamplerState, TextNode
-from panda3d.core import Texture
-from panda3d.core import PNMImage, Filename
+from panda3d.bullet import BulletDebugNode
+from panda3d.bullet import BulletHeightfieldShape
+from panda3d.bullet import BulletRigidBodyNode
 # from direct.task import Task
 from panda3d.bullet import BulletWorld
-from panda3d.bullet import BulletRigidBodyNode
-from panda3d.bullet import BulletDebugNode
+from panda3d.bullet import ZUp
 from panda3d.bullet import get_bullet_version
 from panda3d.core import BitMask32
-from panda3d.bullet import BulletHeightfieldShape
-from panda3d.bullet import ZUp
-from src.menu import Menu
-from direct.gui.DirectGui import DirectFrame, DirectEntry
-from src.utils import create_or_load_walk_map
+from panda3d.core import PNMImage, Filename
+from panda3d.core import SamplerState, TextNode
+from panda3d.core import Texture
+from panda3d.core import Vec3, ShaderTerrainMesh, Shader, load_prc_file_data, PStatClient
+
 from src.camera import CameraControl
+from src.humanoid import Humanoid
+from src.menu import Menu
+from src.utils import create_or_load_walk_map
 
 
 # from src.weapons.sword import Sword

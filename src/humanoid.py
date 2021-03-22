@@ -1,14 +1,15 @@
-import random
-from src.inverse_kinematics.IKChain import IKChain
-from src.inverse_kinematics.WalkCycle import WalkCycle
-from src.inverse_kinematics.Utils import *
+from math import radians
+
+from panda3d.bullet import BulletConeTwistConstraint, BulletGenericConstraint
+
 from src.animal import Animal
-from src.shapes import create_rounded_box, create_sphere
 from src.body_parts.humanoid_arm import HumanoidArm
-from src.utils import angle_diff, normalize_angle, get_ground_z_pos
-from math import cos, sin, radians, degrees
-from panda3d.bullet import BulletSphereShape, BulletConeTwistConstraint, BulletGenericConstraint
+from src.inverse_kinematics.IKChain import IKChain
+from src.inverse_kinematics.Utils import *
+from src.inverse_kinematics.WalkCycle import WalkCycle
+from src.shapes import create_rounded_box, create_sphere
 from src.speech_bubble import SpeechBubble
+from src.utils import angle_diff, normalize_angle, get_ground_z_pos
 
 
 class Humanoid(Animal):
@@ -76,8 +77,8 @@ class Humanoid(Animal):
         cs.set_limit(twist, swing2, swing1, softness=0.1, bias=1.0, relaxation=1.0)
         world.attach_constraint(cs, linked_collision=True)
 
-        self.left_arm = HumanoidArm(self.world, self.arm_height, self.chest_width / 3 - 0.01,
-                                    (self.chest_width / 3 - 0.01) * self.arm_height, False, start_position, start_heading)
+        self.left_arm = HumanoidArm(self.world, self.arm_height, upper_arm_diameter,
+                                    forearm_diameter, False, start_position, start_heading)
 
         frame_a = TransformState.make_pos_hpr(Point3(-self.chest_width / 2 - self.left_arm.upper_arm_diameter / 2, 0,
                                                      self.chest_height / 2 - self.left_arm.upper_arm_diameter / 8), Vec3(0, 0, 0))
@@ -91,8 +92,8 @@ class Humanoid(Animal):
         self.left_arm.upper_arm.node().set_angular_factor(Vec3(0.2, 0.2, 0.2))
         self.world.attach_constraint(self.left_arm_constraint, linked_collision=True)
 
-        self.right_arm = HumanoidArm(self.world, self.arm_height, self.chest_width / 3 - 0.01,
-                                     (self.chest_width / 3 - 0.01) * self.arm_height, True, start_position, start_heading)
+        self.right_arm = HumanoidArm(self.world, self.arm_height, upper_arm_diameter,
+                                     forearm_diameter, True, start_position, start_heading)
 
         frame_a = TransformState.make_pos_hpr(Point3(self.chest_width / 2 + self.right_arm.upper_arm_diameter / 2, 0,
                                                      self.chest_height / 2 - self.right_arm.upper_arm_diameter / 8), Vec3(0, 0, 0))

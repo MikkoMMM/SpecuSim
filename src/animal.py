@@ -3,9 +3,11 @@
 This module handles any creature that is capable of locomotion in some form or another.
 """
 
-from src.utils import get_ground_z_pos
 from math import cos, sin, radians, degrees, acos, copysign
+
 from panda3d.core import Vec2, Vec3
+
+from src.utils import get_ground_z_pos
 
 
 class Animal():

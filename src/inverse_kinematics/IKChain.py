@@ -241,7 +241,7 @@ class IKChain():
                     if ang > math.pi:
                         ang -= 2*math.pi
 
-                    if abs(ang) > 1e-6 and abs(ang) < math.pi*2:
+                    if 1e-6 < abs(ang) < math.pi*2:
                         if bone.axis and (rotAxis - bone.axis).lengthSquared() > 0.5:
                             # Clamp the rotation value:
                             ang = max( -bone.maxAng, min( -bone.minAng, ang ) )

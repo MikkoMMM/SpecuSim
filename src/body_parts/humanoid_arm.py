@@ -1,9 +1,7 @@
-from panda3d.bullet import BulletCapsuleShape, BulletCylinderShape
-from panda3d.core import Vec3
-from panda3d.bullet import BulletRigidBodyNode
+from panda3d.bullet import BulletGenericConstraint
 from panda3d.core import BitMask32, Point3, TransformState
-from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint, BulletGenericConstraint
-from panda3d.bullet import ZUp
+from panda3d.core import Vec3
+
 from src.shapes import create_capsule
 
 
