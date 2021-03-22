@@ -7,6 +7,7 @@ from src.utils import get_ground_z_pos
 from math import cos, sin, radians, degrees, acos, copysign
 from panda3d.core import Vec2, Vec3
 
+
 class Animal():
     """A parent class for animals.
 
@@ -22,7 +23,8 @@ class Animal():
         debug_text_node (OnscreenText, optional): A place in the GUI to write debug information to
     """
 
-    def __init__( self, world, terrain_bullet_node, body_node, feet, slope_difficult, slope_max, slope_linear_damping = 0.6, negligible_speed = 0.2, debug_text_node = None ):
+    def __init__(self, world, terrain_bullet_node, body_node, feet, slope_difficult, slope_max,
+                 slope_linear_damping=0.6, negligible_speed=0.2, debug_text_node=None):
         self.world = world
         self.terrain_bullet_node = terrain_bullet_node
         self.body = body_node
@@ -34,7 +36,6 @@ class Animal():
         self.slope_linear_damping = slope_linear_damping
         self.speech_field = None
 
-
     def get_body(self):
         """Gets the organism's main body node
 
@@ -42,7 +43,6 @@ class Animal():
             NodePath: the main body node
         """
         return self.body
-
 
     def set_speech_field(self, speech_field):
         """Sets where to output what this animal says.
@@ -52,7 +52,6 @@ class Animal():
         """
         self.speech_field = speech_field
 
-
     def say(self, text):
         """Sets the speech field's (if it exists) text to the given argument
 
@@ -61,7 +60,6 @@ class Animal():
         """
         if self.speech_field:
             self.speech_field.set_text(text)
-
 
     def get_ground_z_velocity(self, current_z_pos=None):
         """Calculates a vertical velocity at which the creature will stay on the surface of the terrain
@@ -76,11 +74,10 @@ class Animal():
         # Too high and you'll get massive jittering at sharp points in the terrain physics node
         vector = self.body.node().get_linear_velocity()
         # Determine some Z change that is allowed. It's got to be low enough to reduce jitter.
-        max_Z_change = 4*globalClock.get_dt()*min(self.walk_speed, 4*Vec3(vector.getX(), vector.getY(), 0).length())
+        max_Z_change = 4 * globalClock.get_dt() * 4 * Vec3(vector.getX(), vector.getY(), 0).length()
         if current_z_pos:
-            return -min(max_Z_change,max(current_z_pos,-max_Z_change))/globalClock.get_dt()
-        return -min(max_Z_change,max(self.get_body_ground_z_pos(),-max_Z_change))/globalClock.get_dt()
-
+            return -min(max_Z_change, max(current_z_pos, -max_Z_change)) / globalClock.get_dt()
+        return -min(max_Z_change, max(self.get_body_ground_z_pos(), -max_Z_change)) / globalClock.get_dt()
 
     def get_body_ground_z_pos(self, offset_x=0, offset_y=0):
         """Calculates where the body should be located on the Z axis
@@ -91,14 +88,14 @@ class Animal():
         """
         average_z = 0
         for foot in self.feet:
-            average_z += foot.getZ(render)-self.foot_height/2
+            average_z += foot.getZ(render)
         average_z /= len(self.feet)
 
-        average_z -= get_ground_z_pos(self.body.getX()+offset_x, self.body.getY()+offset_y, self.world, self.terrain_bullet_node)
+        average_z -= get_ground_z_pos(self.body.getX() + offset_x, self.body.getY() + offset_y, self.world,
+                                      self.terrain_bullet_node)
         return average_z
 
-
-    def walk_physics( self, speed, angle=0, decelerate=False ):
+    def walk_physics(self, speed, angle=0, decelerate=False):
         """Sets the linear velocity of the creature while keeping it on the ground.
 
         Args:
@@ -109,52 +106,56 @@ class Animal():
         Returns:
             bool: Whether the organism actually moved at all.
         """
-        if not decelerate:
-            math_angle = radians(angle+90)
-            diff = Vec3(-cos(math_angle),sin(math_angle),0)
-            diff_n = diff.normalized()
-            step = diff_n*speed
 
         current_z_pos = self.get_body_ground_z_pos()
-        preliminary_Z_velocity = self.get_ground_z_velocity(current_z_pos)
+        preliminary_z_velocity = self.get_ground_z_velocity(current_z_pos)
         if decelerate:
-            new_vector = Vec3(self.body.node().get_linear_velocity().getX(), self.body.node().get_linear_velocity().getY(), preliminary_Z_velocity)
+            new_vector = Vec3(self.body.node().get_linear_velocity().getX(),
+                              self.body.node().get_linear_velocity().getY(), preliminary_z_velocity)
         else:
+            math_angle = radians(angle + 90)
+            diff = Vec3(-cos(math_angle), sin(math_angle), 0)
+            diff_n = diff.normalized()
+            step = diff_n * speed
+
             ca = cos(radians(self.body.getH()))
             sa = sin(radians(self.body.getH()))
-            new_vector = Vec3(ca*step.getX() - sa*step.getY(), sa*step.getX() + ca*step.getY(), preliminary_Z_velocity)
+            new_vector = Vec3(ca * step.getX() - sa * step.getY(), sa * step.getX() + ca * step.getY(),
+                              preliminary_z_velocity)
 
-        eps_x = new_vector.getX()*0.01
-        eps_y = new_vector.getY()*0.01
+        eps_x = new_vector.getX() * 0.01
+        eps_y = new_vector.getY() * 0.01
         z_diff = current_z_pos - self.get_body_ground_z_pos(offset_x=eps_x, offset_y=eps_y)
         eps_dist = Vec2(eps_x, eps_y).length()
         new_vec_dist = Vec3(eps_x, eps_y, z_diff).length()
         if new_vec_dist > 0 and new_vec_dist >= eps_dist:
-            vertical_angle = copysign(acos(eps_dist/new_vec_dist), z_diff)
+            vertical_angle = copysign(acos(eps_dist / new_vec_dist), z_diff)
             if self.debug_text_node:
-                self.debug_text_node.text = "Angle: " + str(round(degrees(vertical_angle),1))
+                self.debug_text_node.text = "Angle: " + str(round(degrees(vertical_angle), 1))
         else:
             vertical_angle = 0
 
         if vertical_angle > self.slope_difficult:
             if vertical_angle >= self.slope_max:
-                self.body.node().set_linear_velocity(Vec3(0, 0, preliminary_Z_velocity))
+                self.body.node().set_linear_velocity(Vec3(0, 0, preliminary_z_velocity))
                 return False
 
-            normalized = (vertical_angle-self.slope_difficult)/(self.slope_max-self.slope_difficult)
+            normalized = (vertical_angle - self.slope_difficult) / (self.slope_max - self.slope_difficult)
             # Bullet's code has this regarding linear damping:
             # m_linearVelocity *= btPow(btScalar(1) - m_linearDamping, timeStep);
 
-            mult = pow(1-normalized, self.slope_linear_damping)
+            mult = pow(1 - normalized, self.slope_linear_damping)
             if decelerate:
-                mult = pow(1-mult, globalClock.get_dt())
-            self.body.node().set_linear_velocity(Vec3(new_vector.getX()*mult, new_vector.getY()*mult, preliminary_Z_velocity))
+                mult = pow(1 - mult, globalClock.get_dt())
+            self.body.node().set_linear_velocity(
+                Vec3(new_vector.getX() * mult, new_vector.getY() * mult, preliminary_z_velocity))
         else:
             self.body.node().set_linear_velocity(new_vector)
 
         # Negligible speed; assume we've come to a halt and save on resources
-        if self.body.node().get_linear_velocity().length() < self.negligible_speed and abs(self.body.node().get_angular_velocity().getZ()) < 0.1:
-            self.body.node().set_linear_velocity(Vec3(0,0,self.body.node().get_linear_velocity().getZ()))
+        if self.body.node().get_linear_velocity().length() < self.negligible_speed and abs(
+                self.body.node().get_angular_velocity().getZ()) < 0.1:
+            self.body.node().set_linear_velocity(Vec3(0, 0, self.body.node().get_linear_velocity().getZ()))
             return False
 
         return True

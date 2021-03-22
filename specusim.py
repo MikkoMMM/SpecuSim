@@ -8,7 +8,7 @@ from panda3d.core import Vec3, ShaderTerrainMesh, Shader, load_prc_file_data, PS
 from panda3d.core import SamplerState, TextNode
 from panda3d.core import Texture
 from panda3d.core import PNMImage, Filename
-#from direct.task import Task
+# from direct.task import Task
 from panda3d.bullet import BulletWorld
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.bullet import BulletDebugNode
@@ -20,11 +20,13 @@ from src.menu import Menu
 from direct.gui.DirectGui import DirectFrame, DirectEntry
 from src.utils import create_or_load_walk_map
 from src.camera import CameraControl
-#from src.weapons.sword import Sword
+
+
+# from src.weapons.sword import Sword
 
 
 def timediff(time1, time2):
-    return (time1-time2)
+    return time1 - time2
 
 
 # Function to put instructions on the screen.
@@ -60,12 +62,12 @@ class MyApp(ShowBase):
         # Initialize the showbase
         ShowBase.__init__(self)
         # In case window size would be at first detected incorrectly, buy a bit of time.
-        base.graphicsEngine.render_frame() 
+        base.graphicsEngine.render_frame()
 
-        self.gui = True                 # A toggle for the GUI for testing puposes
-        self.performance_analysis = True # Enable pstat support and show frame rate
-        self.physics_debug = False        # Show wireframes for the physics objects.
-        self.debug_messages = False       # Some extraneous information
+        self.gui = True  # A toggle for the GUI for testing puposes
+        self.performance_analysis = True  # Enable pstat support and show frame rate
+        self.physics_debug = False  # Show wireframes for the physics objects.
+        self.debug_messages = False  # Some extraneous information
 
         if self.debug_messages:
             print("Using Bullet Physics version ", get_bullet_version())
@@ -78,7 +80,7 @@ class MyApp(ShowBase):
             base.set_frame_rate_meter(True)
             PStatClient.connect()
 
-        self.doppelganger_num = 0      # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
+        self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         self.menu = Menu(self)
         self.menu.show_menu()
@@ -86,8 +88,8 @@ class MyApp(ShowBase):
         # Increase camera FOV as well as the far plane
         self.camLens.set_fov(90)
         self.camLens.set_near_far(0.1, 50000)
-        
-        #Heightfield's height
+
+        # Heightfield's height
         self.height = 25.0
 
         # Physics setup
@@ -95,7 +97,7 @@ class MyApp(ShowBase):
         # The custom ground collision doesn't go well along with gravity, but some aesthetics depend on it.
         self.world.set_gravity(Vec3(0, 0, -9.81))
 
-        #Collision groups:
+        # Collision groups:
         # 0: ground
         # 1: "ghost" body parts, for weapon hits
         # 2: feet
@@ -111,7 +113,6 @@ class MyApp(ShowBase):
         self.world.set_group_collision_flag(3, 3, True)
 
         self.disable_mouse()
-
 
         if self.physics_debug:
             # We have to use a smaller heightfield image for debugging
@@ -150,7 +151,7 @@ class MyApp(ShowBase):
         # set, the terrain ranges from (0, 0, 0) to (1, 1, 1)
         self.terrain = render.attach_new_node(self.terrain_node)
         self.terrain.set_scale(elevation_img_size, elevation_img_size, self.height)
-        self.terrain.set_pos(-elevation_img_offset, -elevation_img_offset, -self.height/2)
+        self.terrain.set_pos(-elevation_img_offset, -elevation_img_offset, -self.height / 2)
 
         # Set a shader on the terrain. The ShaderTerrainMesh only works with
         # an applied shader. You can use the shaders used here in your own application
@@ -170,7 +171,9 @@ class MyApp(ShowBase):
         if self.physics_debug:
             terrain_colshape = BulletHeightfieldShape(elevation_img, self.height, ZUp)
         else:
-            terrain_colshape = BulletHeightfieldShape(create_or_load_walk_map("worldmaps/seed_16783_grayscale.png", "worldmaps/seed_16783_ocean.png"), self.height, ZUp)
+            terrain_colshape = BulletHeightfieldShape(
+                create_or_load_walk_map("worldmaps/seed_16783_grayscale.png", "worldmaps/seed_16783_ocean.png"),
+                self.height, ZUp)
         terrain_colshape.set_use_diamond_subdivision(True)
 
         self.terrain_bullet_node = BulletRigidBodyNode("terrainBodyNode")
@@ -187,7 +190,6 @@ class MyApp(ShowBase):
 
         self.start_game()
 
-
     def start_game(self):
         self.menu.hide_menu()
 
@@ -200,24 +202,26 @@ class MyApp(ShowBase):
         self.inst6 = add_instructions(0.42, "")
         self.inst7 = add_instructions(0.48, "")
 
-        self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=self.physics_debug, debug_text_node=self.inst6)
-        
+        self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=self.physics_debug,
+                               debug_text_node=self.inst6)
+
         self.doppelgangers = []
         for i in range(self.doppelganger_num):
             for j in range(self.doppelganger_num):
-                if i == (self.doppelganger_num-1)/2 and j == (self.doppelganger_num-1)/2: continue
-                self.doppelgangers.append(Humanoid(self.world, self.terrain_bullet_node, i-(self.doppelganger_num-1)/2, j-(self.doppelganger_num-1)/2))
-
+                if i == (self.doppelganger_num - 1) / 2 and j == (self.doppelganger_num - 1) / 2: continue
+                self.doppelgangers.append(
+                    Humanoid(self.world, self.terrain_bullet_node, i - (self.doppelganger_num - 1) / 2,
+                             j - (self.doppelganger_num - 1) / 2))
 
         self.camera.reparent_to(self.player.lower_torso)
 
-        self.cam_control = CameraControl( camera, self.mouseWatcherNode )
+        self.cam_control = CameraControl(camera, self.mouseWatcherNode)
         self.cam_control.attach_to(self.player.lower_torso)
 
-        self.taskMgr.add( self.cam_control.move_camera, "MoveCameraTask")
+        self.taskMgr.add(self.cam_control.move_camera, "MoveCameraTask")
 
-        self.accept( "wheel_down", self.cam_control.wheel_down )
-        self.accept( "wheel_up", self.cam_control.wheel_up )
+        self.accept("wheel_down", self.cam_control.wheel_down)
+        self.accept("wheel_up", self.cam_control.wheel_up)
 
         self.accept('f1', self.toggle_wireframe)
         self.accept('f2', self.toggle_texture)
@@ -235,15 +239,17 @@ class MyApp(ShowBase):
             wy = base.win.get_y_size()
             self.bar_start = -0.8
             self.gui_bar = DirectFrame(frameColor=(0, 0, 0, 1),
-                                frameSize=(-wx/2, wx/2, -1, self.bar_start),
-                                pos=(0, -1, 0))
+                                       frameSize=(-wx / 2, wx / 2, -1, self.bar_start),
+                                       pos=(0, -1, 0))
             # Each width unit seems to be a 2/scale'th of a screen on a rectangular aspect ratio
             scale = 0.05
-            self.text_field = DirectEntry(text = "", scale=scale, command=print, parent=self.gui_bar,
-                        text_fg=(1,1,1,1), frameColor=(0, 0, 0, 1), width = 30, pos=(-15*scale, 0, (self.bar_start-1)/2),
-                        initialText="Press Enter to start talking", numLines = 2, focus=0, focusInCommand=self.clearText)
-            #self.text_field.reparent_to(self.gui_bar)
-            #self.text_field.set_pos(Vec3(0,-1,0))
+            self.text_field = DirectEntry(text="", scale=scale, command=print, parent=self.gui_bar,
+                                          text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 1), width=30,
+                                          pos=(-15 * scale, 0, (self.bar_start - 1) / 2),
+                                          initialText="Press Enter to start talking", numLines=2, focus=0,
+                                          focusInCommand=self.clearText)
+            # self.text_field.reparent_to(self.gui_bar)
+            # self.text_field.set_pos(Vec3(0,-1,0))
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
@@ -258,11 +264,10 @@ class MyApp(ShowBase):
     def update(self, task):
         dt = globalClock.get_dt()
 
-        self.world.do_physics(dt, 5, 1.0/80.0)
+        self.world.do_physics(dt, 5, 1.0 / 80.0)
 
         # Define controls
         stepping = False
-
 
         if inputState.is_set('forward'):
             if inputState.is_set('left'):
@@ -326,14 +331,18 @@ class MyApp(ShowBase):
             for doppelganger in self.doppelgangers:
                 doppelganger.slow_down()
 
-        self.inst5.text = "Speed " + str(round(sqrt(pow(self.player.lower_torso.node().get_linear_velocity()[0], 2) + pow(self.player.lower_torso.node().get_linear_velocity()[1], 2)),2)) + " / " + str(round(self.player.walk_speed,1)) + " m/s"
+        self.inst5.text = "Speed " + str(round(sqrt(
+            pow(self.player.lower_torso.node().get_linear_velocity()[0], 2) + pow(
+                self.player.lower_torso.node().get_linear_velocity()[1], 2)), 2)) + " / " + str(
+            round(self.player.walk_speed, 1)) + " m/s"
 
         if hasattr(self, 'npc1'):
             self.npc1.stand_still()
 
-#        self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
+        #        self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
 
         return task.cont
+
 
 app = MyApp()
 app.run()

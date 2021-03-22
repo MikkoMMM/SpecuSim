@@ -6,6 +6,7 @@ from panda3d.bullet import BulletHingeConstraint, BulletConeTwistConstraint, Bul
 from panda3d.bullet import ZUp
 from src.shapes import create_capsule
 
+
 class HumanoidArm():
     # Arguments:
     # world: A BulletWorld to use for physics
@@ -15,22 +16,21 @@ class HumanoidArm():
     def __init__(self, world, height, upper_arm_diameter, forearm_diameter, right_arm, start_position, start_heading):
         self.world = world
 
-        self.upper_arm_length = height*50/100
-        self.forearm_length = height*50/100
+        self.upper_arm_length = height * 50 / 100
+        self.forearm_length = height * 50 / 100
         self.upper_arm_diameter = upper_arm_diameter
 
         self.upper_arm = create_capsule(self.upper_arm_diameter, self.upper_arm_length)
         self.upper_arm.node().set_mass(3.0)
         self.world.attach(self.upper_arm.node())
 
-
         self.forearm = create_capsule(forearm_diameter, self.forearm_length)
         self.forearm.set_collide_mask(BitMask32.bit(3))
         self.forearm.node().set_mass(2.0)
         self.world.attach(self.forearm.node())
 
-        frame_a = TransformState.make_pos_hpr(Point3(0,0,-self.upper_arm_length/2), Vec3(0, 0, 0))
-        frame_b = TransformState.make_pos_hpr(Point3(0,0,self.forearm_length/2), Vec3(0, 0, 0))
+        frame_a = TransformState.make_pos_hpr(Point3(0, 0, -self.upper_arm_length / 2), Vec3(0, 0, 0))
+        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.forearm_length / 2), Vec3(0, 0, 0))
 
         self.elbow = BulletGenericConstraint(self.upper_arm.node(), self.forearm.node(), frame_a, frame_b, True)
 
@@ -54,7 +54,7 @@ class HumanoidArm():
             self.grab_for_real(attachment_info[1], attachment_info[2])
 
     def grab_for_real(self, target, grab_position, grab_angle=Vec3(0, 0, 0)):
-        frame_a = TransformState.make_pos_hpr(Point3(0,0,-self.forearm_length/2), Vec3(0, 0, 0))
+        frame_a = TransformState.make_pos_hpr(Point3(0, 0, -self.forearm_length / 2), Vec3(0, 0, 0))
         frame_b = TransformState.make_pos_hpr(grab_position, grab_angle)
 
         self.hand = BulletGenericConstraint(self.forearm.node(), target.node(), frame_a, frame_b, True)
