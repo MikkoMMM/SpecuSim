@@ -19,7 +19,7 @@ First, you need to install the required Python modules:
 pip install -r requirements.txt 
 
 ## AI models
-You'll also need an AI model to use the natural language processing features. It's to be placed in the ai directory. The PyTorch version of the original AID2 model is being distributed by bittorrent:
+You'll also need an AI model to use the natural language processing features. It's to be placed in the language_models directory. The PyTorch version of the original AID2 model is being distributed by bittorrent:
 
 [Torrent File](model.torrent) 
 
@@ -29,9 +29,9 @@ You'll also need an AI model to use the natural language processing features. It
 magnet:?xt=urn:btih:17dcfe3d12849db04a3f64070489e6ff5fc6f63f&dn=model_v5_pytorch&tr=udp%3a%2f%2ftracker.opentrackr.org%3a1337%2fannounce&tr=udp%3a%2f%2fopen.stealth.si%3a80%2fannounce&tr=udp%3a%2f%2fp4p.arenabg.com%3a1337%2fannounce&tr=udp%3a%2f%2ftracker.coppersurfer.tk%3a6969%2fannounce&tr=udp%3a%2f%2ftracker.cyberia.is%3a6969%2fannounce&tr=udp%3a%2f%2ftracker.moeking.me%3a6969%2fannounce&tr=udp%3a%2f%2f9.rarbg.me%3a2710%2fannounce&tr=udp%3a%2f%2ftracker3.itzmx.com%3a6961%2fannounce
 ```
 
-Once downloaded your ai folder should look like this:
+Once downloaded your language_models folder should look like this:
 ```
-    ./ai
+    ./language_models
     └── <MODEL-NAME>
         ├── config.json
         ├── merges.txt
