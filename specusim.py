@@ -15,12 +15,13 @@ from panda3d.core import BitMask32
 from panda3d.core import PNMImage, Filename
 from panda3d.core import SamplerState, TextNode
 from panda3d.core import Texture
-from panda3d.core import Vec3, ShaderTerrainMesh, Shader, load_prc_file_data, PStatClient
+from panda3d.core import Vec3, ShaderTerrainMesh, Shader, load_prc_file_data, PStatClient, CullBinManager
 
 from src.camera import CameraControl
 from src.humanoid import Humanoid
 from src.menu import Menu
 from src.utils import create_or_load_walk_map
+from src.language_processing.main import get_generator
 
 
 # from src.weapons.sword import Sword
@@ -31,10 +32,14 @@ def timediff(time1, time2):
 
 
 # Function to put instructions on the screen.
-def add_instructions(pos, msg):
-    return OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1), scale=.05,
-                        shadow=(0, 0, 0, 1), parent=base.a2dTopLeft,
-                        pos=(0.08, -pos - 0.04), align=TextNode.ALeft)
+def add_instructions(pos, msg, z_bin=None):
+    text_object = OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1), scale=.05,
+                 shadow=(0, 0, 0, 1), parent=base.a2dTopLeft,
+                 pos=(0.08, -pos - 0.04), align=TextNode.ALeft)
+    if z_bin:
+        text_object.setBin(z_bin, 1)
+
+    return text_object
 
 
 class MyApp(ShowBase):
@@ -83,7 +88,9 @@ class MyApp(ShowBase):
 
         self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
-        self.main_menu = Menu(PNMImage(Filename("textures/menu.jpg")), aspect_ratio_keeping_scale=1)
+        self.menu_img = PNMImage(Filename("textures/menu.jpg"))
+
+        self.main_menu = Menu(self.menu_img, aspect_ratio_keeping_scale=1)
         self.main_menu.change_button_style(PNMImage(Filename("textures/empty_button_52.png")), aspect_ratio_keeping_scale=2)
         self.main_menu.change_select_style(PNMImage(Filename("textures/select.png")), aspect_ratio_keeping_scale=2)
         self.main_menu.add_button("No Add-Ons", self.start_game, y=-0.1)
@@ -189,13 +196,36 @@ class MyApp(ShowBase):
         self.terrain_np.set_pos(0, 0, 0)
         self.world.attach(self.terrain_np.node())
 
+        # To set Direct2D objects in front of others
+        cullManager = CullBinManager.getGlobalPtr()
+        # According to the manual page linked-to below,
+        # the highest-order standard bin has order 50,
+        # so I'm assigning our new bin a sort order of 60.
+        cullManager.addBin("frontBin", cullManager.BTFixed, 60)
+
 
     def start_with_nlp(self):
+        self.main_menu.hide_menu()
         self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
 
         self.npc1.say("Hello World!")
+        text_object = OnscreenText(text="", style=1, fg=(1, 1, 1, 1), scale=.05,
+                                   shadow=(0, 0, 0, 1), parent=base.aspect2d,
+                                   pos=(0.0, 0.3), align=TextNode.ACenter)
+        text_object.setBin("frontBin", 1)
 
-        self.start_game()
+        nlp_menu = Menu(self.menu_img, aspect_ratio_keeping_scale=1)
+        nlp_menu.change_button_style(PNMImage(Filename("textures/empty_button_52.png")), aspect_ratio_keeping_scale=2)
+        nlp_menu.change_select_style(PNMImage(Filename("textures/select.png")), aspect_ratio_keeping_scale=2)
+        nlp_menu.show_menu()
+
+#        gm = GameManager(get_generator())
+        gm = get_generator(text_object, nlp_menu)
+        if gm:
+            text_object.hide()
+            nlp_menu.hide_menu()
+
+            self.start_game()
 
 
     def start_game(self):
@@ -208,7 +238,7 @@ class MyApp(ShowBase):
         self.inst4 = add_instructions(0.30, "Right mouse button: Adjust zoom")
         self.inst5 = add_instructions(0.36, "")
         self.inst6 = add_instructions(0.42, "")
-        self.inst7 = add_instructions(0.48, "")
+        # inst7 is reserved for NLP stuff
 
         self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=self.physics_debug,
                                debug_text_node=self.inst6)

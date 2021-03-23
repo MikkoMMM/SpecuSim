@@ -24,14 +24,14 @@ class Menu:
             scale = aspect_ratio_keeping_scale
             wx = kx / ky
 
-            self.my_frame = DirectFrame(frameSize=(-scale * wx, scale * wx, -scale, scale), **keywords)
+            self.menu_frame = DirectFrame(frameSize=(-scale * wx, scale * wx, -scale, scale), **keywords)
         else:
-            self.my_frame = DirectFrame(**keywords)
+            self.menu_frame = DirectFrame(**keywords)
 
-        self.my_frame["frameTexture"] = menu_tex
-        self.my_frame.reparent_to(base.aspect2d)
-        self.my_frame.set_transparency(True)
-        self.my_frame.hide()
+        self.menu_frame["frameTexture"] = menu_tex
+        self.menu_frame.reparent_to(base.aspect2d)
+        self.menu_frame.set_transparency(True)
+        self.menu_frame.hide()
 
         self.entries = []
         self.funcs = []
@@ -46,7 +46,7 @@ class Menu:
             "relief": DGG.FLAT,
             "rolloverSound": None,
             "clickSound": None,
-            "parent": self.my_frame,
+            "parent": self.menu_frame,
             "scale": 0.1,
         }
 
@@ -103,15 +103,15 @@ class Menu:
     def add_button(self, text, command, x=0.0, y=0.0, args=None):
         if args is None:
             args = []
-        self.entries.append(DirectButton(**self.button_style, pos=(x, 0, -y)))
+        self.funcs.append(command)
+        self.args.append(args)
+        self.entries.append(DirectButton(**self.button_style, pos=(x, 0, -y), command=self.funcs[-1], extraArgs=self.args[-1]))
 
         self.entries[-1]["frameTexture"] = self.button_tex
         if self.button_scale:
             self.entries[-1]["frameSize"] = (
                 -self.button_scale, self.button_scale,
                 -self.button_vert_aspect_r * self.button_scale, self.button_vert_aspect_r * self.button_scale)
-        self.funcs.append(command)
-        self.args.append(args)
 
         self.set_text(self.entries[-1], text)
         self.select_frame.reparent_to(self.entries[self.active_entry])
@@ -161,7 +161,7 @@ class Menu:
 
     def hide_menu(self):
         self.clear_keys()
-        self.my_frame.hide()
+        self.menu_frame.hide()
 
 
     def show_menu(self):
@@ -170,7 +170,7 @@ class Menu:
             base.accept("arrow_up", self.select_up)
             base.accept("arrow_down", self.select_down)
             base.accept("enter", self.exec_selection)
-        self.my_frame.show()
+        self.menu_frame.show()
         self.select_frame.show()
-        seq = Sequence(LerpColorScaleInterval(self.my_frame, .5, (1, 1, 1, 1)))
+        seq = Sequence(LerpColorScaleInterval(self.menu_frame, .5, (1, 1, 1, 1)))
         seq.start()

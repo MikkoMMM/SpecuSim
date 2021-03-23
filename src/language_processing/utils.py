@@ -6,7 +6,7 @@ import textwrap
 import os
 import sys
 
-from getconfig import logger, settings, colors, ptcolors
+from .getconfig import logger, settings
 from shutil import get_terminal_size
 
 
@@ -174,7 +174,8 @@ def output(text1, col1=None,
            beg=None, end='\n', sep=' ',
            rem_beg_spaces=True):
     print('', end=beg)
-    ptoolkit = use_ptoolkit() and ptcolors['displaymethod'] == "prompt-toolkit"
+    ptoolkit = False
+#    ptoolkit = use_ptoolkit() and ptcolors['displaymethod'] == "prompt-toolkit"
 
     if wrap:
         width = settings.getint("text-wrap-width")
@@ -199,8 +200,10 @@ def output(text1, col1=None,
         print('', end=end)
 
     else:
-        col1 = colors[col1] if col1 and colors[col1] and colors[col1][0].isdigit() else None
-        col2 = colors[col2] if col2 and colors[col2] and colors[col2][0].isdigit() else None
+#        col1 = colors[col1] if col1 and colors[col1] and colors[col1][0].isdigit() else None
+#        col2 = colors[col2] if col2 and colors[col2] and colors[col2][0].isdigit() else None
+        col1 = None
+        col2 = None
 
         clb1 = "\x1B[{}m".format(col1) if col1 else ""
         clb2 = "\x1B[{}m".format(col2) if col2 else ""

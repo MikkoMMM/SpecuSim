@@ -62,3 +62,4 @@
 20.3.2021 Working on the GUI, and sending a message to the supervisor. Wrote a pull request template.
 21.3.2021 Refactoring some of the general code from the Humanoid class to the Creature class. Documenting the Creature class.
 22.3.2021 Some form of collision for the ocean, a new camera controller, some cleanup and refactoring.
+23.3.2021 The menu system was overhauled to be more general-purpose. Started integration of GPT2.

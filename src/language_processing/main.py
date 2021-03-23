@@ -1,5 +1,15 @@
-def get_generator():
-    models = [x for x in Path('language_models').iterdir() if x.is_dir()]
+# Credit: AI Dungeon 2: Clover Edition
+
+from pathlib import Path
+import os
+from src.language_processing.gpt2generator import GPT2Generator
+from src.language_processing.getconfig import config, setting_info
+from src.language_processing.utils import *
+
+
+def get_generator(text_node, menu):
+    model_dir = "language_models"
+    models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
     generator = None
     failed_env_load = False
     while True:
@@ -15,19 +25,24 @@ def get_generator():
                     raise FileNotFoundError(
                         'There are no models in the models directory! You must download a pytorch compatible model!')
                 if os.environ.get("MODEL_FOLDER", False) and not failed_env_load:
-                    model = Path("models/" + os.environ.get("MODEL_FOLDER", False))
+                    model = Path(model_dir + os.environ.get("MODEL_FOLDER", False))
                 elif len(models) > 1:
-                    output("You have multiple models in your models folder. Please select one to load:", 'message')
+                    text_node.text = "You have multiple models in your models folder. Please select one to load:"
+                    for i in range (len( models)):
+                        menu.add_button(models[i].name, exit, y=-0.1+0.1*i)
+                    menu.add_button("(Exit)", exit, y=0.5)
+                    return None
+
                     list_items([m.name for m in models] + ["(Exit)"], "menu")
                     model_selection = input_number(len(models))
                     if model_selection == len(models):
-                        output("Exiting. ", "message")
+                        print("Exiting.")
                         exit(0)
                     else:
                         model = models[model_selection]
                 else:
                     model = models[0]
-                    logger.info("Using model: " + str(model))
+                    print("Using model: " + str(model))
                 assert isinstance(model, Path)
             generator = GPT2Generator(
                 model_path=model,
@@ -40,16 +55,15 @@ def get_generator():
             break
         except OSError:
             if len(models) == 0:
-                output("You do not seem to have any models installed.", "error")
-                output("Place a model in the 'models' subfolder and press enter", "error")
-                input("")
+                text_node.text = "You do not seem to have any models installed. Place a model in the '"+model_dir+"' subfolder"
+                base.graphicsEngine.render_frame()
                 # Scan for models again
-                models = [x for x in Path('models').iterdir() if x.is_dir()]
+                models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
             else:
                 failed_env_load = True
-                output("Model could not be loaded. Please try another model. ", "error")
+                text_node.text = "Model could not be loaded. Please try another model."
             continue
         except KeyboardInterrupt:
-            output("Model load cancelled. ", "error")
+            print("Model load cancelled. ")
             exit(0)
     return generator

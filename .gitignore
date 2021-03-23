@@ -1,9 +1,9 @@
 # Custom ignores
 */unit_*.blend
 *.kate-swp
-!*.gitkeep
-ai
-/ai/*
+language_models
+/language_models/*
+!language_models/.gitkeep
 *.walk
 .idea
 
