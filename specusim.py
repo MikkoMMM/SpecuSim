@@ -83,7 +83,9 @@ class MyApp(ShowBase):
 
         self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
-        self.menu = Menu(PNMImage(Filename("textures/menu.jpg")))
+        self.menu = Menu(PNMImage(Filename("textures/menu.jpg")), aspect_ratio_keeping_scale=1)
+        self.menu.change_button_style(img=PNMImage(Filename("textures/empty_button_52.png")), aspect_ratio_keeping_scale=2)
+        self.menu.change_select_style(img=PNMImage(Filename("textures/select.png")), aspect_ratio_keeping_scale=2)
         self.menu.add_button("No Add-Ons", self.start_game, y=-0.1)
         self.menu.add_button("Language AI", self.start_with_nlp, y=0)
         self.menu.add_button("Exit Game", exit, y=0.1)
