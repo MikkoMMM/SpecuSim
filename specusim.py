@@ -127,6 +127,38 @@ class MyApp(ShowBase):
 
         self.disable_mouse()
 
+        self.terrain_bullet_node = BulletRigidBodyNode("terrainBodyNode")
+
+        # To set Direct2D objects in front of others
+        cull_manager = CullBinManager.getGlobalPtr()
+        # According to the manual page linked-to below,
+        # the highest-order standard bin has order 50,
+        # so I'm assigning our new bin a sort order of 60.
+        cull_manager.addBin("frontBin", cull_manager.BTFixed, 60)
+
+
+    def start_with_nlp(self):
+        self.main_menu.hide_menu()
+        text_object = OnscreenText(text="", style=1, fg=(1, 1, 1, 1), scale=.05,
+                                   shadow=(0, 0, 0, 1), parent=base.aspect2d,
+                                   pos=(0.0, 0.3), align=TextNode.ACenter)
+        text_object.setBin("frontBin", 1)
+
+#        gm = GameManager(get_generator())
+        gm = get_generator(text_object, self.menu_img)
+        if gm:
+            text_object.hide()
+
+            self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
+            self.npc1.say("Hello World!")
+
+            self.start_game()
+
+
+    def start_game(self):
+        self.main_menu.hide_menu()
+
+        # Some terrain manipulations which weren't done at startup yet
         if self.physics_debug:
             # We have to use a smaller heightfield image for debugging
             elevation_img = PNMImage(Filename("worldmaps/debug_heightmap.png"))
@@ -189,47 +221,11 @@ class MyApp(ShowBase):
                 self.height, ZUp)
         terrain_colshape.set_use_diamond_subdivision(True)
 
-        self.terrain_bullet_node = BulletRigidBodyNode("terrainBodyNode")
         self.terrain_bullet_node.add_shape(terrain_colshape)
         self.terrain_np = render.attach_new_node(self.terrain_bullet_node)
         self.terrain_np.set_collide_mask(BitMask32.bit(0))
         self.terrain_np.set_pos(0, 0, 0)
         self.world.attach(self.terrain_np.node())
-
-        # To set Direct2D objects in front of others
-        cullManager = CullBinManager.getGlobalPtr()
-        # According to the manual page linked-to below,
-        # the highest-order standard bin has order 50,
-        # so I'm assigning our new bin a sort order of 60.
-        cullManager.addBin("frontBin", cullManager.BTFixed, 60)
-
-
-    def start_with_nlp(self):
-        self.main_menu.hide_menu()
-        self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
-
-        self.npc1.say("Hello World!")
-        text_object = OnscreenText(text="", style=1, fg=(1, 1, 1, 1), scale=.05,
-                                   shadow=(0, 0, 0, 1), parent=base.aspect2d,
-                                   pos=(0.0, 0.3), align=TextNode.ACenter)
-        text_object.setBin("frontBin", 1)
-
-        nlp_menu = Menu(self.menu_img, aspect_ratio_keeping_scale=1)
-        nlp_menu.change_button_style(PNMImage(Filename("textures/empty_button_52.png")), aspect_ratio_keeping_scale=2)
-        nlp_menu.change_select_style(PNMImage(Filename("textures/select.png")), aspect_ratio_keeping_scale=2)
-        nlp_menu.show_menu()
-
-#        gm = GameManager(get_generator())
-        gm = get_generator(text_object, nlp_menu)
-        if gm:
-            text_object.hide()
-            nlp_menu.hide_menu()
-
-            self.start_game()
-
-
-    def start_game(self):
-        self.main_menu.hide_menu()
 
         self.inst1 = add_instructions(0.06, "[WASD]: Move")
         self.inst2 = add_instructions(0.12, "[QE]: Rotate")

@@ -12,8 +12,9 @@ from panda3d.core import TextNode, PNMImage, Filename, Texture
 
 
 class Menu:
-    def __init__(self, menu_tex_img, aspect_ratio_keeping_scale=None, use_keyboard=True, **keywords):
+    def __init__(self, menu_tex_img, aspect_ratio_keeping_scale=None, use_keyboard=True, auto_hide=False, **keywords):
         self.use_keyboard = use_keyboard
+        self.auto_hide = auto_hide
 
         kx = menu_tex_img.get_x_size()
         ky = menu_tex_img.get_y_size()
@@ -105,8 +106,9 @@ class Menu:
             args = []
         self.funcs.append(command)
         self.args.append(args)
-        self.entries.append(DirectButton(**self.button_style, pos=(x, 0, -y), command=self.funcs[-1], extraArgs=self.args[-1]))
+        self.entries.append(DirectButton(**self.button_style, pos=(x, 0, -y), command=self.exec_selection))
 
+        self.entries[-1]["extraArgs"] = [len(self.entries)-1]
         self.entries[-1]["frameTexture"] = self.button_tex
         if self.button_scale:
             self.entries[-1]["frameSize"] = (
@@ -131,8 +133,13 @@ class Menu:
             base.ignore("enter")
 
 
-    def exec_selection(self):
-        self.funcs[self.active_entry](*self.args[self.active_entry])
+    def exec_selection(self, entry = None):
+        if entry is None:
+            self.funcs[self.active_entry](*self.args[self.active_entry])
+        else:
+            self.funcs[entry](*self.args[entry])
+        if self.auto_hide:
+            self.hide_menu()
 
 
     def select_down(self):
@@ -162,6 +169,7 @@ class Menu:
     def hide_menu(self):
         self.clear_keys()
         self.menu_frame.hide()
+        self.select_frame.hide()
 
 
     def show_menu(self):

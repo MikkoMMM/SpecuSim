@@ -3,11 +3,12 @@
 from pathlib import Path
 import os
 from src.language_processing.gpt2generator import GPT2Generator
-from src.language_processing.getconfig import config, setting_info
-from src.language_processing.utils import *
+from src.language_processing.getconfig import config, setting_info, settings
+from src.menu import Menu
+from panda3d.core import PNMImage, Filename
 
 
-def get_generator(text_node, menu):
+def get_generator(text_node, menu_img):
     model_dir = "language_models"
     models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
     generator = None
@@ -28,18 +29,16 @@ def get_generator(text_node, menu):
                     model = Path(model_dir + os.environ.get("MODEL_FOLDER", False))
                 elif len(models) > 1:
                     text_node.text = "You have multiple models in your models folder. Please select one to load:"
-                    for i in range (len( models)):
-                        menu.add_button(models[i].name, exit, y=-0.1+0.1*i)
-                    menu.add_button("(Exit)", exit, y=0.5)
-                    return None
 
-                    list_items([m.name for m in models] + ["(Exit)"], "menu")
-                    model_selection = input_number(len(models))
-                    if model_selection == len(models):
-                        print("Exiting.")
-                        exit(0)
-                    else:
-                        model = models[model_selection]
+                    menu = Menu(menu_img, aspect_ratio_keeping_scale=1, auto_hide=True)
+                    menu.change_button_style(PNMImage(Filename("textures/empty_button_52.png")), aspect_ratio_keeping_scale=2)
+                    menu.change_select_style(PNMImage(Filename("textures/select.png")), aspect_ratio_keeping_scale=2)
+
+                    for i in range (len( models)):
+                        menu.add_button(models[i].name, exit, args=[models[i]], y=-0.1+0.1*i)
+                    menu.add_button("(Exit)", exit, y=0.5)
+                    menu.show_menu()
+                    return None
                 else:
                     model = models[0]
                     print("Using model: " + str(model))

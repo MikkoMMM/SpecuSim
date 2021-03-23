@@ -8,7 +8,7 @@ import re
 from .gpt2 import GPT2LMHeadModelExperimental
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 from .getconfig import settings, logger
-from .utils import cut_trailing_sentence, output, clear_lines, format_result, use_ptoolkit
+from .utils import cut_trailing_sentence, clear_lines, format_result, use_ptoolkit
 
 if not settings.getboolean('force-cpu') and not torch.cuda.is_available():
     logger.warning('CUDA is not available, you are limited to CPU only.')

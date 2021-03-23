@@ -21,30 +21,6 @@ def getTermWidth():
 termWidth = getTermWidth()
 
 
-def in_colab():
-    """Some terminal codes don't work in a colab notebook."""
-    # from https://github.com/tqdm/tqdm/blob/master/tqdm/autonotebook.py
-    if settings.getboolean("colab-mode"):
-        settings["prompt-toolkit"] = "off"
-        return True
-    try:
-        from IPython import get_ipython
-        if (not get_ipython()) or ('IPKernelApp' not in get_ipython().config):  # pragma: no cover
-            raise ImportError("console")
-        if 'VSCODE_PID' in os.environ:  # pragma: no cover
-            raise ImportError("vscode")
-    except ImportError:
-        if get_terminal_size()[0]==0 or 'google.colab' in sys.modules:
-            settings["colab-mode"] = "on"
-            settings["prompt-toolkit"] = "off"
-            return True
-        return False
-    else:
-        settings["colab-mode"] = "on"
-        settings["prompt-toolkit"] = "off"
-        return True
-
-
 def use_ptoolkit():
     return not settings.getboolean("colab-mode") and settings.getboolean('prompt-toolkit')
 
@@ -57,32 +33,6 @@ def clear_lines(n):
     screen_code = "\033[1A[\033[2K"  # up one line, and clear line
     for _ in range(n):
         print(screen_code, end="\r")
-
-
-if in_colab():
-    logger.warning("Colab mode enabled, disabling line clearing and readline to avoid colab bugs.")
-else:
-    try:
-        if settings.getboolean('prompt-toolkit'):
-            from inline_editor import edit_multiline
-            from prompt_toolkit import prompt as ptprompt
-            from prompt_toolkit import print_formatted_text
-            from prompt_toolkit.styles import Style
-            from prompt_toolkit.formatted_text import to_formatted_text, HTML
-        else:
-            raise ModuleNotFoundError
-
-        logger.info(
-            'Python Prompt Toolkit has been imported. This enables a number of editing features but may cause bugs for colab users.')
-    except (ImportError, ModuleNotFoundError):
-        try:
-            settings['prompt-toolkit'] = "off"
-            import readline
-
-            logger.info(
-                'readline has been imported. This enables a number of editting features but may cause bugs for colab users.')
-        except (ImportError, ModuleNotFoundError):
-            pass
 
 
 def pad_text(text, width, sep=' '):
@@ -165,71 +115,6 @@ def fill_text(text, width):
             drop_whitespace=False
         )
     return '\n'.join(texts)
-
-
-# ECMA-48 set graphics codes for the curious. Check out "man console_codes"
-def output(text1, col1=None,
-           text2=None, col2=None,
-           wrap=True,
-           beg=None, end='\n', sep=' ',
-           rem_beg_spaces=True):
-    print('', end=beg)
-    ptoolkit = False
-#    ptoolkit = use_ptoolkit() and ptcolors['displaymethod'] == "prompt-toolkit"
-
-    if wrap:
-        width = settings.getint("text-wrap-width")
-        width = 999999999 if width < 2 else width
-        width = min(width, termWidth)
-        wtext = text1 + '\u200D' + sep + '\u200D' + text2 if text2 is not None else text1
-        wtext = fill_text(wtext, width)
-        wtext = re.sub(r"\n[ \t]+", "\n", wtext) if rem_beg_spaces else wtext
-        wtext = wtext.split('\u200D')
-        text1 = wtext[0]
-        if text2 is not None:
-            sep = wtext[1]
-            text2 = ' '.join(wtext[2:])
-
-    if ptoolkit:
-        col1 = ptcolors[col1] if col1 and ptcolors[col1] else ""
-        col2 = ptcolors[col2] if col2 and ptcolors[col2] else ""
-        print_formatted_text(to_formatted_text(text1, col1), end='')
-        if text2:
-            print_formatted_text(to_formatted_text(sep), end='')
-            print_formatted_text(to_formatted_text(text2, col2), end='')
-        print('', end=end)
-
-    else:
-#        col1 = colors[col1] if col1 and colors[col1] and colors[col1][0].isdigit() else None
-#        col2 = colors[col2] if col2 and colors[col2] and colors[col2][0].isdigit() else None
-        col1 = None
-        col2 = None
-
-        clb1 = "\x1B[{}m".format(col1) if col1 else ""
-        clb2 = "\x1B[{}m".format(col2) if col2 else ""
-        cle1 = "\x1B[0m" if col1 else ""
-        cle2 = "\x1B[0m" if col2 else ""
-        text1 = clb1 + text1 + cle1
-        if text2 is not None:
-            text2 = clb2 + text2 + cle2
-            print(text1, end='')
-            print(sep, end='')
-            print(text2, end=end)
-        else:
-            print(text1, end=end)
-
-    linecount = 1
-    if beg:
-        linecount += beg.count('\n')
-    if text1:
-        linecount += text1.count('\n')
-    if end:
-        linecount += end.count('\n')
-    if text2:
-        linecount += text2.count('\n')
-        if sep:
-            linecount += sep.count('\n')
-    return linecount
 
 
 def input_bool(prompt, col1="default", default: bool = False):
