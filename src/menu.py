@@ -11,16 +11,6 @@ from direct.interval.MetaInterval import Sequence
 from panda3d.core import TextNode, PNMImage, Filename, Texture
 
 
-def set_centered_text(gui_object, text, scale=0.5, fg=(0.2, 0.2, 0.2, 1)):
-    text_object = DirectLabel(text=text,
-                              text_fg=fg,
-                              relief=None,
-                              text_align=TextNode.ACenter, text_scale=scale,
-                              parent=gui_object)
-
-    text_object.set_pos(0, 0, -text_object.getHeight() / 2)
-
-
 class Menu:
     def __init__(self, menu_tex_img, aspect_ratio_keeping_scale=None, use_keyboard=True, **keywords):
         self.use_keyboard = use_keyboard
@@ -40,7 +30,6 @@ class Menu:
 
         self.my_frame["frameTexture"] = menu_tex
         self.my_frame.reparent_to(base.aspect2d)
-        self.my_frame.set_pos(0, 0, 0)
         self.my_frame.set_transparency(True)
         self.my_frame.hide()
 
@@ -61,6 +50,13 @@ class Menu:
             "scale": 0.1,
         }
 
+        self.text_style = {
+            "text_fg": (0.2, 0.2, 0.2, 1),
+            "relief": None,
+            "text_align": TextNode.ACenter,
+            "text_scale": 0.5,
+        }
+
         self.active_entry = 0
         self.select_frame = DirectFrame()
         self.select_frame.hide()
@@ -79,6 +75,11 @@ class Menu:
         self.button_scale = aspect_ratio_keeping_scale
         for kw in keywords:
             self.button_style[kw] = keywords[kw]
+
+
+    def change_text_style(self, **keywords):
+        for kw in keywords:
+            self.text_style[kw] = keywords[kw]
 
 
     def change_select_style(self, img, aspect_ratio_keeping_scale=None, **keywords):
@@ -112,10 +113,15 @@ class Menu:
         self.funcs.append(command)
         self.args.append(args)
 
-        set_centered_text(self.entries[-1], text)
+        self.set_text(self.entries[-1], text)
         self.select_frame.reparent_to(self.entries[self.active_entry])
 
         return self.entries[self.active_entry]
+
+
+    def set_text(self, gui_object, text):
+        text_object = DirectLabel(text=text, parent=gui_object, **self.text_style)
+        text_object.set_z(-text_object.getHeight() / 2)
 
 
     def clear_keys(self):
