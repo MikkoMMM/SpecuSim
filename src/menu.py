@@ -12,9 +12,9 @@ from panda3d.core import TextNode, PNMImage, Filename, Texture
 
 
 class Menu:
-    def __init__(self, menu_tex_img, aspect_ratio_keeping_scale=None, use_keyboard=True, auto_hide=False, **keywords):
+    def __init__(self, menu_tex_img, aspect_ratio_keeping_scale=None, use_keyboard=True, hide_afterwards=False, **keywords):
         self.use_keyboard = use_keyboard
-        self.auto_hide = auto_hide
+        self.auto_hide = hide_afterwards
 
         kx = menu_tex_img.get_x_size()
         ky = menu_tex_img.get_y_size()

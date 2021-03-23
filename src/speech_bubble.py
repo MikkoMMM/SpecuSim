@@ -1,7 +1,14 @@
 from direct.gui.DirectGui import DirectLabel
 
-
 class SpeechBubble:
+    """A speech bubble.
+
+    Example:
+        speech_bubble = SpeechBubble(someone_who_says_something, 5)
+        speech_bubble.set_text("Hello!")
+    """
+
+
     def __init__(self, parent_node, height):
         self.speech_bubble = DirectLabel(parent=parent_node, text="", text_wordwrap=10,
                                          relief=None, text_scale=(.5, .5),

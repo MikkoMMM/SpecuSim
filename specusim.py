@@ -1,4 +1,6 @@
+import os
 from math import sqrt
+from pathlib import Path
 
 from direct.gui.DirectGui import DirectFrame, DirectEntry
 from direct.gui.OnscreenText import OnscreenText
@@ -19,9 +21,11 @@ from panda3d.core import Vec3, ShaderTerrainMesh, Shader, load_prc_file_data, PS
 
 from src.camera import CameraControl
 from src.humanoid import Humanoid
+from src.language_processing.main import act
+from src.language_processing.getconfig import settings
+from src.language_processing.gpt2generator import GPT2Generator
 from src.menu import Menu
 from src.utils import create_or_load_walk_map
-from src.language_processing.main import get_generator
 
 
 # from src.weapons.sword import Sword
@@ -34,8 +38,8 @@ def timediff(time1, time2):
 # Function to put instructions on the screen.
 def add_instructions(pos, msg, z_bin=None):
     text_object = OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1), scale=.05,
-                 shadow=(0, 0, 0, 1), parent=base.a2dTopLeft,
-                 pos=(0.08, -pos - 0.04), align=TextNode.ALeft)
+                               shadow=(0, 0, 0, 1), parent=base.a2dTopLeft,
+                               pos=(0.08, -pos - 0.04), align=TextNode.ALeft)
     if z_bin:
         text_object.setBin(z_bin, 1)
 
@@ -86,14 +90,14 @@ class MyApp(ShowBase):
             base.set_frame_rate_meter(True)
             PStatClient.connect()
 
-        self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
+        self.doppelganger_num = 2  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         self.menu_img = PNMImage(Filename("textures/menu.jpg"))
 
         self.main_menu = Menu(self.menu_img, aspect_ratio_keeping_scale=1)
         self.main_menu.change_button_style(PNMImage(Filename("textures/empty_button_52.png")), aspect_ratio_keeping_scale=2)
         self.main_menu.change_select_style(PNMImage(Filename("textures/select.png")), aspect_ratio_keeping_scale=2)
-        self.main_menu.add_button("No Add-Ons", self.start_game, y=-0.1)
+        self.main_menu.add_button("No Add-Ons", self.start_without_nlp, y=-0.1)
         self.main_menu.add_button("Language AI", self.start_with_nlp, y=0)
         self.main_menu.add_button("Exit Game", exit, y=0.1)
         self.main_menu.show_menu()
@@ -137,27 +141,89 @@ class MyApp(ShowBase):
         cull_manager.addBin("frontBin", cull_manager.BTFixed, 60)
 
 
+    def start_without_nlp(self):
+        self.initialize_terrain()
+        self.start_game()
+
     def start_with_nlp(self):
         self.main_menu.hide_menu()
-        text_object = OnscreenText(text="", style=1, fg=(1, 1, 1, 1), scale=.05,
-                                   shadow=(0, 0, 0, 1), parent=base.aspect2d,
-                                   pos=(0.0, 0.3), align=TextNode.ACenter)
-        text_object.setBin("frontBin", 1)
+        self.notice_text_obj = OnscreenText(text="", style=1, fg=(1, 1, 1, 1), scale=.05,
+                                            shadow=(0, 0, 0, 1), parent=base.aspect2d,
+                                            pos=(0.0, 0.3), align=TextNode.ACenter)
+        self.notice_text_obj.setBin("frontBin", 1)
 
-#        gm = GameManager(get_generator())
-        gm = get_generator(text_object, self.menu_img)
-        if gm:
-            text_object.hide()
+        model_dir = "language_models"
+        models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
+        generator = None
+        failed_env_load = False
+        while True:
+            try:
+                transformers_pretrained = os.environ.get("TRANSFORMERS_PRETRAINED_MODEL", False)
+                if transformers_pretrained and not failed_env_load:
+                    # Keep it as a string, so that transformers library will load the generic model
+                    model = transformers_pretrained
+                    assert isinstance(model, str)
+                else:
+                    # Convert to path, so that transformers library will load the model from our folder
+                    if not models:
+                        raise FileNotFoundError(
+                            'There are no models in the models directory! You must download a pytorch compatible model!')
+                    if os.environ.get("MODEL_FOLDER", False) and not failed_env_load:
+                        model = Path(model_dir + os.environ.get("MODEL_FOLDER", False))
+                    elif len(models) > 1:
+                        self.notice_text_obj.text = "You have multiple models in your models folder. Please select one to load:"
 
-            self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
-            self.npc1.say("Hello World!")
+                        menu = Menu(self.menu_img, aspect_ratio_keeping_scale=1, hide_afterwards=True)
+                        menu.change_button_style(PNMImage(Filename("textures/empty_button_52.png")), aspect_ratio_keeping_scale=2)
+                        menu.change_select_style(PNMImage(Filename("textures/select.png")), aspect_ratio_keeping_scale=2)
 
-            self.start_game()
+                        for i in range(len(models)):
+                            menu.add_button(models[i].name, self.nlp_model_chosen, args=[models[i]], y=-0.1 + 0.1 * i)
+                        menu.add_button("(Exit)", exit, y=0.5)
+                        menu.show_menu()
+                        return
+                    else:
+                        model = models[0]
+                        print("Using model: " + str(model))
+                    assert isinstance(model, Path)
+                self.nlp_model_chosen(model)
+                break
+            except OSError:
+                if len(models) == 0:
+                    self.notice_text_obj.text = "You do not seem to have any models installed. Place a model in the '" + model_dir + "' subfolder"
+                    base.graphicsEngine.render_frame()
+                    # Scan for models again
+                    models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
+                else:
+                    failed_env_load = True
+                    self.notice_text_obj.text = "Model could not be loaded. Please try another model."
+                continue
+            except KeyboardInterrupt:
+                print("Model load cancelled. ")
+                exit(0)
+
+    def nlp_model_chosen(self, model):
+        self.notice_text_obj.hide()
+
+        assert isinstance(model, Path)
+        generator = GPT2Generator(
+            model_path=model,
+            generate_num=settings.getint("generate-num"),
+            temperature=settings.getfloat("temp"),
+            top_k=settings.getint("top-keks"),
+            top_p=settings.getfloat("top-p"),
+            repetition_penalty=settings.getfloat("rep-pen"),
+        )
+        self.initialize_terrain()
+
+        self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
+#        self.npc1.say("Hello")
+        self.npc1.say(act(generator, "You are speaking to a man.", "You say to him: \"Hello!\"", format=False))
+
+        self.start_game()
 
 
-    def start_game(self):
-        self.main_menu.hide_menu()
-
+    def initialize_terrain(self):
         # Some terrain manipulations which weren't done at startup yet
         if self.physics_debug:
             # We have to use a smaller heightfield image for debugging
@@ -227,6 +293,10 @@ class MyApp(ShowBase):
         self.terrain_np.set_pos(0, 0, 0)
         self.world.attach(self.terrain_np.node())
 
+
+    def start_game(self):
+        self.main_menu.hide_menu()
+
         self.inst1 = add_instructions(0.06, "[WASD]: Move")
         self.inst2 = add_instructions(0.12, "[QE]: Rotate")
         self.inst2 = add_instructions(0.18, "[+-]: Change speed")
@@ -283,8 +353,6 @@ class MyApp(ShowBase):
                                           pos=(-15 * scale, 0, (bar_start - 1) / 2),
                                           initialText="Press Enter to start talking", numLines=2, focus=0,
                                           focusInCommand=self.clear_text)
-            # self.text_field.reparent_to(self.gui_bar)
-            # self.text_field.set_pos(Vec3(0,-1,0))
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")

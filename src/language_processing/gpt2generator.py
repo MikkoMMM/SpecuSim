@@ -8,7 +8,7 @@ import re
 from .gpt2 import GPT2LMHeadModelExperimental
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 from .getconfig import settings, logger
-from .utils import cut_trailing_sentence, clear_lines, format_result, use_ptoolkit
+from .utils import cut_trailing_sentence, format_result, use_ptoolkit
 
 if not settings.getboolean('force-cpu') and not torch.cuda.is_available():
     logger.warning('CUDA is not available, you are limited to CPU only.')
@@ -156,10 +156,6 @@ def sample_sequence(
             generated.text = tokenizer.decode(
                 o, clean_up_tokenization_spaces=False, skip_special_tokens=True
             )
-            if use_ptoolkit():
-                clear_lines(clines)
-                generated.text = format_result(generated.text)
-                clines = output(generated.text, "ai-text")
             if (
                     (stop_tokens is not None)
                     and (j > 4)
@@ -173,7 +169,6 @@ def sample_sequence(
                     j,
                 )
                 break
-    clear_lines(clines)
     return generated
 
 
