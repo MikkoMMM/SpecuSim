@@ -16,6 +16,7 @@ class Humanoid(Animal):
     """A class for humanoid animals.
     """
 
+
     def __init__(self, world, terrain_bullet_node, x, y, height=1.7, start_heading=Vec3(0, 0, 0), debug=False, debug_text_node=None):
         self.world = world
         self.terrain_bullet_node = terrain_bullet_node
@@ -241,20 +242,24 @@ class Humanoid(Animal):
         self.set_speech_field(
             SpeechBubble(self.get_body(), self.lower_torso_height + self.chest_height + self.head_height + self.height * 0.2))
 
+
     def speed_up(self):
         self.walk_speed += 0.1
         self.walk_speed = min(self.walk_speed, 9)
         self.leg_movement_speed = self.walk_speed * 3
+
 
     def slow_down(self):
         self.walk_speed -= 0.1
         self.walk_speed = max(self.walk_speed, 0)
         self.leg_movement_speed = self.walk_speed * 3
 
+
     def stand_still(self):
         """Stand still. Please call this method if you didn't call walk_in_dir this frame.
         """
         self.walk_in_dir(self.lower_torso.getH(), decelerate=True)
+
 
     def walk_in_dir(self, angle=0, visuals=True, decelerate=False):
         """Walk in the given direction. Please call this method or stand_still exactly once every frame.
@@ -266,6 +271,7 @@ class Humanoid(Animal):
             self._walking_visuals(cur_walk_dist, 0)
         # The heading should be updated exactly once per frame, so let's do it here
         self._update_heading()
+
 
     def _walking_visuals(self, cur_walk_dist, ang_clamped):
         #############################
@@ -320,17 +326,20 @@ class Humanoid(Animal):
         self.leg[left].updateIK()
         self.leg[right].updateIK()
 
+
     def turn_left(self):
         if abs(angle_diff(-self.lower_torso.getH(), self.desired_heading)) > 170:
             return
         self.desired_heading -= globalClock.get_dt() * 450
         self.desired_heading = normalize_angle(self.desired_heading)
 
+
     def turn_right(self):
         if abs(angle_diff(-self.lower_torso.getH(), self.desired_heading)) > 170:
             return
         self.desired_heading += globalClock.get_dt() * 450
         self.desired_heading = normalize_angle(self.desired_heading)
+
 
     def _update_heading(self):
         """Sets the angular velocity toward the desired heading.

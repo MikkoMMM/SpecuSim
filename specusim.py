@@ -187,12 +187,14 @@ class MyApp(ShowBase):
         self.terrain_np.set_pos(0, 0, 0)
         self.world.attach(self.terrain_np.node())
 
+
     def start_with_nlp(self):
         self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
 
         self.npc1.say("Hello World!")
 
         self.start_game()
+
 
     def start_game(self):
         self.menu.hide_menu()
@@ -244,8 +246,8 @@ class MyApp(ShowBase):
             wy = base.win.get_y_size()
             bar_start = -0.8
             gui_bar = DirectFrame(frameColor=(0, 0, 0, 1),
-                                       frameSize=(-wx / 2, wx / 2, -1, bar_start),
-                                       pos=(0, -1, 0))
+                                  frameSize=(-wx / 2, wx / 2, -1, bar_start),
+                                  pos=(0, -1, 0))
             # Each width unit seems to be a 2/scale'th of a screen on a rectangular aspect ratio
             scale = 0.05
             self.text_field = DirectEntry(text="", scale=scale, command=print, parent=gui_bar,
@@ -261,8 +263,10 @@ class MyApp(ShowBase):
         if self.debug_messages:
             render.analyze()
 
+
     def clear_text(self):
         self.text_field.enterText('')
+
 
     # Everything that needs to be done every frame goes here.
     # Physics updates and movement and stuff.

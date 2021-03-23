@@ -45,11 +45,13 @@ class HumanoidArm:
         self.upper_arm.set_pos_hpr(start_position, start_heading)
         self.forearm.set_pos_hpr(start_position, start_heading)
 
+
     def grab(self, attachment_info):
         if len(attachment_info) >= 4:
             self.grab_for_real(attachment_info[1], attachment_info[2], grab_angle=attachment_info[3])
         else:
             self.grab_for_real(attachment_info[1], attachment_info[2])
+
 
     def grab_for_real(self, target, grab_position, grab_angle=Vec3(0, 0, 0)):
         frame_a = TransformState.make_pos_hpr(Point3(0, 0, -self.forearm_length / 2), Vec3(0, 0, 0))
@@ -62,9 +64,11 @@ class HumanoidArm:
         self.hand.set_angular_limit(2, -180, 180)
         self.world.attach_constraint(self.hand, linked_collision=True)
 
+
     def set_pos(self, new_pos):
         self.upper_arm.set_pos(new_pos)
         self.forearm.set_pos(new_pos)
+
 
     def get_mass(self):
         return self.upper_arm.node().get_mass() + self.forearm.node().get_mass()

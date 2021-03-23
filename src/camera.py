@@ -36,26 +36,31 @@ class CameraControl:
 
         self.last_mouse_pos = (0, 0)
 
+
     def toggle_attachment(self):
         if self.attachment_node:
             self.attached = not self.attached
         else:
             self.attached = False
 
+
     def attach_to(self, other):
 
         self.attachment_node = other
         self.attached = True
+
 
     def wheel_up(self):
 
         self.zoom = self.zoom - 1
         self.zoom = min(max(self.zoom, 1), 2000)
 
+
     def wheel_down(self):
 
         self.zoom = self.zoom + 1
         self.zoom = min(max(self.zoom, 1), 2000)
+
 
     def move_camera(self, task):
 
@@ -107,11 +112,11 @@ class CameraControl:
             #            self.camera.setZ(self.render, (self.old_camera_z*2 + self.camera.getZ(self.render))/3)
             #        self.old_camera_z = self.camera.getZ(self.render)
             node_pos = LVector3f(r_y * math.cos(self.ang) * radius, -r_y * math.sin(self.ang) * radius,
-                                      radius * math.cos(self.angY))
+                                 radius * math.cos(self.angY))
         else:  # Could also be used when reparented to render but there is a focus point
             node_pos = self.focus_point + LVector3f(r_y * math.cos(self.ang) * radius,
-                                                         -r_y * math.sin(self.ang) * radius,
-                                                         radius * math.cos(self.angY))
+                                                    -r_y * math.sin(self.ang) * radius,
+                                                    radius * math.cos(self.angY))
 
         self.node.set_pos(node_pos)
         self.node.look_at(self.focus_node)

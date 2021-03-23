@@ -13,5 +13,6 @@ class SpeechBubble:
         self.speech_bubble.component('text0').textNode.set_card_decal(1)
         self.speech_bubble.set_billboard_point_eye()
 
+
     def set_text(self, text):
         self.speech_bubble['text'] = text

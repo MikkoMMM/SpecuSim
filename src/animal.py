@@ -25,6 +25,7 @@ class Animal:
         debug_text_node (OnscreenText, optional): A place in the GUI to write debug information to
     """
 
+
     def __init__(self, world, terrain_bullet_node, body_node, feet, slope_difficult, slope_max,
                  slope_linear_damping=0.6, negligible_speed=0.2, debug_text_node=None):
         self.world = world
@@ -38,6 +39,7 @@ class Animal:
         self.slope_linear_damping = slope_linear_damping
         self.speech_field = None
 
+
     def get_body(self):
         """Gets the organism's main body node
 
@@ -45,6 +47,7 @@ class Animal:
             NodePath: the main body node
         """
         return self.body
+
 
     def set_speech_field(self, speech_field):
         """Sets where to output what this animal says.
@@ -54,6 +57,7 @@ class Animal:
         """
         self.speech_field = speech_field
 
+
     def say(self, text):
         """Sets the speech field's (if it exists) text to the given argument
 
@@ -62,6 +66,7 @@ class Animal:
         """
         if self.speech_field:
             self.speech_field.set_text(text)
+
 
     def get_ground_z_velocity(self, current_z_pos=None):
         """Calculates a vertical velocity at which the creature will stay on the surface of the terrain
@@ -81,6 +86,7 @@ class Animal:
             return -min(max_z_change, max(current_z_pos, -max_z_change)) / globalClock.get_dt()
         return -min(max_z_change, max(self.get_body_ground_z_pos(), -max_z_change)) / globalClock.get_dt()
 
+
     def get_body_ground_z_pos(self, offset_x=0, offset_y=0):
         """Calculates where the body should be located on the Z axis
 
@@ -96,6 +102,7 @@ class Animal:
         average_z -= get_ground_z_pos(self.body.getX() + offset_x, self.body.getY() + offset_y, self.world,
                                       self.terrain_bullet_node)
         return average_z
+
 
     def walk_physics(self, speed, angle=0, decelerate=False):
         """Sets the linear velocity of the creature while keeping it on the ground.

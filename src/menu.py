@@ -60,17 +60,20 @@ class Menu:
         self.select_frame = DirectFrame(frameColor=(1, 1, 1, 1), frameSize=(-2, 2, -0.4, 0.4), frameTexture="textures/select.png")
         self.select_frame.hide()
 
+
     def set_button_texture(self, image):
         kx = image.get_x_size()
         ky = image.get_y_size()
         self.button_vert_aspect_r = ky / kx
         self.button_tex.load(image)
 
+
     def change_button_style(self, img=None, **keywords):
         if img:
             set_button_texture(img)
         for kw in keywords:
             self.button_style[kw] = keywords[kw]
+
 
     def add_button(self, text, command, x=0.0, y=0.0, args=None):
         if args is None:
@@ -86,6 +89,7 @@ class Menu:
 
         self.select_frame.reparent_to(self.entries[self.active_entry])
 
+
     def clear_keys(self):
         base.ignore("arrow_up")
         base.ignore("arrow_down")
@@ -96,8 +100,10 @@ class Menu:
         base.ignore("escape")
         base.ignore("enter")
 
+
     def exec_selection(self):
         self.funcs[self.active_entry](*self.args[self.active_entry])
+
 
     #        self.entries[self.active_entry]["command"]()
 
@@ -112,6 +118,7 @@ class Menu:
             return
         self.select_frame.reparent_to(self.entries[self.active_entry])
 
+
     def select_up(self):
 
         if self.active_entry == 0:
@@ -123,9 +130,11 @@ class Menu:
             return
         self.select_frame.reparent_to(self.entries[self.active_entry])
 
+
     def hide_menu(self):
         self.clear_keys()
         self.my_frame.hide()
+
 
     #        seq= Sequence( LerpColorScaleInterval(self.my_frame, 0.4 ,(1,1,1,0)) , Func(self.my_frame.hide) )
     #        seq.start()
