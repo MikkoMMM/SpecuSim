@@ -9,7 +9,7 @@ from direct.gui.DirectLabel import DirectLabel
 from direct.interval.FunctionInterval import Func
 from direct.interval.LerpInterval import LerpColorScaleInterval
 from direct.interval.MetaInterval import Sequence
-from panda3d.core import SamplerState, TextNode
+from panda3d.core import SamplerState, TextNode, PNMImage, Filename, Texture
 
 
 def set_centered_text(gui_object, text, scale=14, fg=(0.2, 0.2, 0.2, 1)):
@@ -22,24 +22,22 @@ def set_centered_text(gui_object, text, scale=14, fg=(0.2, 0.2, 0.2, 1)):
     text_object.set_pos(0, 0, -text_object.getHeight() / 2)
 
 
-class Menu(object):
+class Menu:
     def __init__(self, main):
         self.main = main
 
-        wx = base.win.get_x_size()
-        wy = base.win.get_y_size()
-        kx = 1920
+        menu_tex_img = PNMImage(Filename("textures/menu.jpg"))
+        kx = menu_tex_img.get_x_size()
+        ky = menu_tex_img.get_y_size()
+        menu_tex = Texture("texture name")
+        menu_tex.load(menu_tex_img)
 
-        ky = 1080
         self.my_frame = DirectFrame(frameColor=(1, 1, 1, 1),
-                                    frameSize=(0, kx, 0, ky))
+                                    frameSize=(-kx/ky, kx/ky, -1, 1))
 
-        menu_tex = loader.load_texture("textures/menu.jpg")
-        menu_tex.set_minfilter(SamplerState.FT_nearest)
-        menu_tex.set_magfilter(SamplerState.FT_linear)
         self.my_frame["frameTexture"] = menu_tex
-        self.my_frame.reparent_to(base.pixel2d)
-        self.my_frame.set_pos((wx - kx) / 2, 0, -(wy + ky) / 2)
+        self.my_frame.reparent_to(base.aspect2d)
+        self.my_frame.set_pos(0, 0, 0)
         self.my_frame.set_transparency(True)
 
         self.entries = []
@@ -47,14 +45,14 @@ class Menu(object):
         self.entries.append(DirectButton(
             frameTexture="textures/empty_button.png",
             frameColor=(1, 1, 1, 1),
-            frameSize=(-64, 64, -20, 20),
+            frameSize=(-1, 1, -0.4, 0.4),
             command=self.main.start_game,
             relief=DGG.FLAT,
             rolloverSound=None,
             clickSound=None,
             parent=self.my_frame,
-            scale=2.0,
-            pos=(kx / 2, 0, ky / 2 + 150)
+            scale=0.003,
+            pos=(0, 0, 0.1)
         ))
         set_centered_text(self.entries[-1], "No Add-Ons")
         self.entries[-1].set_transparency(1)
@@ -62,14 +60,14 @@ class Menu(object):
         self.entries.append(DirectButton(
             frameTexture="textures/empty_button.png",
             frameColor=(1, 1, 1, 1),
-            frameSize=(-64, 64, -20, 20),
+            frameSize=(-1, 1, -0.4, 0.4),
             command=self.main.start_with_nlp,
             relief=DGG.FLAT,
             rolloverSound=None,
             clickSound=None,
             parent=self.my_frame,
-            scale=2.0,
-            pos=(kx / 2, 0, ky / 2 + 50)
+            scale=0.003,
+            pos=(0, 0, 0.0)
         ))
         set_centered_text(self.entries[-1], "Language AI")
         self.entries[-1].set_transparency(1)
@@ -77,21 +75,21 @@ class Menu(object):
         self.entries.append(DirectButton(
             frameTexture="textures/empty_button.png",
             frameColor=(1, 1, 1, 1),
-            frameSize=(-64, 64, -20, 20),
+            frameSize=(-1, 1, -0.4, 0.4),
             command=exit,
             relief=DGG.FLAT,
             rolloverSound=None,
             clickSound=None,
             parent=self.my_frame,
-            scale=2.0,
-            pos=(kx / 2, 0, ky / 2 - 50)
+            scale=0.003,
+            pos=(0, 0, -0.1)
         ))
 
         set_centered_text(self.entries[-1], "Exit Game")
         self.entries[-1].set_transparency(1)
 
         self.active_entry = 1
-        self.select_frame = DirectFrame(frameColor=(1, 1, 1, 1), frameSize=(-64, 64, -20, 20), frameTexture="textures/select.png")
+        self.select_frame = DirectFrame(frameColor=(1, 1, 1, 1), frameSize=(-64, 64, -15, 15), frameTexture="textures/select.png")
         self.select_frame.set_transparency(1)
         self.select_frame.reparent_to(self.entries[self.active_entry])
 

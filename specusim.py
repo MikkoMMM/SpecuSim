@@ -217,13 +217,13 @@ class MyApp(ShowBase):
 
         self.camera.reparent_to(self.player.lower_torso)
 
-        self.cam_control = CameraControl(camera, self.mouseWatcherNode)
-        self.cam_control.attach_to(self.player.lower_torso)
+        cam_control = CameraControl(camera, self.mouseWatcherNode)
+        cam_control.attach_to(self.player.lower_torso)
 
-        self.taskMgr.add(self.cam_control.move_camera, "MoveCameraTask")
+        self.taskMgr.add(cam_control.move_camera, "MoveCameraTask")
 
-        self.accept("wheel_down", self.cam_control.wheel_down)
-        self.accept("wheel_up", self.cam_control.wheel_up)
+        self.accept("wheel_down", cam_control.wheel_down)
+        self.accept("wheel_up", cam_control.wheel_up)
 
         self.accept('f1', self.toggle_wireframe)
         self.accept('f2', self.toggle_texture)
@@ -239,15 +239,15 @@ class MyApp(ShowBase):
         if self.gui:
             wx = base.win.get_x_size()
             wy = base.win.get_y_size()
-            self.bar_start = -0.8
-            self.gui_bar = DirectFrame(frameColor=(0, 0, 0, 1),
-                                       frameSize=(-wx / 2, wx / 2, -1, self.bar_start),
+            bar_start = -0.8
+            gui_bar = DirectFrame(frameColor=(0, 0, 0, 1),
+                                       frameSize=(-wx / 2, wx / 2, -1, bar_start),
                                        pos=(0, -1, 0))
             # Each width unit seems to be a 2/scale'th of a screen on a rectangular aspect ratio
             scale = 0.05
-            self.text_field = DirectEntry(text="", scale=scale, command=print, parent=self.gui_bar,
+            self.text_field = DirectEntry(text="", scale=scale, command=print, parent=gui_bar,
                                           text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 1), width=30,
-                                          pos=(-15 * scale, 0, (self.bar_start - 1) / 2),
+                                          pos=(-15 * scale, 0, (bar_start - 1) / 2),
                                           initialText="Press Enter to start talking", numLines=2, focus=0,
                                           focusInCommand=self.clear_text)
             # self.text_field.reparent_to(self.gui_bar)
