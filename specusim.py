@@ -1,5 +1,5 @@
 import os
-from math import sqrt
+from math import sqrt, atan2, degrees, acos, pi
 from pathlib import Path
 from time import sleep
 
@@ -19,7 +19,7 @@ from panda3d.bullet import get_bullet_version
 from panda3d.core import BitMask32
 from panda3d.core import PNMImage, Filename
 from panda3d.core import SamplerState, TextNode
-from panda3d.core import Vec3, load_prc_file_data, PStatClient, CullBinManager
+from panda3d.core import Vec3, load_prc_file_data, PStatClient, CullBinManager, Vec2
 
 import src.language_processing.nlp_manager as nlp_manager
 from src.camera import CameraControl
@@ -98,7 +98,7 @@ class MyApp(ShowBase):
             base.set_frame_rate_meter(True)
             PStatClient.connect()
 
-        self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
+        self.doppelganger_num = 5  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         self.terrain_loaded = False
         self.menu_img = PNMImage(Filename("textures/menu.jpg"))
@@ -114,6 +114,8 @@ class MyApp(ShowBase):
         # Increase camera FOV as well as the far plane
         self.camLens.set_fov(90)
         self.camLens.set_near_far(0.1, 50000)
+
+        self.dxdy_to_degrees = [[-45, 0, 45], [-90, -999, 90], [-135, 180, 135]]
 
         # Heightfield's height
         self.terrain_height = 25.0
@@ -376,48 +378,22 @@ class MyApp(ShowBase):
         self.world.do_physics(dt, 5, 1.0 / 80.0)
 
         # Define controls
-        stepping = False
-
+        dx = dy = 1
         if inputState.is_set('forward'):
-            if inputState.is_set('left'):
-                self.player.walk_in_dir(-45)
-                for doppelganger in self.doppelgangers:
-                    doppelganger.walk_in_dir(-45)
-            elif inputState.is_set('right'):
-                self.player.walk_in_dir(45)
-                for doppelganger in self.doppelgangers:
-                    doppelganger.walk_in_dir(45)
-            else:
-                self.player.walk_in_dir(0)
-                for doppelganger in self.doppelgangers:
-                    doppelganger.walk_in_dir(0)
-            stepping = True
-        elif inputState.is_set('backward'):
-            if inputState.is_set('left'):
-                self.player.walk_in_dir(-135)
-                for doppelganger in self.doppelgangers:
-                    doppelganger.walk_in_dir(-135)
-            elif inputState.is_set('right'):
-                self.player.walk_in_dir(135)
-                for doppelganger in self.doppelgangers:
-                    doppelganger.walk_in_dir(135)
-            else:
-                self.player.walk_in_dir(180)
-                for doppelganger in self.doppelgangers:
-                    doppelganger.walk_in_dir(180)
-            stepping = True
-        elif inputState.is_set('left'):
-            self.player.walk_in_dir(-90)
-            for doppelganger in self.doppelgangers:
-                doppelganger.walk_in_dir(-90)
-            stepping = True
-        elif inputState.is_set('right'):
-            self.player.walk_in_dir(90)
-            for doppelganger in self.doppelgangers:
-                doppelganger.walk_in_dir(90)
-            stepping = True
+            dy -= 1
+        if inputState.is_set('backward'):
+            dy += 1
+        if inputState.is_set('left'):
+            dx -= 1
+        if inputState.is_set('right'):
+            dx += 1
+        direction = self.dxdy_to_degrees[dy][dx]
 
-        if not stepping:
+        if direction > -900:
+            self.player.walk_in_dir(direction)
+            for doppelganger in self.doppelgangers:
+                doppelganger.walk_in_dir(direction)
+        else:
             self.player.stand_still()
             for doppelganger in self.doppelgangers:
                 doppelganger.stand_still()
