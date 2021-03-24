@@ -1,5 +1,8 @@
 from panda3d.core import PNMImage, Filename, PNMFileTypeRegistry
 from panda3d.core import Point3, BitMask32, TransformState
+from panda3d.core import SamplerState
+from panda3d.core import ShaderTerrainMesh, Shader
+from panda3d.core import Texture
 
 
 # TODO: compare speed to angleDeg in Panda's Vec3
@@ -60,3 +63,37 @@ def create_or_load_walk_map(file_name_prefix, ocean_map_file):
     png_type = PNMFileTypeRegistry.get_global_ptr().get_type_from_extension('.png')
     image.write(new_file, png_type)
     return image
+
+
+def create_shader_terrain_mesh(elevation_img, height):
+    elevation_img_size = elevation_img.get_x_size()
+    elevation_img_offset = elevation_img_size / 2.0
+    heightfield = Texture("heightfield")
+    heightfield.load(elevation_img)
+    heightfield.wrap_u = SamplerState.WM_clamp
+    heightfield.wrap_v = SamplerState.WM_clamp
+
+    # Construct the terrain
+    terrain_node = ShaderTerrainMesh()
+    terrain_node.heightfield = heightfield
+
+    # Set the target triangle width. For a value of 10.0 for example,
+    # the terrain will attempt to make every triangle 10 pixels wide on screen.
+    terrain_node.target_triangle_width = 10.0
+
+    # Generate the terrain
+    terrain_node.generate()
+
+    # Attach the terrain to the main scene and set its scale. With no scale
+    # set, the terrain ranges from (0, 0, 0) to (1, 1, 1)
+    terrain = render.attach_new_node(terrain_node)
+    terrain.set_scale(elevation_img_size, elevation_img_size, height)
+    terrain.set_pos(-elevation_img_offset, -elevation_img_offset, -height / 2)
+
+    # Set a shader on the terrain. The ShaderTerrainMesh only works with
+    # an applied shader. You can use the shaders used here in your own application
+    terrain_shader = Shader.load(Shader.SL_GLSL, "shaders/terrain.vert.glsl", "shaders/terrain.frag.glsl")
+    terrain.set_shader(terrain_shader)
+    terrain.set_shader_input("camera", base.camera)
+
+    return terrain

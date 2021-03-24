@@ -9,7 +9,6 @@ from direct.showbase.InputStateGlobal import inputState
 from direct.showbase.ShowBase import ShowBase
 from direct.stdpy import thread
 from direct.task import Task
-# from direct.tkpanels.Inspector import inspect
 from panda3d.bullet import BulletDebugNode
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import BulletRigidBodyNode
@@ -20,16 +19,15 @@ from panda3d.bullet import get_bullet_version
 from panda3d.core import BitMask32
 from panda3d.core import PNMImage, Filename
 from panda3d.core import SamplerState, TextNode
-from panda3d.core import Texture
-from panda3d.core import Vec3, ShaderTerrainMesh, Shader, load_prc_file_data, PStatClient, CullBinManager
+from panda3d.core import Vec3, load_prc_file_data, PStatClient, CullBinManager
 
+import src.language_processing.nlp_manager as nlp_manager
 from src.camera import CameraControl
 from src.humanoid import Humanoid
-from src.language_processing.main import act
 from src.language_processing.getconfig import settings
 from src.language_processing.gpt2generator import GPT2Generator
 from src.menu import Menu
-from src.utils import create_or_load_walk_map
+from src.utils import create_or_load_walk_map, create_shader_terrain_mesh
 
 
 # from src.weapons.sword import Sword
@@ -86,7 +84,7 @@ class MyApp(ShowBase):
         self.gui = True  # A toggle for the GUI for testing puposes
         self.performance_analysis = True  # Enable pstat support and show frame rate
         self.physics_debug = False  # Show wireframes for the physics objects.
-        self.nlp_debug = True       # Stuff that makes debugging natural language processing faster
+        self.nlp_debug = True  # Stuff that makes debugging natural language processing faster
         self.debug_messages = True  # Some extraneous information
 
         if self.debug_messages:
@@ -118,7 +116,7 @@ class MyApp(ShowBase):
         self.camLens.set_near_far(0.1, 50000)
 
         # Heightfield's height
-        self.height = 25.0
+        self.terrain_height = 25.0
 
         # Physics setup
         self.world = BulletWorld()
@@ -128,16 +126,12 @@ class MyApp(ShowBase):
         # Collision groups:
         # 0: ground
         # 1: "ghost" body parts, for weapon hits
-        # 2: feet
+        # 2: reserved
         # 3: mutually colliding parts of characters
         self.world.set_group_collision_flag(1, 0, False)
         self.world.set_group_collision_flag(1, 1, False)
-        self.world.set_group_collision_flag(2, 0, True)
-        self.world.set_group_collision_flag(2, 1, False)
-        self.world.set_group_collision_flag(2, 2, False)
         self.world.set_group_collision_flag(3, 0, False)
         self.world.set_group_collision_flag(3, 1, False)
-        self.world.set_group_collision_flag(3, 2, False)
         self.world.set_group_collision_flag(3, 3, True)
 
         self.disable_mouse()
@@ -160,8 +154,9 @@ class MyApp(ShowBase):
 
 
     def start_without_nlp(self):
-        #self.initialize_terrain()
+        # self.initialize_terrain()
         self.start_game()
+
 
     def start_with_nlp(self):
         self.main_menu.hide_menu()
@@ -216,6 +211,7 @@ class MyApp(ShowBase):
                 print("Model load cancelled. ")
                 exit(0)
 
+
     def nlp_model_chosen(self, model):
         self.notice_text_obj.text = "Loading language model. This may take a few minutes."
 
@@ -223,19 +219,24 @@ class MyApp(ShowBase):
         thread.start_new_thread(self.load_generator, args=(), kwargs={
             "model_path": model,
             "generate_num": settings.getint("generate-num"),
-                                "temperature": settings.getfloat("temp"),
-                                "top_k": settings.getint("top-keks"),
-                                "top_p": settings.getfloat("top-p"),
-                                "repetition_penalty": settings.getfloat("rep-pen")})
-
-        self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
+            "temperature": settings.getfloat("temp"),
+            "top_k": settings.getint("top-keks"),
+            "top_p": settings.getfloat("top-p"),
+            "repetition_penalty": settings.getfloat("rep-pen")})
 
         while not hasattr(self, 'generator'):
             base.graphicsEngine.render_frame()
             sleep(0.05)
 
-        thread.start_new_thread(act, args=(self.generator, "You are speaking to a man.", "You say to him: \"Hello!\""), kwargs={
-                             "output": self.npc1.speech_field, "debug": self.nlp_debug})
+        while not self.terrain_loaded:
+            self.notice_text_obj.text = "Loading terrain."
+            base.graphicsEngine.render_frame()
+            sleep(0.05)
+
+        self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
+
+        thread.start_new_thread(nlp_manager.act, args=(self.generator, "You are speaking to a man.", "You say to him: \"Hello!\""), kwargs={
+            "output": self.npc1.speech_field, "debug": self.nlp_debug})
 
         self.start_game()
 
@@ -261,61 +262,30 @@ class MyApp(ShowBase):
             # have a quadratic size of a power of two.
             elevation_img = PNMImage(Filename("worldmaps/seed_16783_grayscale.png"))
 
-        elevation_img_size = elevation_img.get_x_size()
-        elevation_img_offset = elevation_img_size / 2.0
-        heightfield = Texture("heightfield")
-        heightfield.load(elevation_img)
-        heightfield.wrap_u = SamplerState.WM_clamp
-        heightfield.wrap_v = SamplerState.WM_clamp
+            terrain = create_shader_terrain_mesh(elevation_img, self.terrain_height)
 
-        # Construct the terrain
-        self.terrain_node = ShaderTerrainMesh()
-        self.terrain_node.heightfield = heightfield
+            # Wait for there to be a texture loader
+            while not hasattr(self, 'loader'):
+                sleep(0.01)
 
-        # Set the target triangle width. For a value of 10.0 for example,
-        # the terrain will attempt to make every triangle 10 pixels wide on screen.
-        self.terrain_node.target_triangle_width = 10.0
-
-        # Generate the terrain
-        self.terrain_node.generate()
-
-        # Attach the terrain to the main scene and set its scale. With no scale
-        # set, the terrain ranges from (0, 0, 0) to (1, 1, 1)
-        self.terrain = render.attach_new_node(self.terrain_node)
-        self.terrain.set_scale(elevation_img_size, elevation_img_size, self.height)
-        self.terrain.set_pos(-elevation_img_offset, -elevation_img_offset, -self.height / 2)
-
-        # Set a shader on the terrain. The ShaderTerrainMesh only works with
-        # an applied shader. You can use the shaders used here in your own application
-        terrain_shader = Shader.load(Shader.SL_GLSL, "shaders/terrain.vert.glsl", "shaders/terrain.frag.glsl")
-        self.terrain.set_shader(terrain_shader)
-        self.terrain.set_shader_input("camera", self.camera)
-
-        # Wait for there to be a texture loader
-        while not hasattr(self, 'loader'):
-            sleep(0.01)
-
-        # Set some texture on the terrain
-        terrain_tex = self.loader.loadTexture("worldmaps/seed_16783_satellite.png")
-        terrain_tex.set_minfilter(SamplerState.FT_linear_mipmap_linear)
-        terrain_tex.set_anisotropic_degree(16)
-        self.terrain.set_texture(terrain_tex)
-        if self.physics_debug:
-            self.terrain.hide()
+            # Set some texture on the terrain
+            terrain_tex = self.loader.loadTexture("worldmaps/seed_16783_satellite.png")
+            terrain_tex.set_minfilter(SamplerState.FT_linear_mipmap_linear)
+            terrain_tex.set_anisotropic_degree(16)
+            terrain.set_texture(terrain_tex)
 
         # Collision detection for the terrain
         if self.physics_debug:
-            terrain_colshape = BulletHeightfieldShape(elevation_img, self.height, ZUp)
+            terrain_colshape = BulletHeightfieldShape(elevation_img, self.terrain_height, ZUp)
         else:
             terrain_colshape = BulletHeightfieldShape(
                 create_or_load_walk_map("worldmaps/seed_16783_grayscale.png", "worldmaps/seed_16783_ocean.png"),
-                self.height, ZUp)
+                self.terrain_height, ZUp)
         terrain_colshape.set_use_diamond_subdivision(True)
 
         self.terrain_bullet_node.add_shape(terrain_colshape)
         self.terrain_np = render.attach_new_node(self.terrain_bullet_node)
         self.terrain_np.set_collide_mask(BitMask32.bit(0))
-        self.terrain_np.set_pos(0, 0, 0)
         self.world.attach(self.terrain_np.node())
         self.terrain_loaded = True
 
