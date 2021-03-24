@@ -218,23 +218,30 @@ class MyApp(ShowBase):
 
     def nlp_model_chosen(self, model):
         self.notice_text_obj.text = "Loading language model. This may take a few minutes."
-        base.graphicsEngine.render_frame()
 
         assert isinstance(model, Path)
-        generator = GPT2Generator(
-            model_path=model,
-            generate_num=settings.getint("generate-num"),
-            temperature=settings.getfloat("temp"),
-            top_k=settings.getint("top-keks"),
-            top_p=settings.getfloat("top-p"),
-            repetition_penalty=settings.getfloat("rep-pen"),
-        )
+        thread.start_new_thread(self.load_generator, args=(), kwargs={
+            "model_path": model,
+            "generate_num": settings.getint("generate-num"),
+                                "temperature": settings.getfloat("temp"),
+                                "top_k": settings.getint("top-keks"),
+                                "top_p": settings.getfloat("top-p"),
+                                "repetition_penalty": settings.getfloat("rep-pen")})
 
         self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
-        thread.start_new_thread(act, args=(generator, "You are speaking to a man.", "You say to him: \"Hello!\""), kwargs={
+
+        while not hasattr(self, 'generator'):
+            base.graphicsEngine.render_frame()
+            sleep(0.05)
+
+        thread.start_new_thread(act, args=(self.generator, "You are speaking to a man.", "You say to him: \"Hello!\""), kwargs={
                              "output": self.npc1.speech_field, "debug": self.nlp_debug})
 
         self.start_game()
+
+
+    def load_generator(self, **kwargs):
+        self.generator = GPT2Generator(**kwargs)
 
 
     def initialize_terrain(self):
@@ -318,8 +325,8 @@ class MyApp(ShowBase):
     def start_game(self):
         self.main_menu.hide_menu()
 
+        self.notice_text_obj.text = "Loading terrain"
         while not self.terrain_loaded:
-            self.notice_text_obj.text = "Loading terrain"
             base.graphicsEngine.render_frame()
             sleep(0.01)
         self.notice_text_obj.hide()
