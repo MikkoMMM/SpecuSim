@@ -86,7 +86,8 @@ class MyApp(ShowBase):
         self.gui = True  # A toggle for the GUI for testing puposes
         self.performance_analysis = True  # Enable pstat support and show frame rate
         self.physics_debug = False  # Show wireframes for the physics objects.
-        self.debug_messages = False  # Some extraneous information
+        self.nlp_debug = True       # Stuff that makes debugging natural language processing faster
+        self.debug_messages = True  # Some extraneous information
 
         if self.debug_messages:
             print("Using Bullet Physics version ", get_bullet_version())
@@ -230,10 +231,8 @@ class MyApp(ShowBase):
         )
 
         self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
-#        self.npc1.say(' "Hello!" "Hello!" "Hello!" "Hello!" "Hello!" "Hello!"\n\n\n.\n\n.\n\n.\n\n\n.\n\n.\n\n.\n\n"Hello!" "Hello!" '
-#                      '"Hello!" "Hello!" "Hello!" "Hello!" "Hello!" "\n')
-        thread.start_new_thread(act, args=(generator, "You are speaking to a man.", "You say to him: \"Hello!\""), kwargs={"format": False,
-                             "output": self.npc1.speech_field})
+        thread.start_new_thread(act, args=(generator, "You are speaking to a man.", "You say to him: \"Hello!\""), kwargs={
+                             "output": self.npc1.speech_field, "debug": self.nlp_debug})
 
         self.start_game()
 
