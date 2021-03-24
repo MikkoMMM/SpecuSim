@@ -10,6 +10,7 @@ class SpeechBubble:
 
 
     def __init__(self, parent_node, height):
+        self.height = height
         self.speech_bubble = DirectLabel(parent=parent_node, text="", text_wordwrap=10,
                                          relief=None, text_scale=(.5, .5),
                                          pos=(0, 0, height),
@@ -23,3 +24,5 @@ class SpeechBubble:
 
     def set_text(self, text):
         self.speech_bubble['text'] = text
+        new_height_offset = -self.speech_bubble.getBounds()[2]+self.speech_bubble.getBounds()[3]
+        self.speech_bubble.set_z(self.height+new_height_offset)

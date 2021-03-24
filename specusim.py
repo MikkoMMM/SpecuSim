@@ -1,11 +1,14 @@
 import os
 from math import sqrt
 from pathlib import Path
+from time import sleep
 
 from direct.gui.DirectGui import DirectFrame, DirectEntry
 from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.InputStateGlobal import inputState
 from direct.showbase.ShowBase import ShowBase
+from direct.task import Task
+# from direct.tkpanels.Inspector import inspect
 from panda3d.bullet import BulletDebugNode
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import BulletRigidBodyNode
@@ -51,9 +54,12 @@ class MyApp(ShowBase):
         # Load some configuration variables, its important for this to happen
         # before the ShowBase is initialized
         load_prc_file_data("", """
-            textures-power-2 none
-            gl-coordinate-system default
             window-title SpecuSim - An Early Prototype
+
+            # Specify whether textures should automatically be constrained to dimensions which are a power of 2 when they are loaded
+            textures-power-2 none
+            # If using a lot of shaders, apparently this is better
+            gl-coordinate-system default
 
             # As an optimization, set this to the maximum number of cameras
             # or lights that will be rendering the terrain at any given time.
@@ -62,6 +68,8 @@ class MyApp(ShowBase):
             # Further optimize the performance by reducing this to the max
             # number of chunks that will be visible at any given time.
             stm-max-chunk-count 2048
+
+            texture-compression 1
 
             # The TransformState object cache is a performance hindrance for individually simulated body parts
             transform-cache 0
@@ -92,6 +100,7 @@ class MyApp(ShowBase):
 
         self.doppelganger_num = 2  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
+        self.terrain_loaded = False
         self.menu_img = PNMImage(Filename("textures/menu.jpg"))
 
         self.main_menu = Menu(self.menu_img, aspect_ratio_keeping_scale=1)
@@ -140,17 +149,23 @@ class MyApp(ShowBase):
         # so I'm assigning our new bin a sort order of 60.
         cull_manager.addBin("frontBin", cull_manager.BTFixed, 60)
 
-
-    def start_without_nlp(self):
-        self.initialize_terrain()
-        self.start_game()
-
-    def start_with_nlp(self):
-        self.main_menu.hide_menu()
         self.notice_text_obj = OnscreenText(text="", style=1, fg=(1, 1, 1, 1), scale=.05,
                                             shadow=(0, 0, 0, 1), parent=base.aspect2d,
                                             pos=(0.0, 0.3), align=TextNode.ACenter)
         self.notice_text_obj.setBin("frontBin", 1)
+
+        taskMgr.setupTaskChain('async_load', numThreads=1, tickClock=None,
+                               threadPriority=None, frameBudget=None,
+                               frameSync=None, timeslicePriority=None)
+        taskMgr.add(self.initialize_terrain, 'initialize_terrain', taskChain='async_load')
+
+
+    def start_without_nlp(self):
+        #self.initialize_terrain()
+        self.start_game()
+
+    def start_with_nlp(self):
+        self.main_menu.hide_menu()
 
         model_dir = "language_models"
         models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
@@ -203,7 +218,9 @@ class MyApp(ShowBase):
                 exit(0)
 
     def nlp_model_chosen(self, model):
-        self.notice_text_obj.hide()
+        self.notice_text_obj.text = "Loading language model. This may take a few minutes."
+        base.graphicsEngine.render_frame()
+        '''
 
         assert isinstance(model, Path)
         generator = GPT2Generator(
@@ -214,16 +231,16 @@ class MyApp(ShowBase):
             top_p=settings.getfloat("top-p"),
             repetition_penalty=settings.getfloat("rep-pen"),
         )
-        self.initialize_terrain()
+        '''
 
         self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
-#        self.npc1.say("Hello")
-        self.npc1.say(act(generator, "You are speaking to a man.", "You say to him: \"Hello!\"", format=False))
+        self.npc1.say("This is one stupidly long line of dialogue. This is one stupidly long line of dialogue. This is one stupidly long line of dialogue. This is one stupidly long line of dialogue.")
+#        self.npc1.say(act(generator, "You are speaking to a man.", "You say to him: \"Hello!\"", format=False))
 
         self.start_game()
 
 
-    def initialize_terrain(self):
+    def initialize_terrain(self, task):
         # Some terrain manipulations which weren't done at startup yet
         if self.physics_debug:
             # We have to use a smaller heightfield image for debugging
@@ -270,6 +287,10 @@ class MyApp(ShowBase):
         self.terrain.set_shader(terrain_shader)
         self.terrain.set_shader_input("camera", self.camera)
 
+        # Wait for there to be a texture loader
+        while not hasattr(self, 'loader'):
+            sleep(0.01)
+
         # Set some texture on the terrain
         terrain_tex = self.loader.loadTexture("worldmaps/seed_16783_satellite.png")
         terrain_tex.set_minfilter(SamplerState.FT_linear_mipmap_linear)
@@ -292,10 +313,19 @@ class MyApp(ShowBase):
         self.terrain_np.set_collide_mask(BitMask32.bit(0))
         self.terrain_np.set_pos(0, 0, 0)
         self.world.attach(self.terrain_np.node())
+        self.terrain_loaded = True
+
+        return Task.done
 
 
     def start_game(self):
         self.main_menu.hide_menu()
+
+        while not self.terrain_loaded:
+            self.notice_text_obj.text = "Loading terrain"
+            base.graphicsEngine.render_frame()
+            sleep(0.01)
+        self.notice_text_obj.hide()
 
         self.inst1 = add_instructions(0.06, "[WASD]: Move")
         self.inst2 = add_instructions(0.12, "[QE]: Rotate")

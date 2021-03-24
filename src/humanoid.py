@@ -241,6 +241,8 @@ class Humanoid(Animal):
         # Humanoids automatically come equipped with a speaking capability. Neat, huh?
         self.set_speech_field(
             SpeechBubble(self.get_body(), self.lower_torso_height + self.chest_height + self.head_height + self.height * 0.2))
+#        self.set_speech_field(
+#            SpeechBubble(self.get_body(), self.lower_torso_height/2 + self.chest_height + self.head_height))
 
 
     def speed_up(self):

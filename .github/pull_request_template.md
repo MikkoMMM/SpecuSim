@@ -8,7 +8,7 @@
 
 ### Before submitting a *pull request* make sure you have:
 - [ ] Read [SpecuSim coding conventions](https://github.com/MikkoMMM/SpecuSim#style-guide) and adjusted the code to meet them as best as reasonable
-- [ ] Added docstrings for new modules, classes, methods and functions
+- [ ] Added docstrings for new classes, methods and functions, and modules if combining a lot of stuff into one
 
 ### In order to be accepted and merged into SpecuSim, each piece of code must be MIT License compatible. Check one of the following options:
 - [ ] I am the original author of this code and I am willing to release it under the [MIT License](https://opensource.org/licenses/MIT). (You may optionally add an extra copyright notice to NOTICE.txt)
