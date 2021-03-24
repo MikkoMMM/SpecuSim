@@ -7,6 +7,7 @@ from direct.gui.DirectGui import DirectFrame, DirectEntry
 from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.InputStateGlobal import inputState
 from direct.showbase.ShowBase import ShowBase
+from direct.stdpy import thread
 from direct.task import Task
 # from direct.tkpanels.Inspector import inspect
 from panda3d.bullet import BulletDebugNode
@@ -98,7 +99,7 @@ class MyApp(ShowBase):
             base.set_frame_rate_meter(True)
             PStatClient.connect()
 
-        self.doppelganger_num = 2  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
+        self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         self.terrain_loaded = False
         self.menu_img = PNMImage(Filename("textures/menu.jpg"))
@@ -154,10 +155,7 @@ class MyApp(ShowBase):
                                             pos=(0.0, 0.3), align=TextNode.ACenter)
         self.notice_text_obj.setBin("frontBin", 1)
 
-        taskMgr.setupTaskChain('async_load', numThreads=1, tickClock=None,
-                               threadPriority=None, frameBudget=None,
-                               frameSync=None, timeslicePriority=None)
-        taskMgr.add(self.initialize_terrain, 'initialize_terrain', taskChain='async_load')
+        thread.start_new_thread(self.initialize_terrain, args=())
 
 
     def start_without_nlp(self):
@@ -220,7 +218,6 @@ class MyApp(ShowBase):
     def nlp_model_chosen(self, model):
         self.notice_text_obj.text = "Loading language model. This may take a few minutes."
         base.graphicsEngine.render_frame()
-        '''
 
         assert isinstance(model, Path)
         generator = GPT2Generator(
@@ -231,16 +228,17 @@ class MyApp(ShowBase):
             top_p=settings.getfloat("top-p"),
             repetition_penalty=settings.getfloat("rep-pen"),
         )
-        '''
 
         self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
-        self.npc1.say("This is one stupidly long line of dialogue. This is one stupidly long line of dialogue. This is one stupidly long line of dialogue. This is one stupidly long line of dialogue.")
-#        self.npc1.say(act(generator, "You are speaking to a man.", "You say to him: \"Hello!\"", format=False))
+#        self.npc1.say(' "Hello!" "Hello!" "Hello!" "Hello!" "Hello!" "Hello!"\n\n\n.\n\n.\n\n.\n\n\n.\n\n.\n\n.\n\n"Hello!" "Hello!" '
+#                      '"Hello!" "Hello!" "Hello!" "Hello!" "Hello!" "\n')
+        thread.start_new_thread(act, args=(generator, "You are speaking to a man.", "You say to him: \"Hello!\""), kwargs={"format": False,
+                             "output": self.npc1.speech_field})
 
         self.start_game()
 
 
-    def initialize_terrain(self, task):
+    def initialize_terrain(self):
         # Some terrain manipulations which weren't done at startup yet
         if self.physics_debug:
             # We have to use a smaller heightfield image for debugging

@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import Union
+from time import sleep
 
 import torch
 import torch.nn.functional as F
@@ -104,7 +105,8 @@ def sample_sequence(
         repetition_penalty=1.0,
         device="cpu",
         stop_tokens=None,
-        tokenizer=None
+        tokenizer=None,
+        output=None
 ):
     """Actually generate the tokens"""
     logger.debug(
@@ -156,6 +158,9 @@ def sample_sequence(
             generated.text = tokenizer.decode(
                 o, clean_up_tokenization_spaces=False, skip_special_tokens=True
             )
+            if output is not None:
+                output.set_text(format_result(generated.text))
+#                output.set_text(generated.text)
             if (
                     (stop_tokens is not None)
                     and (j > 4)
@@ -169,6 +174,11 @@ def sample_sequence(
                     j,
                 )
                 break
+    print(generated.text)
+    print()
+    print("And the same formatted;")
+    print(format_result(generated.text))
+    output.finish()
     return generated
 
 
@@ -223,7 +233,7 @@ class GPT2Generator:
 
     def sample_sequence(
             self, context_tokens=None, top_k=None, top_p=None, repetition_penalty=None, generate_num=None,
-            temperature=None, stop_tokens=None
+            temperature=None, stop_tokens=None, output=None
     ):
         assert (top_k is not None)
         assert (temperature is not None)
@@ -245,8 +255,9 @@ class GPT2Generator:
             repetition_penalty=repetition_penalty,
             device=self.device,
             stop_tokens=stop_tokens,
-            tokenizer=self.tokenizer
+            tokenizer=self.tokenizer,
             # batch_size=self.batch_size,
+            output=output
         )
         return out
 
@@ -275,7 +286,7 @@ class GPT2Generator:
 
     def generate_raw(
             self, context, prompt='', generate_num=None, temperature=None, top_k=None, top_p=None,
-            repetition_penalty=None, stop_tokens=None
+            repetition_penalty=None, stop_tokens=None, output=None
     ):
         assert (top_k is not None)
         assert (temperature is not None)
@@ -303,6 +314,7 @@ class GPT2Generator:
                 top_p=top_p,
                 repetition_penalty=repetition_penalty,
                 stop_tokens=stop_tokens,
+                output=output
             )
             text += out.text
             generated += 1
@@ -320,7 +332,7 @@ class GPT2Generator:
                     text = text[:index]
         return text
 
-    def generate(self, context, prompt='', temperature=None, top_p=None, top_k=None, repetition_penalty=None, depth=0):
+    def generate(self, context, prompt='', temperature=None, top_p=None, top_k=None, repetition_penalty=None, depth=0, output=None):
         assert (top_k is not None)
         assert (temperature is not None)
         assert (top_p)
@@ -334,7 +346,7 @@ class GPT2Generator:
 
         text = self.generate_raw(
             context, prompt, temperature=temperature, top_k=top_k, top_p=top_p, repetition_penalty=repetition_penalty,
-            stop_tokens=self.tokenizer.encode(["<|endoftext|>", ">"])
+            stop_tokens=self.tokenizer.encode(["<|endoftext|>", ">"]), output=output
         )
 
         logger.debug("Generated result is: `%r`", repr(text))
@@ -358,7 +370,7 @@ class GPT2Generator:
                 logger.info("Model generated empty text trying again %r", depth)
                 return self.generate(
                     prompt, context, temperature=temperature, top_p=top_p, top_k=top_k,
-                    repetition_penalty=repetition_penalty, depth=depth + 1
+                    repetition_penalty=repetition_penalty, depth=depth + 1, output=output
                 )
             else:
                 logger.warn(

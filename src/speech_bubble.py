@@ -1,4 +1,5 @@
 from direct.gui.DirectGui import DirectLabel
+from direct.task import Task
 
 class SpeechBubble:
     """A speech bubble.
@@ -12,7 +13,7 @@ class SpeechBubble:
     def __init__(self, parent_node, height):
         self.height = height
         self.speech_bubble = DirectLabel(parent=parent_node, text="", text_wordwrap=10,
-                                         relief=None, text_scale=(.5, .5),
+                                         relief=None, text_scale=(.3, .3),
                                          pos=(0, 0, height),
                                          frameColor=(.3, .2, .1, .5),
                                          text_frame=(0, 0, 0, 1),
@@ -23,6 +24,14 @@ class SpeechBubble:
 
 
     def set_text(self, text):
-        self.speech_bubble['text'] = text
+        self.speech_bubble.setText(text)
         new_height_offset = -self.speech_bubble.getBounds()[2]+self.speech_bubble.getBounds()[3]
         self.speech_bubble.set_z(self.height+new_height_offset)
+
+    def finish(self):
+        self.speech_bubble.updateFrameStyle()
+#        taskMgr.add(self.finish2, 'finish_talking')
+
+    def finish2(self, task):
+        self.speech_bubble.updateFrameStyle()
+        return Task.done
