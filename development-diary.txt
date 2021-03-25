@@ -64,3 +64,4 @@
 22.3.2021 Some form of collision for the ocean, a new camera controller, some cleanup and refactoring.
 23.3.2021 The menu system was overhauled to be more general-purpose. Started integration of GPT2, and managed to get it to a state where it can generate text in speech bubbles.
 24.3.2021 Some threaded loading stuff. Refactoring. Thinking about more ways to debug. Learning about asyncs, threading and multiprocessing.
+25.3.2021 Some work on a system to thread GPT-2 calls.

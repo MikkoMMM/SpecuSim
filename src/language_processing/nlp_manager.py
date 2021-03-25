@@ -9,6 +9,10 @@ from time import sleep
 
 
 def act(generator, context, action, output=None, debug=True):
+    if debug:
+        print("Context: " + context)
+        print("Action: " + action)
+        print()
     temperature = settings.getfloat('temp')
     top_p = settings.getfloat('top-p')
     top_k = settings.getint('top-keks')
@@ -49,40 +53,49 @@ class SpeechTask:
         self.speaker = speaker
         self.text = text
 
+
     def __lt__(self, obj):
         return self.priority < obj.priority
+
 
     def __le__(self, obj):
         return self.priority <= obj.priority
 
+
     def __eq__(self, obj):
         return False
+
 
     def __ne__(self, obj):
         return True
 
+
     def __gt__(self, obj):
         return self.priority > obj.priority
+
 
     def __ge__(self, obj):
         return self.priority >= obj.priority
 
 
 class NLPManager:
-    def __init__(self):
+    def __init__(self, generator, debug=False):
         self.queue = PriorityQueue()
-        thread.start_new_thread(self.thread_loop, args=())
-#        thread.start_new_thread(target=nlp_manager.act, args=(self.generator, "You are speaking to a man.", "You say to him: \"Hello!\""),
-        #        kwargs={
-#            "output": self.npc1.speech_field, "debug": self.nlp_debug})
+        self.debug = debug
+        self.generator = generator
+        for _ in range(4):
+            thread.start_new_thread(self.thread_loop, args=())
+
 
     def thread_loop(self):
         while True:
             if not self.queue.empty():
                 speech_task = self.queue.get()
-                speech_task.speaker.say(speech_task.text)
+                act(self.generator, "You are speaking to a person.", "You say to him: " + speech_task.text,
+                    output=speech_task.speaker.speech_field, debug=self.debug)
 
-            sleep(0.1)
+            sleep(0.05)
+
 
     def new_speech_task(self, speaker, text):
         self.queue.put(SpeechTask(0, speaker, text))

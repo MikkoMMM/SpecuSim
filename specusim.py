@@ -28,6 +28,7 @@ from src.language_processing.getconfig import settings
 from src.language_processing.gpt2generator import GPT2Generator
 from src.menu import Menu
 from src.utils import create_or_load_walk_map, create_shader_terrain_mesh
+import random
 
 from multiprocessing import Pool
 
@@ -87,7 +88,7 @@ class MyApp(ShowBase):
         self.physics_debug = False  # Show wireframes for the physics objects.
         self.nlp_debug = True  # Stuff that makes debugging natural language processing faster
         self.debug_messages = True  # Some extraneous information
-        self.doppelganger_num = 10  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
+        self.doppelganger_num = 4  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         if self.debug_messages:
             print("Using Bullet Physics version ", get_bullet_version())
@@ -236,7 +237,7 @@ class MyApp(ShowBase):
 
         self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
 
-        self.nlp_manager = NLPManager()
+        self.nlp_manager = NLPManager(self.generator, self.nlp_debug)
 #        self.nlp_manager.new_speech_task(self.npc1, "'Ello, 'ello, 'ello!")
 
 #        thread.start_new_thread(nlp_manager.act, args=(self.generator, "You are speaking to a man.", "You say to him: \"Hello!\""),
@@ -364,10 +365,6 @@ class MyApp(ShowBase):
         inputState.watch_with_modifiers('speeddown', '-')
         self.accept_once("enter", self.focus_in_text_field_initial)
 
-        if hasattr(self, 'nlp_manager'):
-            for doppelganger in self.doppelgangers:
-                self.nlp_manager.new_speech_task(doppelganger, "'Ello, 'ello, 'ello!")
-
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
         if self.debug_messages:
@@ -387,6 +384,9 @@ class MyApp(ShowBase):
     def player_say(self, text):
         self.text_field.enterText('')
         self.player.say(text)
+        if hasattr(self, 'nlp_manager'):
+            for doppelganger in random.sample(self.doppelgangers, len(self.doppelgangers)):
+                self.nlp_manager.new_speech_task(doppelganger, text)
         self.focus_out_text_field()
 
 
