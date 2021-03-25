@@ -86,6 +86,7 @@ class MyApp(ShowBase):
         self.physics_debug = False  # Show wireframes for the physics objects.
         self.nlp_debug = True  # Stuff that makes debugging natural language processing faster
         self.debug_messages = True  # Some extraneous information
+        self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         if self.debug_messages:
             print("Using Bullet Physics version ", get_bullet_version())
@@ -97,8 +98,6 @@ class MyApp(ShowBase):
 
             base.set_frame_rate_meter(True)
             PStatClient.connect()
-
-        self.doppelganger_num = 5  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         self.terrain_loaded = False
         self.menu_img = PNMImage(Filename("textures/menu.jpg"))
@@ -156,7 +155,6 @@ class MyApp(ShowBase):
 
 
     def start_without_nlp(self):
-        # self.initialize_terrain()
         self.start_game()
 
 
@@ -165,7 +163,6 @@ class MyApp(ShowBase):
 
         model_dir = "language_models"
         models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
-        generator = None
         failed_env_load = False
         while True:
             try:
@@ -324,6 +321,21 @@ class MyApp(ShowBase):
                     Humanoid(self.world, self.terrain_bullet_node, i - (self.doppelganger_num - 1) / 2,
                              j - (self.doppelganger_num - 1) / 2))
 
+        if self.gui:
+            wx = base.win.get_x_size()
+            wy = base.win.get_y_size()
+            bar_start = -0.8
+            gui_bar = DirectFrame(frameColor=(0, 0, 0, 1),
+                                  frameSize=(-wx / 2, wx / 2, -1, bar_start),
+                                  pos=(0, -1, 0))
+            # Each width unit seems to be a 2/scale'th of a screen on a rectangular aspect ratio
+            scale = 0.05
+            self.text_field = DirectEntry(text="", scale=scale, command=print, parent=gui_bar,
+                                          text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 1), width=30,
+                                          pos=(-15 * scale, 0, (bar_start - 1) / 2),
+                                          initialText="Press Enter to start talking", numLines=2, focus=0,
+                                          focusInCommand=self.clear_text, focusOutCommand=self.focus_out_text_field)
+
         self.camera.reparent_to(self.player.lower_torso)
 
         cam_control = CameraControl(camera, self.mouseWatcherNode)
@@ -344,21 +356,11 @@ class MyApp(ShowBase):
         inputState.watch_with_modifiers('turnright', 'e')
         inputState.watch_with_modifiers('speedup', '+')
         inputState.watch_with_modifiers('speeddown', '-')
+        self.accept("enter", self.focus_in_text_field)
+        self.accept("mouse1", self.focus_out_text_field)
+        self.accept("mouse2", self.focus_out_text_field)
+        self.accept("mouse3", self.focus_out_text_field)
 
-        if self.gui:
-            wx = base.win.get_x_size()
-            wy = base.win.get_y_size()
-            bar_start = -0.8
-            gui_bar = DirectFrame(frameColor=(0, 0, 0, 1),
-                                  frameSize=(-wx / 2, wx / 2, -1, bar_start),
-                                  pos=(0, -1, 0))
-            # Each width unit seems to be a 2/scale'th of a screen on a rectangular aspect ratio
-            scale = 0.05
-            self.text_field = DirectEntry(text="", scale=scale, command=print, parent=gui_bar,
-                                          text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 1), width=30,
-                                          pos=(-15 * scale, 0, (bar_start - 1) / 2),
-                                          initialText="Press Enter to start talking", numLines=2, focus=0,
-                                          focusInCommand=self.clear_text)
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
@@ -368,6 +370,14 @@ class MyApp(ShowBase):
 
     def clear_text(self):
         self.text_field.enterText('')
+
+
+    def focus_in_text_field(self):
+        self.text_field['focus'] = True
+
+
+    def focus_out_text_field(self):
+        self.text_field['focus'] = False
 
 
     # Everything that needs to be done every frame goes here.

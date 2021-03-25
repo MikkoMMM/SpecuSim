@@ -10,7 +10,7 @@ from panda3d.core import Quat
 
 class CameraControl:
 
-    def __init__(self, node, mouse_watcher_node):
+    def __init__(self, node, mouse_watcher_node, initial_heading=90, initial_pitch=65, initial_zoom=15):
 
         self.node = node
         self.focus_node = render.attach_new_node("CameraFocusNode")
@@ -29,10 +29,10 @@ class CameraControl:
 
         self.speed = 0.2
 
-        self.zoom = 10
+        self.zoom = initial_zoom
 
-        self.ang = 0
-        self.angY = math.pi * 0.5
+        self.ang = math.radians(initial_heading)
+        self.angY = math.radians(initial_pitch)
 
         self.last_mouse_pos = (0, 0)
 
