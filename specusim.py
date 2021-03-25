@@ -1,5 +1,5 @@
 import os
-from math import sqrt, atan2, degrees, acos, pi
+from math import sqrt, atan2, degrees, acos, pi, radians
 from pathlib import Path
 from time import sleep
 
@@ -21,7 +21,7 @@ from panda3d.core import PNMImage, Filename
 from panda3d.core import SamplerState, TextNode
 from panda3d.core import Vec3, load_prc_file_data, PStatClient, CullBinManager, Vec2
 
-import src.language_processing.nlp_manager as nlp_manager
+from src.language_processing.nlp_manager import NLPManager
 from src.camera import CameraControl
 from src.humanoid import Humanoid
 from src.language_processing.getconfig import settings
@@ -29,6 +29,7 @@ from src.language_processing.gpt2generator import GPT2Generator
 from src.menu import Menu
 from src.utils import create_or_load_walk_map, create_shader_terrain_mesh
 
+from multiprocessing import Pool
 
 # from src.weapons.sword import Sword
 
@@ -86,7 +87,7 @@ class MyApp(ShowBase):
         self.physics_debug = False  # Show wireframes for the physics objects.
         self.nlp_debug = True  # Stuff that makes debugging natural language processing faster
         self.debug_messages = True  # Some extraneous information
-        self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
+        self.doppelganger_num = 10  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         if self.debug_messages:
             print("Using Bullet Physics version ", get_bullet_version())
@@ -114,7 +115,8 @@ class MyApp(ShowBase):
         self.camLens.set_fov(90)
         self.camLens.set_near_far(0.1, 50000)
 
-        self.dxdy_to_degrees = [[-45, 0, 45], [-90, -999, 90], [-135, 180, 135]]
+        self.dxdy_to_angle = [[radians(45), radians(90), radians(135)], [radians(0), -999, radians(180)], [radians(-45), radians(-90),
+                                                                                                           radians(-135)]]
 
         # Heightfield's height
         self.terrain_height = 25.0
@@ -234,8 +236,12 @@ class MyApp(ShowBase):
 
         self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
 
-        thread.start_new_thread(nlp_manager.act, args=(self.generator, "You are speaking to a man.", "You say to him: \"Hello!\""), kwargs={
-            "output": self.npc1.speech_field, "debug": self.nlp_debug})
+        self.nlp_manager = NLPManager()
+#        self.nlp_manager.new_speech_task(self.npc1, "'Ello, 'ello, 'ello!")
+
+#        thread.start_new_thread(nlp_manager.act, args=(self.generator, "You are speaking to a man.", "You say to him: \"Hello!\""),
+        #        kwargs={
+#            "output": self.npc1.speech_field, "debug": self.nlp_debug})
 
         self.start_game()
 
@@ -318,8 +324,8 @@ class MyApp(ShowBase):
                 if i == (self.doppelganger_num - 1) / 2 and j == (self.doppelganger_num - 1) / 2:
                     continue
                 self.doppelgangers.append(
-                    Humanoid(self.world, self.terrain_bullet_node, i - (self.doppelganger_num - 1) / 2,
-                             j - (self.doppelganger_num - 1) / 2))
+                    Humanoid(self.world, self.terrain_bullet_node, i*2 - (self.doppelganger_num - 1),
+                             j*2 - (self.doppelganger_num - 1)))
 
         if self.gui:
             wx = base.win.get_x_size()
@@ -358,11 +364,19 @@ class MyApp(ShowBase):
         inputState.watch_with_modifiers('speeddown', '-')
         self.accept_once("enter", self.focus_in_text_field_initial)
 
+        if hasattr(self, 'nlp_manager'):
+            for doppelganger in self.doppelgangers:
+                self.nlp_manager.new_speech_task(doppelganger, "'Ello, 'ello, 'ello!")
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
         if self.debug_messages:
             render.analyze()
+
+
+#    def act(self, num):
+#        nlp_manager.act(self.generator, "You are speaking to a man.", "You say to him: \"Hello!\"", output=self.doppelgangers[
+#            num].speech_field, debug=self.nlp_debug)
 
 
     def focus_in_text_field_initial(self):
@@ -402,7 +416,7 @@ class MyApp(ShowBase):
             dx -= 1
         if inputState.is_set('right'):
             dx += 1
-        direction = self.dxdy_to_degrees[dy][dx]
+        direction = self.dxdy_to_angle[dy][dx]
 
         if direction > -900:
             self.player.walk_in_dir(direction)

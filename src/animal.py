@@ -109,7 +109,7 @@ class Animal:
 
         Args:
             speed (float): Movement speed in m/s, assuming flat ground.
-            angle (float): The absolute angle in which to move, in degrees
+            angle (float): The absolute angle in which to move, in radians
             decelerate (bool, optional): Whether to actively move (False) or to let movement come to a natural halt over time (True)
 
         Returns:
@@ -122,7 +122,7 @@ class Animal:
             new_vector = Vec3(self.body.node().get_linear_velocity().getX(),
                               self.body.node().get_linear_velocity().getY(), preliminary_z_velocity)
         else:
-            math_angle = radians(angle + 90)
+            math_angle = angle
             diff = Vec3(-cos(math_angle), sin(math_angle), 0)
             diff_n = diff.normalized()
             step = diff_n * speed
