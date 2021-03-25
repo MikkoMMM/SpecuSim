@@ -330,11 +330,11 @@ class MyApp(ShowBase):
                                   pos=(0, -1, 0))
             # Each width unit seems to be a 2/scale'th of a screen on a rectangular aspect ratio
             scale = 0.05
-            self.text_field = DirectEntry(text="", scale=scale, command=print, parent=gui_bar,
+            self.text_field = DirectEntry(text="", scale=scale, command=self.player_say, parent=gui_bar,
                                           text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 1), width=30,
-                                          pos=(-15 * scale, 0, (bar_start - 1) / 2),
+                                          pos=(-15 * scale, 0, (bar_start - 1) / 2), suppressKeys=1,
                                           initialText="Press Enter to start talking", numLines=2, focus=0,
-                                          focusInCommand=self.clear_text, focusOutCommand=self.focus_out_text_field)
+                                          focusOutCommand=self.focus_out_text_field)
 
         self.camera.reparent_to(self.player.lower_torso)
 
@@ -356,10 +356,7 @@ class MyApp(ShowBase):
         inputState.watch_with_modifiers('turnright', 'e')
         inputState.watch_with_modifiers('speedup', '+')
         inputState.watch_with_modifiers('speeddown', '-')
-        self.accept("enter", self.focus_in_text_field)
-        self.accept("mouse1", self.focus_out_text_field)
-        self.accept("mouse2", self.focus_out_text_field)
-        self.accept("mouse3", self.focus_out_text_field)
+        self.accept_once("enter", self.focus_in_text_field_initial)
 
 
         # Tasks that are repeated ad infinitum
@@ -368,8 +365,15 @@ class MyApp(ShowBase):
             render.analyze()
 
 
-    def clear_text(self):
+    def focus_in_text_field_initial(self):
         self.text_field.enterText('')
+        self.focus_in_text_field()
+
+
+    def player_say(self, text):
+        self.text_field.enterText('')
+        self.player.say(text)
+        self.focus_out_text_field()
 
 
     def focus_in_text_field(self):
@@ -378,6 +382,7 @@ class MyApp(ShowBase):
 
     def focus_out_text_field(self):
         self.text_field['focus'] = False
+        self.accept("enter", self.focus_in_text_field)
 
 
     # Everything that needs to be done every frame goes here.
