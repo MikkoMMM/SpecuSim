@@ -41,7 +41,7 @@ class Animal:
         self.speech_field = None
         # We store this here, in case somebody wants to switch speech bubble styles
         self.can_talk_time = datetime(1, 1, 1, 1, 1, 1, 342380)
-        self.talking_speed = 5  # How long (in characters per second) the speech bubble should stay visible
+        self.talking_speed = 5+0.1  # How long (in characters per second) the speech bubble should stay visible
 
 
     def get_body(self):
@@ -71,8 +71,8 @@ class Animal:
         if self.speech_field:
             self.speech_field.show()
             self.speech_field.set_text(text)
-            on_screen_time = len(text) / self.talking_speed
-            taskMgr.doMethodLater(on_screen_time, self.speech_field.hide, 'HSB', extraArgs=[])
+            on_screen_time = max(30.0/self.talking_speed, len(text) / self.talking_speed)
+            taskMgr.doMethodLater(max(0.1, on_screen_time-0.1), self.speech_field.hide, 'HSB', extraArgs=[])
 
 
     def get_ground_z_velocity(self, current_z_pos=None):

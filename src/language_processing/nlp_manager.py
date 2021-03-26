@@ -30,6 +30,7 @@ def act(generator, context, action, output=None, debug=True):
             top_p=settings.getfloat('top-p'),
             top_k=settings.getint('top-keks'),
             repetition_penalty=settings.getfloat('rep-pen'), output=output, debug=debug)
+
     except Exception as e:
         print()
         print("Natural language processing has crashed!")
@@ -87,7 +88,7 @@ class NLPManager:
         self.wait_queue = []
         self.debug = debug
         self.generator = generator
-        self.talking_speed = 5  # How long (in characters per second) the speech bubble should stay visible
+        self.talking_speed = 5+0.1  # How long (in characters per second) the speech bubble should stay visible
         self.lock = threading.Lock()  # Just in case
         self.min_time = datetime(1, 1, 1, 1, 1, 1, 342380)
         self.max_time = datetime(9999, 12, 1, 1, 1, 1, 342380)
@@ -100,11 +101,13 @@ class NLPManager:
             speech_task = self.queue.get(block=True)
             speech_task.speaker.speech_field.show()
             talking_started = datetime.now()
+            context = "You are speaking to a person."
+            action = f"You say: \"{speech_task.text.strip()}\"\nThey answer: \""
 
-            result=act(self.generator, "You are speaking to a person.", f"You say: \"{speech_task.text}\"\nThey answer: \"",
+            result=act(self.generator, context, action,
                 output=speech_task.speaker.speech_field, debug=self.debug)
-            on_screen_time = len(result)/self.talking_speed
-            taskMgr.doMethodLater(on_screen_time, speech_task.speaker.speech_field.hide, 'HSB', extraArgs=[])
+            on_screen_time = max(30/self.talking_speed, len(result)/self.talking_speed)
+            taskMgr.doMethodLater(max(0.1, on_screen_time-0.1), speech_task.speaker.speech_field.hide, 'HSB', extraArgs=[])
 
             with self.lock:
                 speech_task.speaker.can_talk_time = talking_started + timedelta(seconds=on_screen_time)

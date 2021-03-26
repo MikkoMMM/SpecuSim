@@ -1,8 +1,11 @@
+import gc
 import os
-from math import sqrt, atan2, degrees, acos, pi, radians
+import random
+from math import sqrt, radians
 from pathlib import Path
 from time import sleep
 
+import torch
 from direct.gui.DirectGui import DirectFrame, DirectEntry
 from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.InputStateGlobal import inputState
@@ -12,25 +15,21 @@ from direct.task import Task
 from panda3d.bullet import BulletDebugNode
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import BulletRigidBodyNode
-# from direct.task import Task
 from panda3d.bullet import BulletWorld
 from panda3d.bullet import ZUp
 from panda3d.bullet import get_bullet_version
 from panda3d.core import BitMask32
 from panda3d.core import PNMImage, Filename
 from panda3d.core import SamplerState, TextNode
-from panda3d.core import Vec3, load_prc_file_data, PStatClient, CullBinManager, Vec2
+from panda3d.core import Vec3, load_prc_file_data, PStatClient, CullBinManager
 
-from src.language_processing.nlp_manager import NLPManager
 from src.camera import CameraControl
 from src.humanoid import Humanoid
 from src.language_processing.getconfig import settings
 from src.language_processing.gpt2generator import GPT2Generator
+from src.language_processing.nlp_manager import NLPManager
 from src.menu import Menu
 from src.utils import create_or_load_walk_map, create_shader_terrain_mesh
-import random
-
-from multiprocessing import Pool
 
 
 # from src.weapons.sword import Sword
@@ -89,7 +88,7 @@ class MyApp(ShowBase):
         self.physics_debug = False  # Show wireframes for the physics objects.
         self.nlp_debug = True  # Stuff that makes debugging natural language processing faster
         self.debug_messages = True  # Some extraneous information
-        self.doppelganger_num = 2  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
+        self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         if self.debug_messages:
             print("Using Bullet Physics version ", get_bullet_version())
@@ -155,6 +154,8 @@ class MyApp(ShowBase):
                                             pos=(0.0, 0.3), align=TextNode.ACenter)
         self.notice_text_obj.setBin("frontBin", 1)
 
+        self.nlp = False
+
         thread.start_new_thread(self.initialize_terrain, args=())
 
 
@@ -164,6 +165,7 @@ class MyApp(ShowBase):
 
     def start_with_nlp(self):
         self.main_menu.hide_menu()
+        self.nlp = True
 
         model_dir = "language_models"
         models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
@@ -232,20 +234,17 @@ class MyApp(ShowBase):
             base.graphicsEngine.render_frame()
             sleep(0.05)
 
+        # May be needed to avoid out of mem
+        gc.collect()
+        torch.cuda.empty_cache()
+
         while not self.terrain_loaded:
             self.notice_text_obj.text = "Loading terrain."
             base.graphicsEngine.render_frame()
             sleep(0.05)
 
         self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
-
         self.nlp_manager = NLPManager(self.generator, self.nlp_debug)
-        #        self.nlp_manager.new_speech_task(self.npc1, "'Ello, 'ello, 'ello!")
-
-        #        thread.start_new_thread(nlp_manager.act, args=(self.generator, "You are speaking to a man.", "You say to him: \"Hello!\""),
-        #        kwargs={
-        #            "output": self.npc1.speech_field, "debug": self.nlp_debug})
-
         self.start_game()
 
 
@@ -382,7 +381,8 @@ class MyApp(ShowBase):
     def player_say(self, text):
         self.text_field.enterText('')
         self.player.say(text)
-        if hasattr(self, 'nlp_manager'):
+        if self.nlp:
+            self.nlp_manager.new_speech_task(self.npc1, text)
             for doppelganger in random.sample(self.doppelgangers, len(self.doppelgangers)):
                 self.nlp_manager.new_speech_task(doppelganger, text)
         self.focus_out_text_field()
@@ -453,11 +453,11 @@ class MyApp(ShowBase):
                 self.player.lower_torso.node().get_linear_velocity()[1], 2)), 2)) + " / " + str(
             round(self.player.walk_speed, 1)) + " m/s"
 
-        if hasattr(self, 'npc1'):
+        if self.nlp:
             self.npc1.stand_still()
+            self.nlp_manager.update()
 
         #        self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
-        self.nlp_manager.update()
 
         return task.cont
 

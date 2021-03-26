@@ -28,7 +28,7 @@ class SpeechBubble:
 
 
     def hide(self):
-        self.speech_bubble.hide()
+        self.speech_bubble.setText("")
 
 
     def set_text(self, text):

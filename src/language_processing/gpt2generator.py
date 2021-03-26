@@ -1,15 +1,14 @@
-import os
+import re
 from pathlib import Path
 from typing import Union
-from time import sleep
 
 import torch
 import torch.nn.functional as F
-import re
-from .gpt2 import GPT2LMHeadModelExperimental
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
+
 from .getconfig import settings, logger
-from .utils import cut_trailing_sentence, format_result, use_ptoolkit
+from .gpt2 import GPT2LMHeadModelExperimental
+from .utils import cut_trailing_sentence, format_result
 
 if not settings.getboolean('force-cpu') and not torch.cuda.is_available():
     logger.warning('CUDA is not available, you are limited to CPU only.')
