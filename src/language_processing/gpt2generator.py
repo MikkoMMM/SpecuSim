@@ -25,7 +25,7 @@ MODEL_CLASSES = {
 }
 
 
-def getTokens(tokenizer, l):
+def getTokens(tokenizer):
     tokenizer.encode()
 
 
@@ -165,7 +165,8 @@ def sample_sequence(
                     and (j > 4)
                     and (next_token[0] in stop_tokens)
             ):
-                # Why the minimum tokens, j>X. Because sometimes the models starts with whitespace, which will strip away anyway. Having a minimum amount of tokens before we stop usually means we don't just stop because of "\n " or similar
+                # Why the minimum tokens, j>X. Because sometimes the models starts with whitespace, which will strip away anyway.
+                # Having a minimum amount of tokens before we stop usually means we don't just stop because of "\n " or similar
                 logger.debug(
                     "Stopping generation as we found stop tokens. One of `%s`, in '%s'. token generated `%s`",
                     stop_tokens,
@@ -173,19 +174,7 @@ def sample_sequence(
                     j,
                 )
                 break
-    if debug:
-        print(generated.text)
-        print()
-        print("And the same formatted;")
-        print(format_result(generated.text))
     return generated
-
-
-def truncate_multiple_sequences(seqs, max_len=100):
-    """Truncate multiple sequences, longest first, removing first."""
-    while sum(len(s) for s in seqs) > max_len:
-        longest = sorted(seqs, key=len, reverse=True)[0]
-        longest.pop(0)
 
 
 class GPT2Generator:
@@ -230,6 +219,7 @@ class GPT2Generator:
         self.model.to(self.dtype).to(self.device)
         self.model.eval()
 
+
     def sample_sequence(
             self, context_tokens=None, top_k=None, top_p=None, repetition_penalty=None, generate_num=None,
             temperature=None, stop_tokens=None, output=None, debug=False
@@ -261,6 +251,7 @@ class GPT2Generator:
         )
         return out
 
+
     def result_replace(self, result, allow_action=False):
         # logger.debug("BEFORE RESULT_REPLACE: `%s`", repr(result))
 
@@ -269,12 +260,11 @@ class GPT2Generator:
         if len(result) == 0:
             return ""
         first_letter_capitalized = result[0].isupper()
-        result = result.replace('."', '".')
+        #        result = result.replace('."', '".')
         result = result.replace("#", "")
         result = result.replace("*", "")
         # TODO look at this I think blank lines should be fine or blacklisted at generation time
         result = result.replace("\n\n", "\n")
-        # result = first_to_second_person(result)
 
         if not first_letter_capitalized:
             result = result[0].lower() + result[1:]
@@ -283,6 +273,7 @@ class GPT2Generator:
         # logger.debug( "AFTER RESULT_REPLACE: `%r`. allow_action=%r", repr(result), allow_action)
 
         return result
+
 
     def generate_raw(
             self, context, prompt='', generate_num=None, temperature=None, top_k=None, top_p=None,
@@ -325,13 +316,8 @@ class GPT2Generator:
                 if index == -1:
                     index = None
                 text = text[:index]
-            if stop_tokens is not None:
-                for stop_token in stop_tokens:
-                    index = text.find(self.stop_token)
-                    if index == -1:
-                        index = None
-                    text = text[:index]
         return text
+
 
     def generate(self, context, prompt='', temperature=None, top_p=None, top_k=None, repetition_penalty=None, depth=0, output=None,
                  debug=False):
@@ -339,11 +325,6 @@ class GPT2Generator:
         assert (temperature is not None)
         assert (top_p)
         assert (repetition_penalty)
-        # logger.debug("BEFORE PROMPT_REPLACE: `%r`", prompt)
-
-        # prompt = [self.prompt_replace(p) for p in prompt]
-
-        # logger.debug("AFTER PROMPT_REPLACE is: `%r`", repr(prompt))
         assert (prompt + context)
 
         text = self.generate_raw(

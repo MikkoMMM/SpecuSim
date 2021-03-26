@@ -340,8 +340,8 @@ class MyApp(ShowBase):
             scale = 0.05
             self.text_field = DirectEntry(text="", scale=scale, command=self.player_say, parent=gui_bar,
                                           text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=30,
-                                          pos=(-15 * scale, 0, (bar_start - 1) / 2),
-                                          initialText="Press Enter to start talking", numLines=2, focus=0,
+                                          pos=(-15 * scale, 0, (bar_start - 0.95) / 2),
+                                          initialText="Press Enter to start talking", numLines=3, focus=0,
                                           focusInCommand=self.focus_in_text_field_initial)
 
         self.camera.reparent_to(self.player.lower_torso)

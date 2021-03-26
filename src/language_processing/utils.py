@@ -128,13 +128,13 @@ def cut_trailing_sentence(text, allow_action=False):
     et_token = text.find("<")
     if et_token > 0:
         last_punc = min(last_punc, et_token - 1)
-    if allow_action:
+    if not allow_action:
         act_token = text.find(">")
         if act_token > 0:
             last_punc = min(last_punc, act_token - 1)
     text = text[: last_punc + 1]
     text = fix_trailing_quotes(text)
-    if allow_action:
+    if not allow_action:
         text = cut_trailing_action(text)
     return text
 
