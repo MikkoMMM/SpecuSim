@@ -23,7 +23,7 @@ def act(generator, context, action, output=None, debug=True):
         if not context.strip() + action.strip():
             return None
         assert (settings.getint('top-keks') is not None)
-        result = generator.generate(
+        return generator.generate(
             action,
             context,
             temperature=settings.getfloat('temp'),
@@ -46,6 +46,7 @@ def act(generator, context, action, output=None, debug=True):
         if debug:
             # Probably a bad idea, but for now hastens the debugging process
             _exit(1)
+        return ""
 
 
 class SpeechTask:
@@ -64,6 +65,7 @@ class SpeechTask:
 
 
     def __eq__(self, obj):
+        # Possibly allow True if same object?
         return False
 
 
@@ -85,6 +87,7 @@ class NLPManager:
         self.wait_queue = []
         self.debug = debug
         self.generator = generator
+        self.talking_speed = 5  # How long (in characters per second) the speech bubble should stay visible
         self.lock = threading.Lock()  # Just in case
         self.min_time = datetime(1, 1, 1, 1, 1, 1, 342380)
         self.max_time = datetime(9999, 12, 1, 1, 1, 1, 342380)
@@ -94,21 +97,22 @@ class NLPManager:
 
     def thread_loop(self):
         while True:
-            if not self.queue.empty():
-                with self.lock:
-                    speech_task = self.queue.get()
-                talking_started = datetime.now()
+            speech_task = self.queue.get(block=True)
+            speech_task.speaker.speech_field.show()
+            talking_started = datetime.now()
 
-                act(self.generator, "You are speaking to a person.", "You say to him: " + speech_task.text,
-                    output=speech_task.speaker.speech_field, debug=self.debug)
+            result=act(self.generator, "You are speaking to a person.", f"You say: \"{speech_task.text}\"\nThey answer: \"",
+                output=speech_task.speaker.speech_field, debug=self.debug)
+            on_screen_time = len(result)/self.talking_speed
+            taskMgr.doMethodLater(on_screen_time, speech_task.speaker.speech_field.hide, 'HSB', extraArgs=[])
 
-                with self.lock:
-                    speech_task.speaker.can_talk_time = talking_started + timedelta(seconds=5)
-
-            sleep(0.05)
+            with self.lock:
+                speech_task.speaker.can_talk_time = talking_started + timedelta(seconds=on_screen_time)
 
 
     def new_speech_task(self, speaker, text):
+        if not text:  # Nothing to react to
+            return
         with self.lock:
             task = SpeechTask(self.min_time, speaker, text)
             if datetime.now() >= speaker.can_talk_time:
@@ -121,8 +125,8 @@ class NLPManager:
     def update(self):
         """Bookkeeping that needs to be done every frame
         """
+        i = 0
         with self.lock:
-            i = 0
             while i < len(self.wait_queue):
                 if datetime.now() >= self.wait_queue[i].speaker.can_talk_time:
                     speech_task = self.wait_queue.pop(i)

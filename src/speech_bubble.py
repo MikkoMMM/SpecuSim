@@ -23,6 +23,14 @@ class SpeechBubble:
         self.speech_bubble.set_billboard_point_eye()
 
 
+    def show(self):
+        self.speech_bubble.show()
+
+
+    def hide(self):
+        self.speech_bubble.hide()
+
+
     def set_text(self, text):
         self.speech_bubble.setText(text)
         new_height_offset = -self.speech_bubble.getBounds()[2] + self.speech_bubble.getBounds()[3]
