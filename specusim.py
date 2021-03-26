@@ -32,6 +32,7 @@ import random
 
 from multiprocessing import Pool
 
+
 # from src.weapons.sword import Sword
 
 
@@ -88,7 +89,7 @@ class MyApp(ShowBase):
         self.physics_debug = False  # Show wireframes for the physics objects.
         self.nlp_debug = True  # Stuff that makes debugging natural language processing faster
         self.debug_messages = True  # Some extraneous information
-        self.doppelganger_num = 4  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
+        self.doppelganger_num = 2  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         if self.debug_messages:
             print("Using Bullet Physics version ", get_bullet_version())
@@ -201,7 +202,8 @@ class MyApp(ShowBase):
                 break
             except OSError:
                 if len(models) == 0:
-                    self.notice_text_obj.text = "You do not seem to have any models installed. Place a model in the '" + model_dir + "' subfolder"
+                    self.notice_text_obj.text = "fYou do not seem to have any models installed. Place a model in the '{model_dir}' " \
+                                                "subfolder"
                     base.graphicsEngine.render_frame()
                     # Scan for models again
                     models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
@@ -238,11 +240,11 @@ class MyApp(ShowBase):
         self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
 
         self.nlp_manager = NLPManager(self.generator, self.nlp_debug)
-#        self.nlp_manager.new_speech_task(self.npc1, "'Ello, 'ello, 'ello!")
+        #        self.nlp_manager.new_speech_task(self.npc1, "'Ello, 'ello, 'ello!")
 
-#        thread.start_new_thread(nlp_manager.act, args=(self.generator, "You are speaking to a man.", "You say to him: \"Hello!\""),
+        #        thread.start_new_thread(nlp_manager.act, args=(self.generator, "You are speaking to a man.", "You say to him: \"Hello!\""),
         #        kwargs={
-#            "output": self.npc1.speech_field, "debug": self.nlp_debug})
+        #            "output": self.npc1.speech_field, "debug": self.nlp_debug})
 
         self.start_game()
 
@@ -309,15 +311,15 @@ class MyApp(ShowBase):
 
         self.inst1 = add_instructions(0.06, "[WASD]: Move")
         self.inst2 = add_instructions(0.12, "[QE]: Rotate")
-        self.inst2 = add_instructions(0.18, "[+-]: Change speed")
-        self.inst3 = add_instructions(0.24, "Middle mouse button: Rotate camera")
-        self.inst4 = add_instructions(0.30, "Right mouse button: Adjust zoom")
-        self.inst5 = add_instructions(0.36, "")
-        self.inst6 = add_instructions(0.42, "")
-        # inst7 is reserved for NLP stuff
+        self.inst3 = add_instructions(0.18, "[+-]: Change speed")
+        self.inst4 = add_instructions(0.24, "Middle mouse button: Rotate camera")
+        self.inst5 = add_instructions(0.30, "Right mouse button: Adjust zoom")
+        self.inst6 = add_instructions(0.36, "")
+        self.inst7 = add_instructions(0.42, "")
+        # inst8 is reserved for NLP stuff
 
         self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=self.physics_debug,
-                               debug_text_node=self.inst6)
+                               debug_text_node=self.inst7)
 
         self.doppelgangers = []
         for i in range(self.doppelganger_num):
@@ -325,23 +327,23 @@ class MyApp(ShowBase):
                 if i == (self.doppelganger_num - 1) / 2 and j == (self.doppelganger_num - 1) / 2:
                     continue
                 self.doppelgangers.append(
-                    Humanoid(self.world, self.terrain_bullet_node, i*2 - (self.doppelganger_num - 1),
-                             j*2 - (self.doppelganger_num - 1)))
+                    Humanoid(self.world, self.terrain_bullet_node, i * 2 - (self.doppelganger_num - 1),
+                             j * 2 - (self.doppelganger_num - 1)))
 
         if self.gui:
             wx = base.win.get_x_size()
             wy = base.win.get_y_size()
             bar_start = -0.8
-            gui_bar = DirectFrame(frameColor=(0, 0, 0, 1),
+            gui_bar = DirectFrame(frameColor=(0, 0, 0, 0.8),
                                   frameSize=(-wx / 2, wx / 2, -1, bar_start),
                                   pos=(0, -1, 0))
             # Each width unit seems to be a 2/scale'th of a screen on a rectangular aspect ratio
             scale = 0.05
             self.text_field = DirectEntry(text="", scale=scale, command=self.player_say, parent=gui_bar,
-                                          text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 1), width=30,
+                                          text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=30,
                                           pos=(-15 * scale, 0, (bar_start - 1) / 2),
                                           initialText="Press Enter to start talking", numLines=2, focus=0,
-                                          focusInCommand=self.focus_in_text_field)
+                                          focusInCommand=self.focus_in_text_field_initial)
 
         self.camera.reparent_to(self.player.lower_torso)
 
@@ -363,7 +365,8 @@ class MyApp(ShowBase):
         inputState.watch_with_modifiers('turnright', 'e')
         inputState.watch_with_modifiers('speedup', '+')
         inputState.watch_with_modifiers('speeddown', '-')
-        self.accept("enter", self.focus_in_text_field_initial)
+        # For whatever reason, we seem to need a delay, in some circumstances at least
+        taskMgr.doMethodLater(globalClock.get_dt(), self.accept, 'Set enter', extraArgs=["enter", self.focus_in_text_field_initial])
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
@@ -392,6 +395,7 @@ class MyApp(ShowBase):
 
     def focus_out_text_field(self):
         self.text_field['focus'] = False
+        # If we don't delay, it will just focus back in again right then and there.
         taskMgr.doMethodLater(globalClock.get_dt(), self.accept, 'Set enter', extraArgs=["enter", self.focus_in_text_field])
 
 
@@ -444,7 +448,7 @@ class MyApp(ShowBase):
             for doppelganger in self.doppelgangers:
                 doppelganger.stand_still()
 
-        self.inst5.text = "Speed " + str(round(sqrt(
+        self.inst6.text = "Speed " + str(round(sqrt(
             pow(self.player.lower_torso.node().get_linear_velocity()[0], 2) + pow(
                 self.player.lower_torso.node().get_linear_velocity()[1], 2)), 2)) + " / " + str(
             round(self.player.walk_speed, 1)) + " m/s"
@@ -453,6 +457,7 @@ class MyApp(ShowBase):
             self.npc1.stand_still()
 
         #        self.player.setRightHandHpr(self.heading, self.pitch, self.roll)
+        self.nlp_manager.update()
 
         return task.cont
 

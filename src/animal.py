@@ -8,6 +8,7 @@ from math import cos, sin, radians, degrees, acos, copysign
 from panda3d.core import Vec2, Vec3
 
 from src.utils import get_ground_z_pos
+from datetime import datetime
 
 
 class Animal:
@@ -38,6 +39,8 @@ class Animal:
         self.debug_text_node = debug_text_node
         self.slope_linear_damping = slope_linear_damping
         self.speech_field = None
+        # We store this here, in case somebody wants to switch speech bubble styles
+        self.can_talk_time = datetime(1, 1, 1, 1, 1, 1, 342380)
 
 
     def get_body(self):

@@ -179,7 +179,6 @@ def sample_sequence(
         print()
         print("And the same formatted;")
         print(format_result(generated.text))
-    output.finish()
     return generated
 
 

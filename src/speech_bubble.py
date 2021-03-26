@@ -1,5 +1,5 @@
 from direct.gui.DirectGui import DirectLabel
-from direct.task import Task
+
 
 class SpeechBubble:
     """A speech bubble.
@@ -25,13 +25,6 @@ class SpeechBubble:
 
     def set_text(self, text):
         self.speech_bubble.setText(text)
-        new_height_offset = -self.speech_bubble.getBounds()[2]+self.speech_bubble.getBounds()[3]
-        self.speech_bubble.set_z(self.height+new_height_offset)
-
-    def finish(self):
-        self.speech_bubble.updateFrameStyle()
-#        taskMgr.add(self.finish2, 'finish_talking')
-
-    def finish2(self, task):
-        self.speech_bubble.updateFrameStyle()
-        return Task.done
+        new_height_offset = -self.speech_bubble.getBounds()[2] + self.speech_bubble.getBounds()[3]
+        self.speech_bubble.set_z(self.height + new_height_offset)
+        self.speech_bubble.updateFrameStyle()  # In case bubble dimensions change

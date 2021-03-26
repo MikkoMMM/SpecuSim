@@ -4,8 +4,9 @@ from src.language_processing.getconfig import settings
 from os import _exit
 import traceback
 from queue import PriorityQueue
-from direct.stdpy import thread
+from direct.stdpy import thread, threading
 from time import sleep
+from datetime import datetime, timedelta
 
 
 def act(generator, context, action, output=None, debug=True):
@@ -81,8 +82,10 @@ class SpeechTask:
 class NLPManager:
     def __init__(self, generator, debug=False):
         self.queue = PriorityQueue()
+        self.wait_queue = []
         self.debug = debug
         self.generator = generator
+        self.lock = threading.Lock()  # Just in case
         for _ in range(4):
             thread.start_new_thread(self.thread_loop, args=())
 
@@ -90,12 +93,35 @@ class NLPManager:
     def thread_loop(self):
         while True:
             if not self.queue.empty():
-                speech_task = self.queue.get()
+                with self.lock:
+                    speech_task = self.queue.get()
+                talking_started = datetime.now()
+
                 act(self.generator, "You are speaking to a person.", "You say to him: " + speech_task.text,
                     output=speech_task.speaker.speech_field, debug=self.debug)
+
+                with self.lock:
+                    speech_task.speaker.can_talk_time = talking_started + timedelta(seconds=10)
 
             sleep(0.05)
 
 
     def new_speech_task(self, speaker, text):
-        self.queue.put(SpeechTask(0, speaker, text))
+        with self.lock:
+            task = SpeechTask(0, speaker, text)
+            if datetime.now() >= speaker.can_talk_time:
+                self.queue.put(task)
+                speaker.can_talk_time = datetime(9999, 12, 1, 1, 1, 1, 342380)
+            else:
+                self.wait_queue.append(task)
+
+
+    def update(self):
+        """Bookkeeping that needs to be done every frame
+        """
+        with self.lock:
+            for i in range(len(self.wait_queue)):
+                if datetime.now() >= self.wait_queue[i].speaker.can_talk_time:
+                    speech_task = self.wait_queue.pop(i)
+                    speech_task.priority = speech_task.speaker.can_talk_time
+                    self.queue.put(speech_task)
