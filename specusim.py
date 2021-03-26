@@ -339,9 +339,9 @@ class MyApp(ShowBase):
             scale = 0.05
             self.text_field = DirectEntry(text="", scale=scale, command=self.player_say, parent=gui_bar,
                                           text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 1), width=30,
-                                          pos=(-15 * scale, 0, (bar_start - 1) / 2), suppressKeys=1,
+                                          pos=(-15 * scale, 0, (bar_start - 1) / 2),
                                           initialText="Press Enter to start talking", numLines=2, focus=0,
-                                          focusOutCommand=self.focus_out_text_field)
+                                          focusInCommand=self.focus_in_text_field)
 
         self.camera.reparent_to(self.player.lower_torso)
 
@@ -363,17 +363,12 @@ class MyApp(ShowBase):
         inputState.watch_with_modifiers('turnright', 'e')
         inputState.watch_with_modifiers('speedup', '+')
         inputState.watch_with_modifiers('speeddown', '-')
-        self.accept_once("enter", self.focus_in_text_field_initial)
+        self.accept("enter", self.focus_in_text_field_initial)
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
         if self.debug_messages:
             render.analyze()
-
-
-#    def act(self, num):
-#        nlp_manager.act(self.generator, "You are speaking to a man.", "You say to him: \"Hello!\"", output=self.doppelgangers[
-#            num].speech_field, debug=self.nlp_debug)
 
 
     def focus_in_text_field_initial(self):
@@ -392,11 +387,12 @@ class MyApp(ShowBase):
 
     def focus_in_text_field(self):
         self.text_field['focus'] = True
+        self.ignore("enter")
 
 
     def focus_out_text_field(self):
         self.text_field['focus'] = False
-        self.accept("enter", self.focus_in_text_field)
+        taskMgr.doMethodLater(globalClock.get_dt(), self.accept, 'Set enter', extraArgs=["enter", self.focus_in_text_field])
 
 
     # Everything that needs to be done every frame goes here.
@@ -407,16 +403,37 @@ class MyApp(ShowBase):
         self.world.do_physics(dt, 5, 1.0 / 80.0)
 
         # Define controls
-        dx = dy = 1
-        if inputState.is_set('forward'):
-            dy -= 1
-        if inputState.is_set('backward'):
-            dy += 1
-        if inputState.is_set('left'):
-            dx -= 1
-        if inputState.is_set('right'):
-            dx += 1
-        direction = self.dxdy_to_angle[dy][dx]
+        if self.text_field['focus']:
+            direction = -999
+        else:
+            dx = dy = 1
+            if inputState.is_set('forward'):
+                dy -= 1
+            if inputState.is_set('backward'):
+                dy += 1
+            if inputState.is_set('left'):
+                dx -= 1
+            if inputState.is_set('right'):
+                dx += 1
+            direction = self.dxdy_to_angle[dy][dx]
+
+            if inputState.is_set('turnleft'):
+                self.player.turn_left()
+                for doppelganger in self.doppelgangers:
+                    doppelganger.turn_left()
+            if inputState.is_set('turnright'):
+                self.player.turn_right()
+                for doppelganger in self.doppelgangers:
+                    doppelganger.turn_right()
+
+            if inputState.is_set('speedup'):
+                self.player.speed_up()
+                for doppelganger in self.doppelgangers:
+                    doppelganger.speed_up()
+            if inputState.is_set('speeddown'):
+                self.player.slow_down()
+                for doppelganger in self.doppelgangers:
+                    doppelganger.slow_down()
 
         if direction > -900:
             self.player.walk_in_dir(direction)
@@ -426,24 +443,6 @@ class MyApp(ShowBase):
             self.player.stand_still()
             for doppelganger in self.doppelgangers:
                 doppelganger.stand_still()
-
-        if inputState.is_set('turnleft'):
-            self.player.turn_left()
-            for doppelganger in self.doppelgangers:
-                doppelganger.turn_left()
-        if inputState.is_set('turnright'):
-            self.player.turn_right()
-            for doppelganger in self.doppelgangers:
-                doppelganger.turn_right()
-
-        if inputState.is_set('speedup'):
-            self.player.speed_up()
-            for doppelganger in self.doppelgangers:
-                doppelganger.speed_up()
-        if inputState.is_set('speeddown'):
-            self.player.slow_down()
-            for doppelganger in self.doppelgangers:
-                doppelganger.slow_down()
 
         self.inst5.text = "Speed " + str(round(sqrt(
             pow(self.player.lower_torso.node().get_linear_velocity()[0], 2) + pow(
