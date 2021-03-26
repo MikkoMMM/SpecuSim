@@ -86,6 +86,8 @@ class NLPManager:
         self.debug = debug
         self.generator = generator
         self.lock = threading.Lock()  # Just in case
+        self.min_time = datetime(1, 1, 1, 1, 1, 1, 342380)
+        self.max_time = datetime(9999, 12, 1, 1, 1, 1, 342380)
         for _ in range(4):
             thread.start_new_thread(self.thread_loop, args=())
 
@@ -101,17 +103,17 @@ class NLPManager:
                     output=speech_task.speaker.speech_field, debug=self.debug)
 
                 with self.lock:
-                    speech_task.speaker.can_talk_time = talking_started + timedelta(seconds=10)
+                    speech_task.speaker.can_talk_time = talking_started + timedelta(seconds=5)
 
             sleep(0.05)
 
 
     def new_speech_task(self, speaker, text):
         with self.lock:
-            task = SpeechTask(0, speaker, text)
+            task = SpeechTask(self.min_time, speaker, text)
             if datetime.now() >= speaker.can_talk_time:
                 self.queue.put(task)
-                speaker.can_talk_time = datetime(9999, 12, 1, 1, 1, 1, 342380)
+                speaker.can_talk_time = self.max_time
             else:
                 self.wait_queue.append(task)
 
@@ -120,8 +122,12 @@ class NLPManager:
         """Bookkeeping that needs to be done every frame
         """
         with self.lock:
-            for i in range(len(self.wait_queue)):
+            i = 0
+            while i < len(self.wait_queue):
                 if datetime.now() >= self.wait_queue[i].speaker.can_talk_time:
                     speech_task = self.wait_queue.pop(i)
                     speech_task.priority = speech_task.speaker.can_talk_time
                     self.queue.put(speech_task)
+                    speech_task.speaker.can_talk_time = self.max_time
+                else:
+                    i += 1
