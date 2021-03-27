@@ -9,6 +9,7 @@ from panda3d.core import Vec2, Vec3
 
 from src.utils import get_ground_z_pos
 from datetime import datetime
+from src.language_processing.nlp_manager import NLPManager
 
 
 class Animal:
@@ -41,7 +42,8 @@ class Animal:
         self.speech_field = None
         # We store this here, in case somebody wants to switch speech bubble styles
         self.can_talk_time = datetime(1, 1, 1, 1, 1, 1, 342380)
-        self.talking_speed = 5+0.1  # How long (in characters per second) the speech bubble should stay visible
+        self.can_talk_more = True
+        self.talking_speed = 6  # How long (in characters per second) the speech bubble should stay visible
 
 
     def get_body(self):
@@ -51,6 +53,13 @@ class Animal:
             NodePath: the main body node
         """
         return self.body
+
+
+    def hide_speech_field(self):
+        with NLPManager.lock:
+            if self.can_talk_more:
+                print(str(datetime.now()))
+                self.speech_field.hide()
 
 
     def set_speech_field(self, speech_field):
@@ -69,10 +78,9 @@ class Animal:
             text (str): The text to say
         """
         if self.speech_field:
-            self.speech_field.show()
             self.speech_field.set_text(text)
             on_screen_time = max(30.0/self.talking_speed, len(text) / self.talking_speed)
-            taskMgr.doMethodLater(max(0.1, on_screen_time-0.1), self.speech_field.hide, 'HSB', extraArgs=[])
+            taskMgr.doMethodLater(on_screen_time, self.hide_speech_field, 'HSB', extraArgs=[])
 
 
     def get_ground_z_velocity(self, current_z_pos=None):

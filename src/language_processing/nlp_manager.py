@@ -83,15 +83,15 @@ class SpeechTask:
 
 
 class NLPManager:
+    lock = threading.Lock()  # Just in case
+
+
     def __init__(self, generator, debug=False):
         self.queue = PriorityQueue()
         self.wait_queue = []
         self.debug = debug
         self.generator = generator
-        self.talking_speed = 5+0.1  # How long (in characters per second) the speech bubble should stay visible
-        self.lock = threading.Lock()  # Just in case
-        self.min_time = datetime(1, 1, 1, 1, 1, 1, 342380)
-        self.max_time = datetime(9999, 12, 1, 1, 1, 1, 342380)
+        self.talking_speed = 6  # How long (in characters per second) the speech bubble should stay visible
         for _ in range(4):
             thread.start_new_thread(self.thread_loop, args=())
 
@@ -100,27 +100,27 @@ class NLPManager:
         while True:
             speech_task = self.queue.get(block=True)
             speech_task.speaker.speech_field.show()
-            talking_started = datetime.now()
+            # talking_started = datetime.now()
             context = "You are speaking to a person."
             action = f"You say: \"{speech_task.text.strip()}\"\nThey answer: \""
 
             result=act(self.generator, context, action,
                 output=speech_task.speaker.speech_field, debug=self.debug)
             on_screen_time = max(30/self.talking_speed, len(result)/self.talking_speed)
-            taskMgr.doMethodLater(max(0.1, on_screen_time-0.1), speech_task.speaker.speech_field.hide, 'HSB', extraArgs=[])
+            taskMgr.doMethodLater(on_screen_time, speech_task.speaker.speech_field.hide, 'HSB', extraArgs=[])
 
             with self.lock:
-                speech_task.speaker.can_talk_time = talking_started + timedelta(seconds=on_screen_time)
+                speech_task.speaker.can_talk_more = True
 
 
     def new_speech_task(self, speaker, text):
         if not text:  # Nothing to react to
             return
         with self.lock:
-            task = SpeechTask(self.min_time, speaker, text)
-            if datetime.now() >= speaker.can_talk_time:
+            task = SpeechTask(datetime.now(), speaker, text)
+            if speaker.can_talk_more:
                 self.queue.put(task)
-                speaker.can_talk_time = self.max_time
+                speaker.can_talk_more = False
             else:
                 self.wait_queue.append(task)
 
@@ -131,10 +131,10 @@ class NLPManager:
         i = 0
         with self.lock:
             while i < len(self.wait_queue):
-                if datetime.now() >= self.wait_queue[i].speaker.can_talk_time:
+                if self.wait_queue[i].speaker.can_talk_more:
                     speech_task = self.wait_queue.pop(i)
-                    speech_task.priority = speech_task.speaker.can_talk_time
+                    speech_task.priority = datetime.now()
                     self.queue.put(speech_task)
-                    speech_task.speaker.can_talk_time = self.max_time
+                    speech_task.speaker.can_talk_more = False
                 else:
                     i += 1

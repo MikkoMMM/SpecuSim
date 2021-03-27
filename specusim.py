@@ -88,7 +88,7 @@ class MyApp(ShowBase):
         self.physics_debug = False  # Show wireframes for the physics objects.
         self.nlp_debug = True  # Stuff that makes debugging natural language processing faster
         self.debug_messages = True  # Some extraneous information
-        self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
+        self.doppelganger_num = 2  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         if self.debug_messages:
             print("Using Bullet Physics version ", get_bullet_version())
