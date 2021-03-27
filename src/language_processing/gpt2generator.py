@@ -41,8 +41,6 @@ def hackyWhiteSpaceCutter(prompt):
 
 def memory_merge(prompt, context, tokenizer, maxHistory=1024):
     assert (prompt + context)
-    # print(prompt+context)
-    # logger.debug('RAW TEXT INPUT IS:`%r`', context)
     # the tokenizer is kind of broken for the first input, especially if it includes white space. Same with any trailing white space on the last output.
     # I'm going with the add prefix option but I'm not sure it's quite right
     prompt_tokens = tokenizer.encode(prompt, add_special_tokens=False, add_prefix_space=True)
@@ -193,27 +191,21 @@ class GPT2Generator:
         self.max_history_tokens = 1024 - generate_num
         self.stop_token = "<|endoftext|>"
 
-        if isinstance(model_path, str):
-            self.checkpoint_path = model_path
-            logger.warning(
-                f"Using DEBUG MODE! This will load one of the generic (non-finetuned) GPT2 models. "
-                f"Selected: {model_path}")
-        elif isinstance(model_path, Path):
+        if isinstance(model_path, Path):
             self.checkpoint_path = model_path
             if not self.checkpoint_path.exists():
                 raise FileNotFoundError(
                     "Could not find {} Make sure to download a pytorch model and put it in the models directory!".format(
                         str(self.checkpoint_path)))
         else:
-            raise ValueError(f"model_path must be either str or Path, got {type(model_path)}")
+            raise ValueError(f"model_path must be a Path, got {type(model_path)}")
 
         self.device = torch.device("cuda" if self.dtype == torch.float16 else "cpu")
         logger.info(
             "Using device={}, checkpoint={}, dtype={}".format(self.device, str(self.checkpoint_path), self.dtype))
 
         # Load tokenizer and model
-        model_class, tokenizer_class = MODEL_CLASSES["gpt2-experimental"] if settings.getboolean(
-            "gpt2_experimental") else MODEL_CLASSES["gpt2"]
+        model_class, tokenizer_class = MODEL_CLASSES["gpt2"]
         self.tokenizer = tokenizer_class.from_pretrained(str(self.checkpoint_path))
         self.model = model_class.from_pretrained(str(self.checkpoint_path))
         self.model.to(self.dtype).to(self.device)
@@ -321,10 +313,6 @@ class GPT2Generator:
 
     def generate(self, context, prompt='', temperature=None, top_p=None, top_k=None, repetition_penalty=None, depth=0, output=None,
                  debug=False):
-        assert (top_k is not None)
-        assert (temperature is not None)
-        assert (top_p)
-        assert (repetition_penalty)
         assert (prompt + context)
 
         text = self.generate_raw(

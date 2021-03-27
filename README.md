@@ -11,7 +11,8 @@ Nothing. All support is currently on halt. But you should have a mouse instead.
 
 
 ## Software
-* Python 3.6 or later.
+* Python 3.6 or later
+* CUDA enabled graphics driver
 
 
 # Installation

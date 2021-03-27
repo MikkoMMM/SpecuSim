@@ -27,6 +27,8 @@ class Animal:
         debug_text_node (OnscreenText, optional): A place in the GUI to write debug information to
     """
 
+    talking_speed = 6  # How long (in characters per second) the speech bubble should stay visible
+
 
     def __init__(self, world, terrain_bullet_node, body_node, feet, slope_difficult, slope_max,
                  slope_linear_damping=0.6, negligible_speed=0.2, debug_text_node=None):
@@ -43,7 +45,6 @@ class Animal:
         # We store this here, in case somebody wants to switch speech bubble styles
         self.can_talk_time = datetime(1, 1, 1, 1, 1, 1, 342380)
         self.can_talk_more = True
-        self.talking_speed = 6  # How long (in characters per second) the speech bubble should stay visible
 
 
     def get_body(self):

@@ -10,10 +10,6 @@ from datetime import datetime, timedelta
 
 
 def act(generator, context, action, output=None, debug=True):
-    if debug:
-        print("Context: " + context)
-        print("Action: " + action)
-        print()
     temperature = settings.getfloat('temp')
     top_p = settings.getfloat('top-p')
     top_k = settings.getint('top-keks')

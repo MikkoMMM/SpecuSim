@@ -36,7 +36,7 @@ def format_result(text):
     return text.strip()
 
 
-def _get_prefix(first_string ,second_string):
+def _get_prefix(first_string, second_string):
     if not first_string or not second_string:
         return ""
     if first_string == second_string:
@@ -64,10 +64,10 @@ def get_similarity(first_string, second_string, scaling=0.1):
     if maximum_matching_distance < 0:
         maximum_matching_distance = 0
 
-    for i in range (first_string_length):
+    for i in range(first_string_length):
         start = max(0, i - maximum_matching_distance)
         end = min(i + maximum_matching_distance + 1, second_string_length)
-        for x in range (start, end):
+        for x in range(start, end):
             if b_matches[x]:
                 continue
             if first_string[i] != second_string[x]:
@@ -91,8 +91,8 @@ def get_similarity(first_string, second_string, scaling=0.1):
         k += 1
 
     jaro_distance = ((matches / first_string_length) +
-                    (matches / second_string_length) +
-                    ((matches - transpositions / 2) / matches)) / 3.0
+                     (matches / second_string_length) +
+                     ((matches - transpositions / 2) / matches)) / 3.0
     prefix = min(len(_get_prefix(first_string, second_string)), 4)
 
     # Round to 2 places of percision to match pyjarowinkler formatting
@@ -103,10 +103,10 @@ def cut_trailing_action(text):
     lines = text.split("\n")
     last_line = lines[-1]
     if (
-        "you ask" in last_line
-        or "You ask" in last_line
-        or "you say" in last_line
-        or "You say" in last_line
+            "you ask" in last_line
+            or "You ask" in last_line
+            or "you say" in last_line
+            or "You say" in last_line
     ) and len(lines) > 1:
         text = "\n".join(lines[0:-1])
     return text
