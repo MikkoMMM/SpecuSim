@@ -87,12 +87,9 @@ class MyApp(ShowBase):
         self.performance_analysis = True  # Enable pstat support and show frame rate
         self.physics_debug = False  # Show wireframes for the physics objects.
         self.nlp_debug = True  # Stuff that makes debugging natural language processing faster
-        self.debug_messages = True  # Some extraneous information
         self.doppelganger_num = 2  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
-        if self.debug_messages:
-            print("Using Bullet Physics version ", get_bullet_version())
-            print()
+        logger.debug(f"Using Bullet Physics version {get_bullet_version()}")
 
         if self.performance_analysis:
             load_prc_file_data("", "task-timer-verbose 1")
@@ -369,8 +366,7 @@ class MyApp(ShowBase):
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
-        if self.debug_messages:
-            render.analyze()
+#        render.analyze()
 
 
     def focus_in_text_field_initial(self):

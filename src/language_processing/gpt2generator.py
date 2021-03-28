@@ -109,8 +109,7 @@ def sample_sequence(
         output=None,
 ):
     """Actually generate the tokens"""
-    logger.debug(
-        'temp: {}    top_k: {}    top_p: {}    rep-pen: {}'.format(temperature, top_k, top_p, repetition_penalty))
+    logger.debug(f'temp: {temperature}    top_k: {top_k}    top_p: {top_p}    rep-pen: {repetition_penalty}')
     context_tokens = context
     context = torch.tensor(context, dtype=torch.long, device=device)
     generated = context
@@ -205,37 +204,6 @@ class GPT2Generator:
         self.model.eval()
 
 
-    def sample_sequence(
-            self, context_tokens=None, top_k=None, top_p=None, repetition_penalty=None, generate_num=None,
-            temperature=None, stop_tokens=None, output=None
-    ):
-        assert (top_k is not None)
-        assert (temperature is not None)
-        assert top_p
-        assert repetition_penalty
-        generate_num = generate_num if (generate_num is not None) else self.generate_num
-        temperature = temperature if (temperature is not None) else self.temp
-        top_k = top_k if top_k is not None else self.top_k
-        top_p = top_p if top_p is not None else self.top_p
-        repetition_penalty = repetition_penalty if repetition_penalty is not None else self.repetition_penalty
-        out = sample_sequence(
-            model=self.model,
-            context=context_tokens,
-            length=generate_num,
-            # context=self.context,
-            temperature=temperature,
-            top_k=top_k,
-            top_p=top_p,
-            repetition_penalty=repetition_penalty,
-            device=self.device,
-            stop_tokens=stop_tokens,
-            tokenizer=self.tokenizer,
-            # batch_size=self.batch_size,
-            output=output,
-        )
-        return out
-
-
     def result_replace(self, result, allow_action=False):
         # logger.debug("BEFORE RESULT_REPLACE: `%s`", repr(result))
 
@@ -280,15 +248,25 @@ class GPT2Generator:
         )
         generated = 0
         text = ""
+        generate_num = generate_num if (generate_num is not None) else self.generate_num
+        temperature = temperature if (temperature is not None) else self.temp
+        top_k = top_k if top_k is not None else self.top_k
+        top_p = top_p if top_p is not None else self.top_p
+        repetition_penalty = repetition_penalty if repetition_penalty is not None else self.repetition_penalty
+
         for _ in range(self.samples // self.batch_size):
-            out = self.sample_sequence(
-                context_tokens,
-                generate_num=generate_num,
+            out = sample_sequence(
+                model=self.model,
+                context=context_tokens,
+                length=generate_num,
                 temperature=temperature,
                 top_k=top_k,
                 top_p=top_p,
                 repetition_penalty=repetition_penalty,
+                device=self.device,
                 stop_tokens=stop_tokens,
+                tokenizer=self.tokenizer,
+                # batch_size=self.batch_size,
                 output=output,
             )
             text += out.text
