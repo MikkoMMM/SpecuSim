@@ -1,6 +1,6 @@
 # Credit: AI Dungeon 2: Clover Edition
 
-from src.language_processing.getconfig import settings
+from src.getconfig import settings
 from os import _exit
 import traceback
 from queue import PriorityQueue
@@ -25,7 +25,7 @@ def act(generator, context, action, output=None, debug=True):
             temperature=settings.getfloat('temp'),
             top_p=settings.getfloat('top-p'),
             top_k=settings.getint('top-keks'),
-            repetition_penalty=settings.getfloat('rep-pen'), output=output, debug=debug)
+            repetition_penalty=settings.getfloat('rep-pen'), output=output)
 
     except Exception as e:
         print()

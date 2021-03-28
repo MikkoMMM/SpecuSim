@@ -66,4 +66,4 @@
 24.3.2021 Some threaded loading stuff. Refactoring. Thinking about more ways to debug. Learning about asyncs, threading and multiprocessing.
 25.3.2021 Some work on a system to thread GPT-2 calls.
 26.3.2021 More work on an "NLP manager" (natural language processing manager). Removing some unused code, and minor tweaks.
-27.3.2021 Getting and providing help with checking how GPU-support can be enabled in Pytorch on an AMD GPU.
+27.3.2021 Getting and providing help with checking how GPU-support can be enabled in Pytorch on an AMD GPU. Comparing the code base of Clover Edition to others of its ilk. Attempting to "properly" fix a long-standing bug in Clover Edition, and by extention in SpecuSim's NLP.

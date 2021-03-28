@@ -25,11 +25,11 @@ from panda3d.core import Vec3, load_prc_file_data, PStatClient, CullBinManager
 
 from src.camera import CameraControl
 from src.humanoid import Humanoid
-from src.language_processing.getconfig import settings
 from src.language_processing.gpt2generator import GPT2Generator
 from src.language_processing.nlp_manager import NLPManager
 from src.menu import Menu
 from src.utils import create_or_load_walk_map, create_shader_terrain_mesh
+from src.getconfig import settings, logger
 
 
 # from src.weapons.sword import Sword
@@ -380,6 +380,7 @@ class MyApp(ShowBase):
 
     def player_say(self, text):
         self.text_field.enterText('')
+        logger.debug(f"The player said: {text}")
         self.player.say(text)
         if self.nlp:
             self.nlp_manager.new_speech_task(self.npc1, text)

@@ -6,8 +6,7 @@ import torch
 import torch.nn.functional as F
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
-from .getconfig import settings, logger
-from .gpt2 import GPT2LMHeadModelExperimental
+from src.getconfig import settings, logger
 from .utils import cut_trailing_sentence, format_result
 
 if not settings.getboolean('force-cpu') and not torch.cuda.is_available():
@@ -21,7 +20,7 @@ logger.info('Cuda Available: {}    Force CPU: {}    Precision: {}'.format(torch.
 # warnings.filterwarnings("ignore")
 MODEL_CLASSES = {
     "gpt2": (GPT2LMHeadModel, GPT2Tokenizer),
-    "gpt2-experimental": (GPT2LMHeadModelExperimental, GPT2Tokenizer),
+    # "gpt2-experimental": (GPT2LMHeadModelExperimental, GPT2Tokenizer),
 }
 
 
@@ -40,20 +39,24 @@ def hackyWhiteSpaceCutter(prompt):
 
 
 def memory_merge(prompt, context, tokenizer, maxHistory=1024):
-    assert (prompt + context)
-    # the tokenizer is kind of broken for the first input, especially if it includes white space. Same with any trailing white space on the last output.
-    # I'm going with the add prefix option but I'm not sure it's quite right
+    assert (len(prompt) + len(context))
+    # the tokenizer is kind of broken for the first input, especially if it includes white space.
+    # Same with any trailing white space on the last output. I'm going with the add prefix option but I'm not sure it's quite right
     prompt_tokens = tokenizer.encode(prompt, add_special_tokens=False, add_prefix_space=True)
-    context_tokens = hackyEncode(tokenizer, hackyWhiteSpaceCutter(prompt) + context)
-    context_tokens = context_tokens[-(maxHistory - len(prompt_tokens)):]
-    # logger.debug('DECODED CONTEXT TOKENS: `%r`', tokenizer.convert_ids_to_tokens(context_tokens))
-    prompt_tokens.extend(context_tokens)
-    context_tokens = prompt_tokens
-    # logger.debug('DECODED OUTPUT IS: `%r`', tokenizer.decode(context_tokens, clean_up_tokenization_spaces=False))
-    # this is a hack and it should be up to the sampler to deal with max size
-    if len(context_tokens) > maxHistory:
-        logger.error("CONTEXT IS TOO LONG ERROR")
-        context_tokens = context_tokens[-maxHistory:]
+    if len(prompt_tokens) >= maxHistory:
+        logger.debug("Clamping the amount of prompt tokens.")
+        context_tokens = prompt_tokens[-maxHistory:]
+    else:
+        context_tokens = hackyEncode(tokenizer, hackyWhiteSpaceCutter(prompt) + context)
+        context_tokens = context_tokens[-(maxHistory - len(prompt_tokens)):]
+        # logger.debug('DECODED CONTEXT TOKENS: `%r`', tokenizer.convert_ids_to_tokens(context_tokens))
+        prompt_tokens.extend(context_tokens)
+        context_tokens = prompt_tokens
+        # logger.debug('DECODED OUTPUT IS: `%r`', tokenizer.decode(context_tokens, clean_up_tokenization_spaces=False))
+        # this is a hack and it should be up to the sampler to deal with max size
+        if len(context_tokens) > maxHistory:
+            logger.error("CONTEXT IS TOO LONG ERROR")
+            context_tokens = context_tokens[-maxHistory:]
     return context_tokens
 
 
@@ -104,28 +107,18 @@ def sample_sequence(
         stop_tokens=None,
         tokenizer=None,
         output=None,
-        debug=False
 ):
     """Actually generate the tokens"""
     logger.debug(
         'temp: {}    top_k: {}    top_p: {}    rep-pen: {}'.format(temperature, top_k, top_p, repetition_penalty))
     context_tokens = context
     context = torch.tensor(context, dtype=torch.long, device=device)
-    # context = context.repeat(num_samples, 1)
     generated = context
-    USE_PAST = True
     next_token = context
     pasts = None
-    clines = 0
     with torch.no_grad():
         for j in range(length):
-            # why would we ever not use past?
-            # is generated and next_token always same thing?
-            if not USE_PAST:
-                input_ids_next = generated
-                pasts = None
-            else:
-                input_ids_next = next_token
+            input_ids_next = next_token
 
             # Note: we could also use 'past' with GPT-2/Transfo-XL/XLNet/CTRL (cached hidden-states)
             logits, pasts = model(input_ids=input_ids_next, past=pasts)
@@ -214,12 +207,12 @@ class GPT2Generator:
 
     def sample_sequence(
             self, context_tokens=None, top_k=None, top_p=None, repetition_penalty=None, generate_num=None,
-            temperature=None, stop_tokens=None, output=None, debug=False
+            temperature=None, stop_tokens=None, output=None
     ):
         assert (top_k is not None)
         assert (temperature is not None)
-        assert (top_p)
-        assert (repetition_penalty)
+        assert top_p
+        assert repetition_penalty
         generate_num = generate_num if (generate_num is not None) else self.generate_num
         temperature = temperature if (temperature is not None) else self.temp
         top_k = top_k if top_k is not None else self.top_k
@@ -239,7 +232,6 @@ class GPT2Generator:
             tokenizer=self.tokenizer,
             # batch_size=self.batch_size,
             output=output,
-            debug=debug
         )
         return out
 
@@ -269,12 +261,13 @@ class GPT2Generator:
 
     def generate_raw(
             self, context, prompt='', generate_num=None, temperature=None, top_k=None, top_p=None,
-            repetition_penalty=None, stop_tokens=None, output=None, debug=False
+            repetition_penalty=None, stop_tokens=None, output=None
     ):
         assert (top_k is not None)
         assert (temperature is not None)
-        assert (top_p)
-        assert (repetition_penalty)
+        assert top_p
+        assert repetition_penalty
+        assert (len(prompt) + len(context))
 
         context_tokens = memory_merge(prompt, context, self.tokenizer, self.max_history_tokens)
 
@@ -283,7 +276,6 @@ class GPT2Generator:
             self.tokenizer.decode(
                 context_tokens,
                 clean_up_tokenization_spaces=True,
-                # skip_special_tokens=True,
             ),
         )
         generated = 0
@@ -298,7 +290,6 @@ class GPT2Generator:
                 repetition_penalty=repetition_penalty,
                 stop_tokens=stop_tokens,
                 output=output,
-                debug=debug
             )
             text += out.text
             generated += 1
@@ -311,13 +302,11 @@ class GPT2Generator:
         return text
 
 
-    def generate(self, context, prompt='', temperature=None, top_p=None, top_k=None, repetition_penalty=None, depth=0, output=None,
-                 debug=False):
-        assert (prompt + context)
+    def generate(self, context, prompt='', temperature=None, top_p=None, top_k=None, repetition_penalty=None, depth=0, output=None):
 
         text = self.generate_raw(
             context, prompt, temperature=temperature, top_k=top_k, top_p=top_p, repetition_penalty=repetition_penalty,
-            stop_tokens=self.tokenizer.encode(["<|endoftext|>", ">"]), output=output, debug=debug
+            stop_tokens=self.tokenizer.encode(["<|endoftext|>", ">"]), output=output
         )
 
         logger.debug("Generated result is: `%r`", repr(text))
@@ -341,7 +330,7 @@ class GPT2Generator:
                 logger.info("Model generated empty text trying again %r", depth)
                 return self.generate(
                     prompt, context, temperature=temperature, top_p=top_p, top_k=top_k,
-                    repetition_penalty=repetition_penalty, depth=depth + 1, output=output, debug=debug
+                    repetition_penalty=repetition_penalty, depth=depth + 1, output=output
                 )
             else:
                 logger.warn(
