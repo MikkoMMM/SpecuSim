@@ -11,21 +11,16 @@ from datetime import datetime, timedelta
 
 def act(generator, context, action, output=None, debug=True):
     temperature = settings.getfloat('temp')
-    top_p = settings.getfloat('top-p')
-    top_k = settings.getint('top-keks')
     repetition_penalty = settings.getfloat('rep-pen')
     try:
 
         if not context.strip() + action.strip():
             return None
-        assert (settings.getint('top-keks') is not None)
         return generator.generate(
             action,
             context,
-            temperature=settings.getfloat('temp'),
-            top_p=settings.getfloat('top-p'),
-            top_k=settings.getint('top-keks'),
-            repetition_penalty=settings.getfloat('rep-pen'), output=output)
+            temperature=temperature,
+            repetition_penalty=repetition_penalty, output=output)
 
     except Exception as e:
         print()
@@ -33,8 +28,6 @@ def act(generator, context, action, output=None, debug=True):
         print("Context: " + context)
         print("Action: " + action)
         print("Temperature: " + str(temperature))
-        print("top_p: " + str(top_p))
-        print("top_k: " + str(top_k))
         print("Repetition penalty: " + str(repetition_penalty))
         print()
         traceback.print_exc()

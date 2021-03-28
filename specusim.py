@@ -223,8 +223,6 @@ class MyApp(ShowBase):
             "model_path": model,
             "generate_num": settings.getint("generate-num"),
             "temperature": settings.getfloat("temp"),
-            "top_k": settings.getint("top-keks"),
-            "top_p": settings.getfloat("top-p"),
             "repetition_penalty": settings.getfloat("rep-pen")})
 
         while not hasattr(self, 'generator'):

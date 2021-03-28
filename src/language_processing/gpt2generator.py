@@ -101,7 +101,7 @@ def sample_sequence(
         context,
         temperature=1,
         top_k=0,
-        top_p=0.9,
+        top_p=0.8,
         repetition_penalty=1.0,
         device="cpu",
         stop_tokens=None,
@@ -124,17 +124,13 @@ def sample_sequence(
             logits = logits[-1, :].float()
 
             # Originally the order was Temperature, Repetition Penalty, then top-k/p
-            if settings.getboolean('top-p-first'):
-                logits = top_k_top_p_filtering(logits, top_k=top_k, top_p=top_p)
+            logits = top_k_top_p_filtering(logits, top_k=top_k, top_p=top_p)
 
             logits = logits / (temperature if temperature > 0 else 1.0)
 
             # repetition penalty from CTRL (https://arxiv.org/abs/1909.05858)
             for k in set(generated.tolist()):
                 logits[k] /= repetition_penalty
-
-            if not settings.getboolean('top-p-first'):
-                logits = top_k_top_p_filtering(logits, top_k=top_k, top_p=top_p)
 
             if temperature == 0:  # greedy sampling:
                 next_token = torch.argmax(logits, dim=-1).unsqueeze(-1)
@@ -148,6 +144,12 @@ def sample_sequence(
             generated.text = tokenizer.decode(
                 o, clean_up_tokenization_spaces=False, skip_special_tokens=True
             )
+
+            # Check whether stop characters were in there
+            last_token = tokenizer.decode(o[-1], clean_up_tokenization_spaces=False, skip_special_tokens=True)
+            if [ele for ele in ["\"", ".", "!", "?"] if (ele in last_token)]:
+                break
+
             if output is not None:
                 output.set_text(format_result(generated.text))
             if (
@@ -169,17 +171,15 @@ def sample_sequence(
 
 class GPT2Generator:
     def __init__(
-            self, generate_num=60, temperature=0.4, top_k=40, top_p=0.9, dtype=DTYPE,
-            model_path: Union[str, Path] = Path('models', 'pytorch-gpt2-xl-aid2-v5'), repetition_penalty=1,
+            self, generate_num=60, temperature=0.4, top_k=0, top_p=0.8, dtype=DTYPE,
+            model_path: Union[str, Path] = Path('models', 'pytorch-gpt2-xl-aid2-v5'), repetition_penalty=1.2,
     ):
         self.generate_num = generate_num
         self.temp = temperature
         self.top_k = top_k
         self.top_p = top_p
-        self.samples = 1
         self.dtype = dtype
         self.repetition_penalty = repetition_penalty
-        self.batch_size = 1
         self.max_history_tokens = 1024 - generate_num
         self.stop_token = "<|endoftext|>"
 
@@ -231,9 +231,7 @@ class GPT2Generator:
             self, context, prompt='', generate_num=None, temperature=None, top_k=None, top_p=None,
             repetition_penalty=None, stop_tokens=None, output=None
     ):
-        assert (top_k is not None)
         assert (temperature is not None)
-        assert top_p
         assert repetition_penalty
         assert (len(prompt) + len(context))
 
@@ -254,29 +252,27 @@ class GPT2Generator:
         top_p = top_p if top_p is not None else self.top_p
         repetition_penalty = repetition_penalty if repetition_penalty is not None else self.repetition_penalty
 
-        for _ in range(self.samples // self.batch_size):
-            out = sample_sequence(
-                model=self.model,
-                context=context_tokens,
-                length=generate_num,
-                temperature=temperature,
-                top_k=top_k,
-                top_p=top_p,
-                repetition_penalty=repetition_penalty,
-                device=self.device,
-                stop_tokens=stop_tokens,
-                tokenizer=self.tokenizer,
-                # batch_size=self.batch_size,
-                output=output,
-            )
-            text += out.text
-            generated += 1
-            # disabled clean up of spaces, see what effect this has TODO
-            if self.stop_token:
-                index = text.find(self.stop_token)
-                if index == -1:
-                    index = None
-                text = text[:index]
+        out = sample_sequence(
+            model=self.model,
+            context=context_tokens,
+            length=generate_num,
+            temperature=temperature,
+            top_k=top_k,
+            top_p=top_p,
+            repetition_penalty=repetition_penalty,
+            device=self.device,
+            stop_tokens=stop_tokens,
+            tokenizer=self.tokenizer,
+            output=output,
+        )
+        text += out.text
+        generated += 1
+        # disabled clean up of spaces, see what effect this has TODO
+        if self.stop_token:
+            index = text.find(self.stop_token)
+            if index == -1:
+                index = None
+            text = text[:index]
         return text
 
 
