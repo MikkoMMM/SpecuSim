@@ -24,20 +24,6 @@ MODEL_CLASSES = {
 }
 
 
-def getTokens(tokenizer):
-    tokenizer.encode()
-
-
-# the tokenizer does not preserve white space at the front of the string.
-# so we will append something else to the front of the string and then remove it after tokenization
-def hackyEncode(tokenizer, s):
-    return tokenizer.encode('====\n ' + s)[2:]
-
-
-def hackyWhiteSpaceCutter(prompt):
-    return re.search(r'\s*$', prompt).group(0)
-
-
 def memory_merge(prompt, context, tokenizer, maxHistory=1024):
     assert (len(prompt) + len(context))
     # the tokenizer is kind of broken for the first input, especially if it includes white space.
@@ -47,7 +33,7 @@ def memory_merge(prompt, context, tokenizer, maxHistory=1024):
         logger.debug("Clamping the amount of prompt tokens.")
         context_tokens = prompt_tokens[-maxHistory:]
     else:
-        context_tokens = hackyEncode(tokenizer, hackyWhiteSpaceCutter(prompt) + context)
+        context_tokens = tokenizer.encode(prompt + context)
         context_tokens = context_tokens[-(maxHistory - len(prompt_tokens)):]
         # logger.debug('DECODED CONTEXT TOKENS: `%r`', tokenizer.convert_ids_to_tokens(context_tokens))
         prompt_tokens.extend(context_tokens)
@@ -104,12 +90,14 @@ def sample_sequence(
         top_p=0.8,
         repetition_penalty=1.0,
         device="cpu",
+        stop_chars_included=(),
+        stop_chars_not_included=('\"'),
         stop_tokens=None,
         tokenizer=None,
         output=None,
 ):
     """Actually generate the tokens"""
-    logger.debug(f'temp: {temperature}    top_k: {top_k}    top_p: {top_p}    rep-pen: {repetition_penalty}')
+    logger.debug(f'temp: {temperature}    generate_num: {length}    rep-pen: {repetition_penalty}')
     context_tokens = context
     context = torch.tensor(context, dtype=torch.long, device=device)
     generated = context
@@ -147,11 +135,17 @@ def sample_sequence(
 
             # Check whether stop characters were in there
             last_token = tokenizer.decode(o[-1], clean_up_tokenization_spaces=False, skip_special_tokens=True)
-            if [ele for ele in ["\"", ".", "!", "?"] if (ele in last_token)]:
+
+            if [ele for ele in stop_chars_not_included if (ele in last_token)]:
                 break
+            formatted_text = format_result(result_replace(generated.text))
 
             if output is not None:
-                output.set_text(format_result(generated.text))
+                output.set_text(formatted_text)
+
+            if [ele for ele in stop_chars_included if (ele in last_token)]:
+                break
+
             if (
                     (stop_tokens is not None)
                     and (j > 4)
@@ -166,7 +160,28 @@ def sample_sequence(
                     j,
                 )
                 break
-    return generated
+    return formatted_text
+
+
+def result_replace(result):
+    # logger.debug("BEFORE RESULT_REPLACE: `%s`", repr(result))
+
+    if len(result) == 0:
+        return ""
+    first_letter_capitalized = result[0].isupper()
+    #        result = result.replace('."', '".')
+    result = result.replace("#", "")
+    result = result.replace("*", "")
+    # TODO look at this I think blank lines should be fine or blacklisted at generation time
+    result = result.replace("\n\n", "\n")
+
+    if not first_letter_capitalized:
+        result = result[0].lower() + result[1:]
+
+    # this is annoying since we can already see the AIs output
+    # logger.debug( "AFTER RESULT_REPLACE: `%r`. allow_action=%r", repr(result), allow_action)
+
+    return result
 
 
 class GPT2Generator:
@@ -181,7 +196,6 @@ class GPT2Generator:
         self.dtype = dtype
         self.repetition_penalty = repetition_penalty
         self.max_history_tokens = 1024 - generate_num
-        self.stop_token = "<|endoftext|>"
 
         if isinstance(model_path, Path):
             self.checkpoint_path = model_path
@@ -204,39 +218,19 @@ class GPT2Generator:
         self.model.eval()
 
 
-    def result_replace(self, result, allow_action=False):
-        # logger.debug("BEFORE RESULT_REPLACE: `%s`", repr(result))
-
-        result = cut_trailing_sentence(result, allow_action=allow_action)
-
-        if len(result) == 0:
-            return ""
-        first_letter_capitalized = result[0].isupper()
-        #        result = result.replace('."', '".')
-        result = result.replace("#", "")
-        result = result.replace("*", "")
-        # TODO look at this I think blank lines should be fine or blacklisted at generation time
-        result = result.replace("\n\n", "\n")
-
-        if not first_letter_capitalized:
-            result = result[0].lower() + result[1:]
-
-        # this is annoying since we can already see the AIs output
-        # logger.debug( "AFTER RESULT_REPLACE: `%r`. allow_action=%r", repr(result), allow_action)
-
-        return result
-
-
-    def generate_raw(
+    def generate(
             self, context, prompt='', generate_num=None, temperature=None, top_k=None, top_p=None,
-            repetition_penalty=None, stop_tokens=None, output=None
+            repetition_penalty=None, stop_tokens=None, depth=0, output=None
     ):
+        if stop_tokens is None:
+            stop_tokens = self.tokenizer.encode(["<|endoftext|>", ">"])
+
         assert (temperature is not None)
         assert repetition_penalty
         assert (len(prompt) + len(context))
 
         context_tokens = memory_merge(prompt, context, self.tokenizer, self.max_history_tokens)
-
+        '''
         logger.debug(
             "Text passing into model `%r`",
             self.tokenizer.decode(
@@ -244,15 +238,14 @@ class GPT2Generator:
                 clean_up_tokenization_spaces=True,
             ),
         )
-        generated = 0
-        text = ""
+        '''
         generate_num = generate_num if (generate_num is not None) else self.generate_num
         temperature = temperature if (temperature is not None) else self.temp
         top_k = top_k if top_k is not None else self.top_k
         top_p = top_p if top_p is not None else self.top_p
         repetition_penalty = repetition_penalty if repetition_penalty is not None else self.repetition_penalty
 
-        out = sample_sequence(
+        result = sample_sequence(
             model=self.model,
             context=context_tokens,
             length=generate_num,
@@ -265,40 +258,8 @@ class GPT2Generator:
             tokenizer=self.tokenizer,
             output=output,
         )
-        text += out.text
-        generated += 1
-        # disabled clean up of spaces, see what effect this has TODO
-        if self.stop_token:
-            index = text.find(self.stop_token)
-            if index == -1:
-                index = None
-            text = text[:index]
-        return text
+        logger.debug("Generated result is: `%r`", result)
 
-
-    def generate(self, context, prompt='', temperature=None, top_p=None, top_k=None, repetition_penalty=None, depth=0, output=None):
-
-        text = self.generate_raw(
-            context, prompt, temperature=temperature, top_k=top_k, top_p=top_p, repetition_penalty=repetition_penalty,
-            stop_tokens=self.tokenizer.encode(["<|endoftext|>", ">"]), output=output
-        )
-
-        logger.debug("Generated result is: `%r`", repr(text))
-
-        result = self.result_replace(text)
-
-        if (depth > 6) and len(result) == 0:
-            # Sometimes it keeps generating a story startng with an action (">"), if it's tried a few times and it keeps
-            # happening, lets let it keep action text which starts in ">"
-            # We could just blacklist that token and force it to generate something else. TODO
-            result = self.result_replace(text, allow_action=True)
-            logger.info(
-                "Model generated empty text after formatting `%r`. Trying to format less with allow_action=True. `%r`",
-                text,
-                result,
-            )
-
-            # same here as above
         if len(result) == 0:
             if depth < 20:
                 logger.info("Model generated empty text trying again %r", depth)

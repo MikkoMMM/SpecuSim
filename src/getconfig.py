@@ -29,7 +29,7 @@ These settings, their descriptions, and their defaults appear in the settings me
 setting_info = {
     "temp":             ["Higher values make the AI more random.", 0.4],
     "rep-pen":          ["Controls how repetitive the AI is allowed to be.", 1.2],
-    "force-cpu":        ["Whether to force CPU instead of GPU usage in language processing", False],
+    "force-cpu":        ["Whether to force CPU instead of GPU usage in language processing", 0],
     "generate-num":     ["Approximate number of words to generate.", 60],
     "log-level":        ["Development log level. <30 is for developers.", 30],
 }

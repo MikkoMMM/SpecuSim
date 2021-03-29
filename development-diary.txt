@@ -67,4 +67,4 @@
 25.3.2021 Some work on a system to thread GPT-2 calls.
 26.3.2021 More work on an "NLP manager" (natural language processing manager). Removing some unused code, and minor tweaks.
 27.3.2021 Getting and providing help with checking how GPU-support can be enabled in Pytorch on an AMD GPU. Comparing the code base of Clover Edition to others of its ilk. Attempting to "properly" fix a long-standing bug in Clover Edition, and by extention in SpecuSim's NLP.
-28.3.2021 Took a bit of a detour to think about punny name generation for NPCs some time in the future.
+28.3.2021 Took a bit of a detour to think about punny name generation for NPCs some time in the future. More refactoring and cleaning up of the GPT2 generator code and config, and made some progress defining stop characters.
