@@ -87,7 +87,7 @@ class MyApp(ShowBase):
         self.performance_analysis = True  # Enable pstat support and show frame rate
         self.physics_debug = False  # Show wireframes for the physics objects.
         self.nlp_debug = True  # Stuff that makes debugging natural language processing faster
-        self.doppelganger_num = 2  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
+        self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         logger.debug(f"Using Bullet Physics version {get_bullet_version()}")
 

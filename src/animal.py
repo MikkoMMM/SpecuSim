@@ -59,7 +59,6 @@ class Animal:
     def hide_speech_field(self):
         with NLPManager.lock:
             if self.can_talk_more:
-                print(str(datetime.now()))
                 self.speech_field.hide()
 
 

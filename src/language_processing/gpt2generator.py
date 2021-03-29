@@ -1,4 +1,9 @@
-import re
+"""Natural language processing with GPT2-like Pytorch models
+
+With this module, you can give a start input to generate(), and it will continue that prompt.
+The module was heavily streamlined from Clover Edition. Some experimental features were removed in the process, too.
+"""
+
 from pathlib import Path
 from typing import Union
 
@@ -7,7 +12,7 @@ import torch.nn.functional as F
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
 from src.getconfig import settings, logger
-from .utils import cut_trailing_sentence, format_result
+from .utils import format_result
 
 if not settings.getboolean('force-cpu') and not torch.cuda.is_available():
     logger.warning('CUDA is not available, you are limited to CPU only.')
@@ -82,19 +87,9 @@ def top_k_top_p_filtering(logits, top_k=0, top_p=0.0, filter_value=-float("Inf")
 # length should be max length, other settings should be removed, device should not be set
 # we could possibly optimize this by having larger batch sizes but it would likely double or more the memory requirements
 def sample_sequence(
-        model,
-        length,
-        context,
-        temperature=1,
-        top_k=0,
-        top_p=0.8,
-        repetition_penalty=1.0,
-        device="cpu",
-        stop_chars_included=(),
-        stop_chars_not_included=('\"'),
-        stop_tokens=None,
-        tokenizer=None,
-        output=None,
+        model, length, context, temperature=1, top_k=0, top_p=0.8, repetition_penalty=1.0, device="cpu",
+        disallowed_starts=('\"',), stop_chars_included=(), stop_chars_not_included=('\"', "\n"),
+        stop_tokens=None, tokenizer=None, output=None,
 ):
     """Actually generate the tokens"""
     logger.debug(f'temp: {temperature}    generate_num: {length}    rep-pen: {repetition_penalty}')
@@ -103,6 +98,7 @@ def sample_sequence(
     generated = context
     next_token = context
     pasts = None
+    formatted_text = ""
     with torch.no_grad():
         for j in range(length):
             input_ids_next = next_token
@@ -133,18 +129,35 @@ def sample_sequence(
                 o, clean_up_tokenization_spaces=False, skip_special_tokens=True
             )
 
+            if j <= 2:
+                for ele in disallowed_starts:
+                    if result_replace(generated.text).startswith(ele):
+                        return ""
+
             # Check whether stop characters were in there
             last_token = tokenizer.decode(o[-1], clean_up_tokenization_spaces=False, skip_special_tokens=True)
 
-            if [ele for ele in stop_chars_not_included if (ele in last_token)]:
-                break
-            formatted_text = format_result(result_replace(generated.text))
+            for ele in stop_chars_not_included:
+                place = last_token.find(ele)
+                if place >= 0:
+                    formatted_text = format_result(result_replace(formatted_text + last_token[:place]))
+                    if output is not None:
+                        output.set_text(formatted_text)
+                    logger.debug("Generated result is: `%r`", generated.text)
+                    return formatted_text
 
+            for ele in stop_chars_included:
+                place = last_token.find(ele)
+                if place >= 0:
+                    formatted_text = format_result(result_replace(formatted_text + last_token[:place+len(ele)]))
+                    if output is not None:
+                        output.set_text(formatted_text)
+                    logger.debug("Generated result is: `%r`", generated.text)
+                    return formatted_text
+
+            formatted_text = format_result(result_replace(generated.text))
             if output is not None:
                 output.set_text(formatted_text)
-
-            if [ele for ele in stop_chars_included if (ele in last_token)]:
-                break
 
             if (
                     (stop_tokens is not None)
@@ -160,6 +173,7 @@ def sample_sequence(
                     j,
                 )
                 break
+    logger.debug("Generated result is: `%r`", formatted_text)
     return formatted_text
 
 
@@ -258,7 +272,6 @@ class GPT2Generator:
             tokenizer=self.tokenizer,
             output=output,
         )
-        logger.debug("Generated result is: `%r`", result)
 
         if len(result) == 0:
             if depth < 20:
