@@ -21,6 +21,7 @@ class SpeechBubble:
 
         self.speech_bubble.component('text0').textNode.set_card_decal(1)
         self.speech_bubble.set_billboard_point_eye()
+        self.hide_task = None
 
 
     def show(self):

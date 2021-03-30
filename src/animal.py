@@ -55,8 +55,7 @@ class Animal:
 
     def hide_speech_field(self):
         with NLPManager.lock:
-            if self.can_talk_more:
-                self.speech_field.hide()
+            self.speech_field.hide()
 
 
     def set_speech_field(self, speech_field):
@@ -77,7 +76,9 @@ class Animal:
         if self.speech_field:
             self.speech_field.set_text(text)
             on_screen_time = max(30.0/NLPManager.talking_speed, len(text) / NLPManager.talking_speed)
-            taskMgr.doMethodLater(on_screen_time, self.hide_speech_field, 'HSB', extraArgs=[])
+            if self.speech_field.hide_task:
+                taskMgr.remove(self.speech_field.hide_task)
+            self.speech_field.hide_task = taskMgr.doMethodLater(on_screen_time, self.hide_speech_field, 'HSB', extraArgs=[])
 
 
     def get_ground_z_velocity(self, current_z_pos=None):

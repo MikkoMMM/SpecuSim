@@ -73,7 +73,7 @@ class SpeechTask:
 
 class NLPManager:
     lock = threading.Lock()  # Just in case
-    talking_speed = 1  # How long (in characters per second) the speech bubble should stay visible
+    talking_speed = 5  # How long (in characters per second) the speech bubble should stay visible
 
 
     def __init__(self, generator, debug=False):
@@ -96,9 +96,9 @@ class NLPManager:
             result=act(self.generator, context, action,
                 output=speech_task.speaker.speech_field, debug=self.debug)
             on_screen_time = max(30.0/self.talking_speed, len(result)/self.talking_speed)
-            taskMgr.doMethodLater(on_screen_time, speech_task.speaker.hide_speech_field, 'HSB', extraArgs=[])
-
             with self.lock:
+                speech_task.speaker.speech_field.hide_task = taskMgr.doMethodLater(on_screen_time, speech_task.speaker.hide_speech_field,
+                                                                               'HSB', extraArgs=[])
                 speech_task.speaker.can_talk_more = True
 
 
@@ -107,6 +107,8 @@ class NLPManager:
             return
         with self.lock:
             task = SpeechTask(datetime.now(), speaker, text)
+            if speaker.speech_field.hide_task:
+                taskMgr.remove(speaker.speech_field.hide_task)
             if speaker.can_talk_more:
                 self.queue.put(task)
                 speaker.can_talk_more = False
