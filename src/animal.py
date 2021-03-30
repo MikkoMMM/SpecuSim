@@ -27,9 +27,6 @@ class Animal:
         debug_text_node (OnscreenText, optional): A place in the GUI to write debug information to
     """
 
-    talking_speed = 6  # How long (in characters per second) the speech bubble should stay visible
-
-
     def __init__(self, world, terrain_bullet_node, body_node, feet, slope_difficult, slope_max,
                  slope_linear_damping=0.6, negligible_speed=0.2, debug_text_node=None):
         self.world = world
@@ -79,7 +76,7 @@ class Animal:
         """
         if self.speech_field:
             self.speech_field.set_text(text)
-            on_screen_time = max(30.0/self.talking_speed, len(text) / self.talking_speed)
+            on_screen_time = max(30.0/NLPManager.talking_speed, len(text) / NLPManager.talking_speed)
             taskMgr.doMethodLater(on_screen_time, self.hide_speech_field, 'HSB', extraArgs=[])
 
 

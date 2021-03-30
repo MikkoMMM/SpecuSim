@@ -99,6 +99,7 @@ def sample_sequence(
     next_token = context
     pasts = None
     formatted_text = ""
+    disallowed_start_len = len(max(disallowed_starts, default=""))
     with torch.no_grad():
         for j in range(length):
             input_ids_next = next_token
@@ -129,13 +130,13 @@ def sample_sequence(
                 o, clean_up_tokenization_spaces=False, skip_special_tokens=True
             )
 
-            if j <= 2:
+            # Check whether stop characters were in there
+            last_token = tokenizer.decode(o[-1], clean_up_tokenization_spaces=False, skip_special_tokens=True)
+
+            if len(generated.text)-len(last_token) <= disallowed_start_len:
                 for ele in disallowed_starts:
                     if result_replace(generated.text).startswith(ele):
                         return ""
-
-            # Check whether stop characters were in there
-            last_token = tokenizer.decode(o[-1], clean_up_tokenization_spaces=False, skip_special_tokens=True)
 
             for ele in stop_chars_not_included:
                 place = last_token.find(ele)
