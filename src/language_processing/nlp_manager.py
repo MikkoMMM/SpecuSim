@@ -91,15 +91,23 @@ class NLPManager:
             speech_task.speaker.speech_field.show()
             # talking_started = datetime.now()
             context = "You are speaking to a person."
-            action = f"You say: \"{speech_task.text.strip()}\"\nThey answer: \""
+            speech_task.speaker.short_term_memory.append(f"They answer: \"")
+            action = '\n'.join(speech_task.speaker.short_term_memory)
 
             result=act(self.generator, context, action,
                 output=speech_task.speaker.speech_field, debug=self.debug)
             on_screen_time = max(30.0/self.talking_speed, len(result)/self.talking_speed)
             with self.lock:
+                speech_task.speaker.short_term_memory[-1] += result + '\"'
                 speech_task.speaker.speech_field.hide_task = taskMgr.doMethodLater(on_screen_time, speech_task.speaker.hide_speech_field,
                                                                                'HSB', extraArgs=[])
                 speech_task.speaker.can_talk_more = True
+
+
+    def _put_in_queue(self, task):
+        self.queue.put(task)
+        task.speaker.can_talk_more = False
+        task.speaker.short_term_memory.append(f"You say: \"{task.text.strip()}\"")
 
 
     def new_speech_task(self, speaker, text):
@@ -110,8 +118,7 @@ class NLPManager:
             if speaker.speech_field.hide_task:
                 taskMgr.remove(speaker.speech_field.hide_task)
             if speaker.can_talk_more:
-                self.queue.put(task)
-                speaker.can_talk_more = False
+                self._put_in_queue(task)
             else:
                 self.wait_queue.append(task)
 
@@ -125,7 +132,6 @@ class NLPManager:
                 if self.wait_queue[i].speaker.can_talk_more:
                     speech_task = self.wait_queue.pop(i)
                     speech_task.priority = datetime.now()
-                    self.queue.put(speech_task)
-                    speech_task.speaker.can_talk_more = False
+                    self._put_in_queue(task)
                 else:
                     i += 1

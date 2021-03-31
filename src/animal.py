@@ -42,6 +42,7 @@ class Animal:
         # We store this here, in case somebody wants to switch speech bubble styles
         self.can_talk_time = datetime(1, 1, 1, 1, 1, 1, 342380)
         self.can_talk_more = True
+        self.short_term_memory = []
 
 
     def get_body(self):

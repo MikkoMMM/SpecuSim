@@ -6,6 +6,7 @@ The module was heavily streamlined from Clover Edition. Some experimental featur
 
 from pathlib import Path
 from typing import Union
+import re
 
 import torch
 import torch.nn.functional as F
@@ -28,6 +29,15 @@ MODEL_CLASSES = {
     # "gpt2-experimental": (GPT2LMHeadModelExperimental, GPT2Tokenizer),
 }
 
+# the tokenizer does not preserve white space at the front of the string.
+# so we will append something else to the front of the string and then remove it after tokenization
+def hackyEncode(tokenizer, s):
+    return tokenizer.encode('====\n ' + s)[2:]
+
+
+def hackyWhiteSpaceCutter(prompt):
+    return re.search(r'\s*$', prompt).group(0)
+
 
 def memory_merge(prompt, context, tokenizer, maxHistory=1024):
     assert (len(prompt) + len(context))
@@ -38,11 +48,10 @@ def memory_merge(prompt, context, tokenizer, maxHistory=1024):
         logger.debug("Clamping the amount of prompt tokens.")
         context_tokens = prompt_tokens[-maxHistory:]
     else:
-        context_tokens = tokenizer.encode(prompt + context)
+        context_tokens = hackyEncode(tokenizer, context + hackyWhiteSpaceCutter(prompt))
         context_tokens = context_tokens[-(maxHistory - len(prompt_tokens)):]
         # logger.debug('DECODED CONTEXT TOKENS: `%r`', tokenizer.convert_ids_to_tokens(context_tokens))
-        prompt_tokens.extend(context_tokens)
-        context_tokens = prompt_tokens
+        context_tokens.extend(prompt_tokens)
         # logger.debug('DECODED OUTPUT IS: `%r`', tokenizer.decode(context_tokens, clean_up_tokenization_spaces=False))
         # this is a hack and it should be up to the sampler to deal with max size
         if len(context_tokens) > maxHistory:
@@ -234,7 +243,7 @@ class GPT2Generator:
 
 
     def generate(
-            self, context, prompt='', generate_num=None, temperature=None, top_k=None, top_p=None,
+            self, prompt='', context='', generate_num=None, temperature=None, top_k=None, top_p=None,
             repetition_penalty=None, stop_tokens=None, depth=0, output=None
     ):
         if stop_tokens is None:
@@ -245,7 +254,6 @@ class GPT2Generator:
         assert (len(prompt) + len(context))
 
         context_tokens = memory_merge(prompt, context, self.tokenizer, self.max_history_tokens)
-        '''
         logger.debug(
             "Text passing into model `%r`",
             self.tokenizer.decode(
@@ -253,7 +261,6 @@ class GPT2Generator:
                 clean_up_tokenization_spaces=True,
             ),
         )
-        '''
         generate_num = generate_num if (generate_num is not None) else self.generate_num
         temperature = temperature if (temperature is not None) else self.temp
         top_k = top_k if top_k is not None else self.top_k
