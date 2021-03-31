@@ -24,10 +24,6 @@ class SpeechBubble:
         self.hide_task = None
 
 
-    def show(self):
-        self.speech_bubble.show()
-
-
     def hide(self):
         self.speech_bubble.setText("")
 

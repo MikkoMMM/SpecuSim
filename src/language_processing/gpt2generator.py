@@ -31,33 +31,8 @@ MODEL_CLASSES = {
 
 # the tokenizer does not preserve white space at the front of the string.
 # so we will append something else to the front of the string and then remove it after tokenization
-def hackyEncode(tokenizer, s):
-    return tokenizer.encode('====\n ' + s)[2:]
-
-
-def hackyWhiteSpaceCutter(prompt):
-    return re.search(r'\s*$', prompt).group(0)
-
-
-def memory_merge(prompt, context, tokenizer, maxHistory=1024):
-    assert (len(prompt) + len(context))
-    # the tokenizer is kind of broken for the first input, especially if it includes white space.
-    # Same with any trailing white space on the last output. I'm going with the add prefix option but I'm not sure it's quite right
-    prompt_tokens = tokenizer.encode(prompt, add_special_tokens=False, add_prefix_space=True)
-    if len(prompt_tokens) >= maxHistory:
-        logger.debug("Clamping the amount of prompt tokens.")
-        context_tokens = prompt_tokens[-maxHistory:]
-    else:
-        context_tokens = hackyEncode(tokenizer, context + hackyWhiteSpaceCutter(prompt))
-        context_tokens = context_tokens[-(maxHistory - len(prompt_tokens)):]
-        # logger.debug('DECODED CONTEXT TOKENS: `%r`', tokenizer.convert_ids_to_tokens(context_tokens))
-        context_tokens.extend(prompt_tokens)
-        # logger.debug('DECODED OUTPUT IS: `%r`', tokenizer.decode(context_tokens, clean_up_tokenization_spaces=False))
-        # this is a hack and it should be up to the sampler to deal with max size
-        if len(context_tokens) > maxHistory:
-            logger.error("CONTEXT IS TOO LONG ERROR")
-            context_tokens = context_tokens[-maxHistory:]
-    return context_tokens
+def encode_prepend_newline(tokenizer, s):
+    return tokenizer.encode('====\n\n' + s)[2:]
 
 
 def top_k_top_p_filtering(logits, top_k=0, top_p=0.0, filter_value=-float("Inf")):
@@ -243,7 +218,7 @@ class GPT2Generator:
 
 
     def generate(
-            self, prompt='', context='', generate_num=None, temperature=None, top_k=None, top_p=None,
+            self, tokens, generate_num=None, temperature=None, top_k=None, top_p=None,
             repetition_penalty=None, stop_tokens=None, depth=0, output=None
     ):
         if stop_tokens is None:
@@ -251,15 +226,10 @@ class GPT2Generator:
 
         assert (temperature is not None)
         assert repetition_penalty
-        assert (len(prompt) + len(context))
 
-        context_tokens = memory_merge(prompt, context, self.tokenizer, self.max_history_tokens)
         logger.debug(
             "Text passing into model `%r`",
-            self.tokenizer.decode(
-                context_tokens,
-                clean_up_tokenization_spaces=True,
-            ),
+            self.tokenizer.decode(tokens),
         )
         generate_num = generate_num if (generate_num is not None) else self.generate_num
         temperature = temperature if (temperature is not None) else self.temp
@@ -269,7 +239,7 @@ class GPT2Generator:
 
         result = sample_sequence(
             model=self.model,
-            context=context_tokens,
+            context=tokens,
             length=generate_num,
             temperature=temperature,
             top_k=top_k,
@@ -285,7 +255,7 @@ class GPT2Generator:
             if depth < 20:
                 logger.info("Model generated empty text trying again %r", depth)
                 return self.generate(
-                    prompt, context, temperature=temperature, top_p=top_p, top_k=top_k,
+                    context, prompt, temperature=temperature, top_p=top_p, top_k=top_k,
                     repetition_penalty=repetition_penalty, depth=depth + 1, output=output
                 )
             else:
@@ -293,3 +263,43 @@ class GPT2Generator:
                     "Model generated empty text %r times. Try another action", depth
                 )
         return result
+
+
+    def memory_merge(self, *args):
+        result = self._memory_merge(*args)
+        assert(result)
+        first, *rest = result
+        # Finally remove the very first newline by doing some trickery
+        return self.tokenizer.encode('====\n' + self.tokenizer.decode(first))[2:] + rest
+
+
+    def _memory_merge(self, *args):
+        merge_objects = [[]] * len(args)
+        reversed_args = reversed(args)
+        length = 0
+        max_len = 0
+
+        # Prioritize arguments that were plain strings, not lists
+        for i, arg in enumerate(reversed_args, start=1):
+            if isinstance(arg, str):
+                new_tokens = encode_prepend_newline(self.tokenizer, arg)
+                length += len(new_tokens)
+                if length > self.max_history_tokens:
+                    return sum(merge_objects, [])
+                merge_objects[-i] = new_tokens
+            else:
+                max_len = max(len(arg), max_len)
+
+        for i in range(1, max_len+1):
+            for j, arg in enumerate(args, start=1):
+                if isinstance(arg, str):
+                    continue
+                if len(arg) < i:
+                    continue
+                new_tokens = encode_prepend_newline(self.tokenizer, arg[-i])
+                length += len(new_tokens)
+                if length > self.max_history_tokens:
+                    return sum(merge_objects, [])
+                merge_objects[j] = new_tokens + merge_objects[j]
+
+        return sum(merge_objects, [])

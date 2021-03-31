@@ -9,18 +9,11 @@ from time import sleep
 from datetime import datetime, timedelta
 
 
-def act(generator, context, action, output=None, debug=True):
+def act(generator, tokens, output=None, debug=True):
     temperature = settings.getfloat('temp')
     repetition_penalty = settings.getfloat('rep-pen')
     try:
-
-        if not context.strip() + action.strip():
-            return None
-        return generator.generate(
-            action,
-            context,
-            temperature=temperature,
-            repetition_penalty=repetition_penalty, output=output)
+        return generator.generate(tokens, temperature=temperature, repetition_penalty=repetition_penalty, output=output)
 
     except Exception as e:
         print()
@@ -88,17 +81,18 @@ class NLPManager:
     def thread_loop(self):
         while True:
             speech_task = self.queue.get(block=True)
-            speech_task.speaker.speech_field.show()
             # talking_started = datetime.now()
             context = "You are speaking to a person."
-            speech_task.speaker.short_term_memory.append(f"They answer: \"")
-            action = '\n'.join(speech_task.speaker.short_term_memory)
+            prompt = f"They answer: \""
 
-            result=act(self.generator, context, action,
+            result = act(self.generator, self.generator.memory_merge(context, speech_task.speaker.short_term_memory, speech_task.text,
+                                                                     prompt),
                 output=speech_task.speaker.speech_field, debug=self.debug)
+
             on_screen_time = max(30.0/self.talking_speed, len(result)/self.talking_speed)
             with self.lock:
-                speech_task.speaker.short_term_memory[-1] += result + '\"'
+                speech_task.speaker.short_term_memory.append(speech_task.text)
+                speech_task.speaker.short_term_memory.append(prompt + result + '\"')
                 speech_task.speaker.speech_field.hide_task = taskMgr.doMethodLater(on_screen_time, speech_task.speaker.hide_speech_field,
                                                                                'HSB', extraArgs=[])
                 speech_task.speaker.can_talk_more = True
@@ -107,7 +101,6 @@ class NLPManager:
     def _put_in_queue(self, task):
         self.queue.put(task)
         task.speaker.can_talk_more = False
-        task.speaker.short_term_memory.append(f"You say: \"{task.text.strip()}\"")
 
 
     def new_speech_task(self, speaker, text):
