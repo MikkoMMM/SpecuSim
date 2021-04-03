@@ -2,6 +2,7 @@ from math import radians
 import struct
 
 from panda3d.bullet import BulletConeTwistConstraint, BulletGenericConstraint
+from panda3d.core import Vec2
 
 from src.animal import Animal
 from src.body_parts.humanoid_arm import HumanoidArm
@@ -59,26 +60,20 @@ class Humanoid(Animal):
             BitMask32.bit(0 | 3))  # Enable ground collision too, to help with avoiding ascending map boundaries
         self.world.attach(self.lower_torso.node())
 
-        self.chest = create_rounded_box(self.chest_width, 0.2, self.chest_height)
-        self.chest.node().set_mass(30.0)
-        self.chest.node().set_angular_factor(Vec3(0.15, 0.05, 0.1))
-        self.chest.node().set_linear_damping(0.5)
-        self.chest.set_collide_mask(BitMask32.bit(3))
-        self.world.attach(self.chest.node())
-        self.chest.node().set_angular_sleep_threshold(0.05)
+        self.spine = self.lower_torso.attach_new_node("spine")
+        self.spine.set_z(self.chest_height/2)
 
-        frame_a = TransformState.make_pos_hpr(Point3(0, 0, -self.chest_height / 2), Vec3(0, 0, 0))
-        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.lower_torso_height / 2), Vec3(0, 0, 0))
+        self.chest = loader.load_model("3d-assets/unit_cylinder.bam")
+        self.chest.set_scale(Vec3(self.chest_width, 0.2, self.chest_height))
+        self.chest.reparent_to(self.spine)
+        self.chest.set_z(self.chest_height/2)
 
-        swing1 = 10  # leaning forward/backward degrees
-        swing2 = 5  # leaning side to side degrees
-        twist = 30  # degrees
+        self.head = loader.load_model("3d-assets/unit_sphere.bam")
+        self.head.reparent_to(self.chest)
+        self.head.set_scale(render, self.head_height)
+        self.head.set_z((self.chest_height+self.head_height)/2/self.chest_height)
 
-        cs = BulletConeTwistConstraint(self.chest.node(), self.lower_torso.node(), frame_a, frame_b)
-        cs.set_debug_draw_size(0.5)
-        cs.set_limit(twist, swing2, swing1, softness=0.1, bias=1.0, relaxation=1.0)
-        world.attach_constraint(cs, linked_collision=True)
-
+        '''
         self.left_arm = HumanoidArm(self.world, self.arm_height, upper_arm_diameter,
                                     forearm_diameter, False, start_position, start_heading)
 
@@ -108,22 +103,7 @@ class Humanoid(Animal):
         self.right_arm_constraint.set_angular_limit(2, -35, 120)  # Left and right
         self.right_arm.upper_arm.node().set_angular_factor(Vec3(0.2, 0.2, 0.2))
         self.world.attach_constraint(self.right_arm_constraint, linked_collision=True)
-
-        self.head = create_sphere(self.head_height)
-        self.head.node().set_mass(3.0)
-        self.head.set_collide_mask(BitMask32.bit(3))
-        self.world.attach(self.head.node())
-
-        frame_a = TransformState.make_pos_hpr(Point3(0, 0, self.head_height / 2), Vec3(0, 0, 0))
-        frame_b = TransformState.make_pos_hpr(Point3(0, 0, -self.chest_height / 2), Vec3(0, 0, 0))
-
-        self.neck = BulletGenericConstraint(self.chest.node(), self.head.node(), frame_a, frame_b, True)
-
-        self.neck.set_debug_draw_size(0.5)
-        self.neck.set_angular_limit(0, -10, 10)
-        self.neck.set_angular_limit(1, 0, 0)
-        self.neck.set_angular_limit(2, -10, 10)
-        self.world.attach_constraint(self.neck, linked_collision=True)
+        '''
 
         ##################################
         # Set up body movement:
@@ -219,14 +199,7 @@ class Humanoid(Animal):
             foot_visual.reparent_to(self.foot[i])
             foot_visual.set_scale(Vec3(lower_leg_diameter, self.foot_length, self.foot_height))
 
-        self.head.set_pos_hpr(start_position, start_heading)
-        self.chest.set_pos_hpr(start_position, start_heading)
-
-        # To reduce the harmful effects of gravity on custom ground collision, have a net zero gravity
-        counteract_mass = self.left_arm.get_mass() + self.right_arm.get_mass()
-        self.head.node().set_gravity(Vec3(0, 0, 0))
-        self.lower_torso.node().set_gravity(Vec3(0, 0, 9.81 * counteract_mass / self.lower_torso.node().get_mass()))
-        self.chest.node().set_gravity(Vec3(0, 0, 0))
+        self.lower_torso.node().set_gravity(Vec3(0, 0, 0))
 
         self.leg_movement_speed = self.walk_speed * 3
 
@@ -242,8 +215,6 @@ class Humanoid(Animal):
         # Humanoids automatically come equipped with a speaking capability. Neat, huh?
         self.set_speech_field(
             SpeechBubble(self.get_body(), self.lower_torso_height + self.chest_height + self.head_height + self.height * 0.2))
-#        self.set_speech_field(
-#            SpeechBubble(self.get_body(), self.lower_torso_height/2 + self.chest_height + self.head_height))
 
 
     def speed_up(self):
@@ -274,6 +245,7 @@ class Humanoid(Animal):
             self._walking_visuals(cur_walk_dist, 0)
         # The heading should be updated exactly once per frame, so let's do it here
         self._update_heading()
+        self._update_spine()
 
 
     def _walking_visuals(self, cur_walk_dist, ang_clamped):
@@ -349,6 +321,12 @@ class Humanoid(Animal):
         """
         diff = radians(angle_diff(-self.desired_heading, self.lower_torso.getH()))
         self.lower_torso.node().set_angular_velocity(Vec3(0, 0, -diff * 8))
+
+
+    def _update_spine(self):
+        velocity = self.get_body().node().get_linear_velocity()
+        speed = Vec2(velocity.get_x(), velocity.get_y()).length()
+        self.spine.set_p(max(-5, -speed/1.5))
 
 
     def get_state_format(self):

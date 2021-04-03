@@ -122,8 +122,8 @@ class MyApp(ShowBase):
 
         # Physics setup
         self.world = BulletWorld()
-        # The custom ground collision doesn't go well along with gravity, but some aesthetics depend on it.
-        self.world.set_gravity(Vec3(0, 0, -9.81))
+        # Currently no need for gravity.
+        self.world.set_gravity(Vec3(0, 0, 0))
 
         # Collision groups:
         # 0: ground
