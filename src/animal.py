@@ -3,13 +3,13 @@
 This module handles any creature that is capable of locomotion in some form or another.
 """
 
+from datetime import datetime
 from math import cos, sin, radians, degrees, acos, copysign
 
 from panda3d.core import Vec2, Vec3
 
-from src.utils import get_ground_z_pos
-from datetime import datetime
 from src.language_processing.nlp_manager import NLPManager
+from src.utils import get_ground_z_pos
 
 
 class Animal:
@@ -26,6 +26,7 @@ class Animal:
         negligible_speed (float, optional): Speed in m/s below which it's assumed the organism is at halt
         debug_text_node (OnscreenText, optional): A place in the GUI to write debug information to
     """
+
 
     def __init__(self, world, terrain_bullet_node, body_node, feet, slope_difficult, slope_max,
                  slope_linear_damping=0.6, negligible_speed=0.2, debug_text_node=None):
@@ -76,7 +77,7 @@ class Animal:
         """
         if self.speech_field:
             self.speech_field.set_text(text)
-            on_screen_time = max(30.0/NLPManager.talking_speed, len(text) / NLPManager.talking_speed)
+            on_screen_time = max(30.0 / NLPManager.talking_speed, len(text) / NLPManager.talking_speed)
             if self.speech_field.hide_task:
                 taskMgr.remove(self.speech_field.hide_task)
             self.speech_field.hide_task = taskMgr.doMethodLater(on_screen_time, self.hide_speech_field, 'HSB', extraArgs=[])

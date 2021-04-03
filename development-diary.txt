@@ -72,4 +72,4 @@
 30.3.2021 The speech bubble's hide timer now resets after new speech.
 31.3.2021 Weighing the possibility of using GPT-Neo. Memory for NPCs. A better "memory merger".
 2.4.2021 Contemplating the possibility of two player peer-to-peer multiplayer and its cyber security implications.
-3.4.2021 Experimented with UDP networking, and made preparations for sending and receiving game state information.
+3.4.2021 Experimented with UDP networking, and made preparations for sending and receiving game state information. Made a "new" upper torso (except for arms) that's not physics-driven.

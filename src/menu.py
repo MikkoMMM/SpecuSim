@@ -1,14 +1,12 @@
 # Credit: RenderPipeline contributors
 
-from sys import exit
-
 from direct.gui.DirectButton import DirectButton
 from direct.gui.DirectFrame import DirectFrame
 from direct.gui.DirectGuiBase import DGG
 from direct.gui.DirectLabel import DirectLabel
 from direct.interval.LerpInterval import LerpColorScaleInterval
 from direct.interval.MetaInterval import Sequence
-from panda3d.core import TextNode, PNMImage, Filename, Texture
+from panda3d.core import TextNode, Texture
 
 
 class Menu:
@@ -108,7 +106,7 @@ class Menu:
         self.args.append(args)
         self.entries.append(DirectButton(**self.button_style, pos=(x, 0, -y), command=self.exec_selection))
 
-        self.entries[-1]["extraArgs"] = [len(self.entries)-1]
+        self.entries[-1]["extraArgs"] = [len(self.entries) - 1]
         self.entries[-1]["frameTexture"] = self.button_tex
         if self.button_scale:
             self.entries[-1]["frameSize"] = (
@@ -133,7 +131,7 @@ class Menu:
             base.ignore("enter")
 
 
-    def exec_selection(self, entry = None):
+    def exec_selection(self, entry=None):
         if entry is None:
             self.funcs[self.active_entry](*self.args[self.active_entry])
         else:

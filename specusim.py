@@ -1,9 +1,9 @@
 import gc
 import os
 import random
+import struct
 from math import sqrt, radians
 from pathlib import Path
-import struct
 from time import sleep
 
 import torch
@@ -25,12 +25,12 @@ from panda3d.core import SamplerState, TextNode
 from panda3d.core import Vec3, load_prc_file_data, PStatClient, CullBinManager
 
 from src.camera import CameraControl
+from src.getconfig import settings, logger
 from src.humanoid import Humanoid
 from src.language_processing.gpt2generator import GPT2Generator
 from src.language_processing.nlp_manager import NLPManager
 from src.menu import Menu
 from src.utils import create_or_load_walk_map, create_shader_terrain_mesh
-from src.getconfig import settings, logger
 
 
 # from src.weapons.sword import Sword
@@ -365,8 +365,9 @@ class MyApp(ShowBase):
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
-#        render.analyze()
 
+
+    #        render.analyze()
 
     def focus_in_text_field_initial(self):
         self.text_field.enterText('')

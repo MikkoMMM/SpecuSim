@@ -1,12 +1,13 @@
 # Credit: AI Dungeon 2: Clover Edition
 
-from src.getconfig import settings
-from os import _exit
 import traceback
+from datetime import datetime
+from os import _exit
 from queue import PriorityQueue
+
 from direct.stdpy import thread, threading
-from time import sleep
-from datetime import datetime, timedelta
+
+from src.getconfig import settings
 
 
 def act(generator, tokens, output=None, debug=True):
@@ -87,14 +88,14 @@ class NLPManager:
 
             result = act(self.generator, self.generator.memory_merge(context, speech_task.speaker.short_term_memory, speech_task.text,
                                                                      prompt),
-                output=speech_task.speaker.speech_field, debug=self.debug)
+                         output=speech_task.speaker.speech_field, debug=self.debug)
 
-            on_screen_time = max(30.0/self.talking_speed, len(result)/self.talking_speed)
+            on_screen_time = max(30.0 / self.talking_speed, len(result) / self.talking_speed)
             with self.lock:
                 speech_task.speaker.short_term_memory.append(speech_task.text)
                 speech_task.speaker.short_term_memory.append(prompt + result + '\"')
                 speech_task.speaker.speech_field.hide_task = taskMgr.doMethodLater(on_screen_time, speech_task.speaker.hide_speech_field,
-                                                                               'HSB', extraArgs=[])
+                                                                                   'HSB', extraArgs=[])
                 speech_task.speaker.can_talk_more = True
 
 

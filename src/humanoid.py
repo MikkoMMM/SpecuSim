@@ -1,15 +1,11 @@
-from math import radians
 import struct
-
-from panda3d.bullet import BulletConeTwistConstraint, BulletGenericConstraint
-from panda3d.core import Vec2
+from math import radians
 
 from src.animal import Animal
-from src.body_parts.humanoid_arm import HumanoidArm
 from src.inverse_kinematics.IKChain import IKChain
 from src.inverse_kinematics.Utils import *
 from src.inverse_kinematics.WalkCycle import WalkCycle
-from src.shapes import create_rounded_box, create_sphere
+from src.shapes import create_rounded_box
 from src.speech_bubble import SpeechBubble
 from src.utils import angle_diff, normalize_angle, get_ground_z_pos
 
@@ -61,17 +57,17 @@ class Humanoid(Animal):
         self.world.attach(self.lower_torso.node())
 
         self.spine = self.lower_torso.attach_new_node("spine")
-        self.spine.set_z(self.lower_torso_height/2)
+        self.spine.set_z(self.lower_torso_height / 2)
 
         self.chest = loader.load_model("3d-assets/unit_cylinder.bam")
         self.chest.set_scale(Vec3(self.chest_width, 0.2, self.chest_height))
         self.chest.reparent_to(self.spine)
-        self.chest.set_z(self.chest_height/2)
+        self.chest.set_z(self.chest_height / 2)
 
         self.head = loader.load_model("3d-assets/unit_sphere.bam")
         self.head.reparent_to(self.chest)
         self.head.set_scale(render, self.head_height)
-        self.head.set_z((self.lower_torso_height+self.head_height)/2/self.lower_torso_height)
+        self.head.set_z((self.lower_torso_height + self.head_height) / 2 / self.lower_torso_height)
 
         '''
         self.left_arm = HumanoidArm(self.world, self.arm_height, upper_arm_diameter,
@@ -326,7 +322,7 @@ class Humanoid(Animal):
     def _update_spine(self):
         velocity = self.get_body().node().get_linear_velocity()
         speed = Vec2(velocity.get_x(), velocity.get_y()).length()
-        self.spine.set_p(max(-5, -speed/1.5))
+        self.spine.set_p(max(-5, -speed / 1.5))
 
 
     def get_state_format(self):
@@ -342,13 +338,14 @@ class Humanoid(Animal):
         return struct.pack(self.get_state_format(), body.get_x(), body.get_y(), body.get_h(),
                            velocity.get_x(), velocity.get_y())
 
+
     def set_state(self, x, y, heading, v_x, v_y):
         body = self.get_body()
-        body.set_x(x+2)
+        body.set_x(x + 2)
         body.set_y(y)
         body.set_h(heading)
         body.node().set_linear_velocity(Vec3(v_x, v_y, body.node().get_linear_velocity().get_z()))
 
 
     def set_state_shifted(self, x, y, heading, v_x, v_y, shift_x, shift_y):
-        self.set_state(x+shift_x, y+shift_y, heading, v_x, v_y)
+        self.set_state(x + shift_x, y + shift_y, heading, v_x, v_y)

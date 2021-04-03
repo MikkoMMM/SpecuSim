@@ -6,7 +6,6 @@ The module was heavily streamlined from Clover Edition. Some experimental featur
 
 from pathlib import Path
 from typing import Union
-import re
 
 import torch
 import torch.nn.functional as F
@@ -28,6 +27,7 @@ MODEL_CLASSES = {
     "gpt2": (GPT2LMHeadModel, GPT2Tokenizer),
     # "gpt2-experimental": (GPT2LMHeadModelExperimental, GPT2Tokenizer),
 }
+
 
 # the tokenizer does not preserve white space at the front of the string.
 # so we will append something else to the front of the string and then remove it after tokenization
@@ -117,7 +117,7 @@ def sample_sequence(
             # Check whether stop characters were in there
             last_token = tokenizer.decode(o[-1], clean_up_tokenization_spaces=False, skip_special_tokens=True)
 
-            if len(generated.text)-len(last_token) <= disallowed_start_len:
+            if len(generated.text) - len(last_token) <= disallowed_start_len:
                 for ele in disallowed_starts:
                     if result_replace(generated.text).startswith(ele):
                         return ""
@@ -134,7 +134,7 @@ def sample_sequence(
             for ele in stop_chars_included:
                 place = last_token.find(ele)
                 if place >= 0:
-                    formatted_text = format_result(result_replace(formatted_text + last_token[:place+len(ele)]))
+                    formatted_text = format_result(result_replace(formatted_text + last_token[:place + len(ele)]))
                     if output is not None:
                         output.set_text(formatted_text)
                     logger.debug("Generated result is: `%r`", generated.text)
@@ -267,7 +267,7 @@ class GPT2Generator:
 
     def memory_merge(self, *args):
         result = self._memory_merge(*args)
-        assert(result)
+        assert (result)
         first, *rest = result
         # Finally remove the very first newline by doing some trickery
         return self.tokenizer.encode('====\n' + self.tokenizer.decode(first))[2:] + rest
@@ -290,7 +290,7 @@ class GPT2Generator:
             else:
                 max_len = max(len(arg), max_len)
 
-        for i in range(1, max_len+1):
+        for i in range(1, max_len + 1):
             for j, arg in enumerate(args, start=1):
                 if isinstance(arg, str):
                     continue
