@@ -3,6 +3,7 @@ import os
 import random
 from math import sqrt, radians
 from pathlib import Path
+import struct
 from time import sleep
 
 import torch
@@ -450,6 +451,9 @@ class MyApp(ShowBase):
             round(self.player.walk_speed, 1)) + " m/s"
 
         if self.nlp:
+            data = self.player.get_compressed_state()
+            uncompressed = struct.unpack(self.player.get_state_format(), data)
+            self.npc1.set_state_shifted(*uncompressed, 2, 0)
             self.npc1.stand_still()
             self.nlp_manager.update()
 

@@ -1,4 +1,5 @@
 from math import radians
+import struct
 
 from panda3d.bullet import BulletConeTwistConstraint, BulletGenericConstraint
 
@@ -348,3 +349,28 @@ class Humanoid(Animal):
         """
         diff = radians(angle_diff(-self.desired_heading, self.lower_torso.getH()))
         self.lower_torso.node().set_angular_velocity(Vec3(0, 0, -diff * 8))
+
+
+    def get_state_format(self):
+        # https://docs.python.org/3/library/struct.html#format-characters
+        return "fffff"
+
+
+    def get_compressed_state(self):
+        """Gets the compressed state information
+        """
+        body = self.get_body()
+        velocity = body.node().get_linear_velocity()
+        return struct.pack(self.get_state_format(), body.get_x(), body.get_y(), body.get_h(),
+                           velocity.get_x(), velocity.get_y())
+
+    def set_state(self, x, y, heading, v_x, v_y):
+        body = self.get_body()
+        body.set_x(x+2)
+        body.set_y(y)
+        body.set_h(heading)
+        body.node().set_linear_velocity(Vec3(v_x, v_y, body.node().get_linear_velocity().get_z()))
+
+
+    def set_state_shifted(self, x, y, heading, v_x, v_y, shift_x, shift_y):
+        self.set_state(x+shift_x, y+shift_y, heading, v_x, v_y)
