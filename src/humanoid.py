@@ -29,8 +29,8 @@ class Humanoid(Animal):
         self.head_height = self.height / 7
         self.chest_width = 0.38
         self.pelvis_width = 0.38
-        self.lower_torso_height = 1.5 * (self.height / 7)
-        self.chest_height = 1.5 * (self.height / 7)
+        self.lower_torso_height = 1.4 * (self.height / 7)
+        self.chest_height = 1.6 * (self.height / 7)
 
         self.leg_height = self.height - self.head_height - self.lower_torso_height - self.chest_height
         self.thigh_length = self.leg_height * 59 / 109
@@ -49,10 +49,10 @@ class Humanoid(Animal):
         self.target_height = self.leg_height + self.lower_torso_height / 2
 
         # Control node and the whole body collision box
-        self.lower_torso = create_rounded_box(self.chest_width, 0.2, self.chest_height)
+        self.lower_torso = create_rounded_box(self.chest_width, 0.2, self.lower_torso_height)
         start_position = Vec3(x, y, self.target_height + get_ground_z_pos(x, y, self.world, self.terrain_bullet_node))
         self.lower_torso.set_pos_hpr(start_position, start_heading)
-        self.lower_torso.node().set_mass(30.0)
+        self.lower_torso.node().set_mass(70.0)
         self.lower_torso.node().set_angular_factor(Vec3(0, 0, 0.1))
         self.lower_torso.node().set_linear_damping(0.8)
         self.lower_torso.node().set_angular_sleep_threshold(0)  # Sleep would freeze the whole character if still
@@ -61,7 +61,7 @@ class Humanoid(Animal):
         self.world.attach(self.lower_torso.node())
 
         self.spine = self.lower_torso.attach_new_node("spine")
-        self.spine.set_z(self.chest_height/2)
+        self.spine.set_z(self.lower_torso_height/2)
 
         self.chest = loader.load_model("3d-assets/unit_cylinder.bam")
         self.chest.set_scale(Vec3(self.chest_width, 0.2, self.chest_height))
@@ -71,7 +71,7 @@ class Humanoid(Animal):
         self.head = loader.load_model("3d-assets/unit_sphere.bam")
         self.head.reparent_to(self.chest)
         self.head.set_scale(render, self.head_height)
-        self.head.set_z((self.chest_height+self.head_height)/2/self.chest_height)
+        self.head.set_z((self.lower_torso_height+self.head_height)/2/self.lower_torso_height)
 
         '''
         self.left_arm = HumanoidArm(self.world, self.arm_height, upper_arm_diameter,
