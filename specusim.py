@@ -1,9 +1,7 @@
 import struct
-from math import sqrt, radians
 from time import sleep
 
 from direct.gui.OnscreenText import OnscreenText
-from direct.showbase.InputStateGlobal import inputState
 from direct.showbase.ShowBase import ShowBase
 from direct.stdpy import threading
 from direct.task import Task
@@ -19,8 +17,9 @@ from panda3d.core import SamplerState, TextNode
 from panda3d.core import Vec3, load_prc_file_data, PStatClient, CullBinManager
 
 from src.camera import CameraControl
+from src.default_controls import setup_controls, interpret_controls
 from src.default_gui import DefaultGUI
-from src.getconfig import logger
+from src.getconfig import logger, settings, debug
 from src.humanoid import Humanoid
 from src.language_processing.nlp_manager import NLPManager
 from src.menu import Menu
@@ -28,17 +27,6 @@ from src.utils import create_or_load_walk_map, create_shader_terrain_mesh
 
 
 # from src.weapons.sword import Sword
-
-
-# Function to put instructions on the screen.
-def add_instructions(pos, msg, z_bin=None):
-    text_object = OnscreenText(text=msg, style=1, fg=(1, 1, 1, 1), scale=.05,
-                               shadow=(0, 0, 0, 1), parent=base.a2dTopLeft,
-                               pos=(0.08, -pos - 0.04), align=TextNode.ALeft)
-    if z_bin:
-        text_object.setBin(z_bin, 1)
-
-    return text_object
 
 
 class MyApp(ShowBase):
@@ -74,19 +62,19 @@ class MyApp(ShowBase):
         # In case window size would be at first detected incorrectly, buy a bit of time.
         base.graphicsEngine.render_frame()
 
-        self.performance_analysis = True  # Enable pstat support and show frame rate
-        self.physics_debug = False  # Show wireframes for the physics objects.
+        self.physics_debug = False
         self.nlp_debug = True  # Stuff that makes debugging natural language processing faster
         self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         logger.debug(f"Using Bullet Physics version {get_bullet_version()}")
 
-        if self.performance_analysis:
+        if debug.getboolean("enable-pstats"):
             load_prc_file_data("", "task-timer-verbose 1")
             load_prc_file_data("", "pstats-tasks 1")
-
-            base.set_frame_rate_meter(True)
             PStatClient.connect()
+
+        if settings.getboolean("enable-fps"):
+            base.set_frame_rate_meter(True)
 
         self.menu_img = PNMImage(Filename("textures/menu.jpg"))
 
@@ -101,9 +89,6 @@ class MyApp(ShowBase):
         # Increase camera FOV as well as the far plane
         self.camLens.set_fov(90)
         self.camLens.set_near_far(0.1, 50000)
-
-        self.dxdy_to_angle = [[radians(45), radians(90), radians(135)], [radians(0), -999, radians(180)], [radians(-45), radians(-90),
-                                                                                                           radians(-135)]]
 
         # Heightfield's height
         self.terrain_height = 25.0
@@ -221,17 +206,7 @@ class MyApp(ShowBase):
         self.main_menu.hide_menu()
         self.notice_text_obj.hide()
 
-        self.inst1 = add_instructions(0.06, "[WASD]: Move")
-        self.inst2 = add_instructions(0.12, "[QE]: Rotate")
-        self.inst3 = add_instructions(0.18, "[+-]: Change speed")
-        self.inst4 = add_instructions(0.24, "Middle mouse button: Rotate camera")
-        self.inst5 = add_instructions(0.30, "Right mouse button: Adjust zoom")
-        self.inst6 = add_instructions(0.36, "")
-        self.inst7 = add_instructions(0.42, "")
-        # inst8 is reserved for NLP stuff
-
-        self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=self.physics_debug,
-                               debug_text_node=self.inst7)
+        self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=debug.getboolean("debug-joints"))
 
         self.doppelgangers = []
         for i in range(self.doppelganger_num):
@@ -254,14 +229,7 @@ class MyApp(ShowBase):
         self.accept("wheel_down", cam_control.wheel_down)
         self.accept("wheel_up", cam_control.wheel_up)
 
-        inputState.watch_with_modifiers('forward', 'w')
-        inputState.watch_with_modifiers('left', 'a')
-        inputState.watch_with_modifiers('backward', 's')
-        inputState.watch_with_modifiers('right', 'd')
-        inputState.watch_with_modifiers('turnleft', 'q')
-        inputState.watch_with_modifiers('turnright', 'e')
-        inputState.watch_with_modifiers('speedup', '+')
-        inputState.watch_with_modifiers('speeddown', '-')
+        setup_controls()
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
@@ -286,50 +254,9 @@ class MyApp(ShowBase):
 
         # Define controls
         if self.gui.text_field['focus']:
-            direction = -999
+            interpret_controls(self.player, stand_still=True)
         else:
-            dx = dy = 1
-            if inputState.is_set('forward'):
-                dy -= 1
-            if inputState.is_set('backward'):
-                dy += 1
-            if inputState.is_set('left'):
-                dx -= 1
-            if inputState.is_set('right'):
-                dx += 1
-            direction = self.dxdy_to_angle[dy][dx]
-
-            if inputState.is_set('turnleft'):
-                self.player.turn_left()
-                for doppelganger in self.doppelgangers:
-                    doppelganger.turn_left()
-            if inputState.is_set('turnright'):
-                self.player.turn_right()
-                for doppelganger in self.doppelgangers:
-                    doppelganger.turn_right()
-
-            if inputState.is_set('speedup'):
-                self.player.speed_up()
-                for doppelganger in self.doppelgangers:
-                    doppelganger.speed_up()
-            if inputState.is_set('speeddown'):
-                self.player.slow_down()
-                for doppelganger in self.doppelgangers:
-                    doppelganger.slow_down()
-
-        if direction > -900:
-            self.player.walk_in_dir(direction)
-            for doppelganger in self.doppelgangers:
-                doppelganger.walk_in_dir(direction)
-        else:
-            self.player.stand_still()
-            for doppelganger in self.doppelgangers:
-                doppelganger.stand_still()
-
-        self.inst6.text = "Speed " + str(round(sqrt(
-            pow(self.player.lower_torso.node().get_linear_velocity()[0], 2) + pow(
-                self.player.lower_torso.node().get_linear_velocity()[1], 2)), 2)) + " / " + str(
-            round(self.player.walk_speed, 1)) + " m/s"
+            interpret_controls(self.player)
 
         if self.nlp:
             data = self.player.get_compressed_state()

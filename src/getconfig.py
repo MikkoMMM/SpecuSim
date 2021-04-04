@@ -4,6 +4,7 @@ import logging
 config = configparser.ConfigParser()
 config.read("config.ini")
 settings = config["Settings"]
+debug = config["Debug"]
 
 logger = logging.getLogger(__name__)
 logLevel = settings.getint("log-level")
@@ -32,4 +33,7 @@ setting_info = {
     "force-cpu":        ["Whether to force CPU instead of GPU usage in language processing", 0],
     "generate-num":     ["Approximate number of words to generate.", 60],
     "log-level":        ["Development log level. <30 is for developers.", 30],
+    "enable-pstats":    ["Enable PStats performance analysis support", 0],
+    "enable-fps":       ["Enable an FPS meter", 1],
+    "debug-joints":     ["Visually debug joints"],
 }
