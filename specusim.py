@@ -1,17 +1,11 @@
-import gc
-import os
-import random
 import struct
 from math import sqrt, radians
-from pathlib import Path
 from time import sleep
 
-import torch
-from direct.gui.DirectGui import DirectFrame, DirectEntry
 from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.InputStateGlobal import inputState
 from direct.showbase.ShowBase import ShowBase
-from direct.stdpy import thread, threading
+from direct.stdpy import threading
 from direct.task import Task
 from panda3d.bullet import BulletDebugNode
 from panda3d.bullet import BulletHeightfieldShape
@@ -25,11 +19,10 @@ from panda3d.core import SamplerState, TextNode
 from panda3d.core import Vec3, load_prc_file_data, PStatClient, CullBinManager
 
 from src.camera import CameraControl
-from src.getconfig import settings, logger
+from src.default_gui import DefaultGUI
+from src.getconfig import logger
 from src.humanoid import Humanoid
-from src.language_processing.gpt2generator import GPT2Generator
 from src.language_processing.nlp_manager import NLPManager
-from src.language_processing.load_model import load_language_model
 from src.menu import Menu
 from src.utils import create_or_load_walk_map, create_shader_terrain_mesh
 
@@ -81,7 +74,6 @@ class MyApp(ShowBase):
         # In case window size would be at first detected incorrectly, buy a bit of time.
         base.graphicsEngine.render_frame()
 
-        self.gui = True  # A toggle for the GUI for testing puposes
         self.performance_analysis = True  # Enable pstat support and show frame rate
         self.physics_debug = False  # Show wireframes for the physics objects.
         self.nlp_debug = True  # Stuff that makes debugging natural language processing faster
@@ -160,6 +152,8 @@ class MyApp(ShowBase):
 
 
     def start_with_nlp(self):
+        from src.language_processing.load_model import load_language_model
+
         self.main_menu.hide_menu()
         self.terrain_init_thread.join()
         self.nlp = True
@@ -175,6 +169,7 @@ class MyApp(ShowBase):
         self.nlp_manager = NLPManager(self.generator_load_return[0], self.nlp_debug)
         self.start_game()
         return task.done
+
 
     def initialize_terrain(self):
         # Some terrain manipulations which weren't done at startup yet
@@ -224,8 +219,6 @@ class MyApp(ShowBase):
 
     def start_game(self):
         self.main_menu.hide_menu()
-
-        self.notice_text_obj.text = "Loading terrain"
         self.notice_text_obj.hide()
 
         self.inst1 = add_instructions(0.06, "[WASD]: Move")
@@ -249,20 +242,7 @@ class MyApp(ShowBase):
                     Humanoid(self.world, self.terrain_bullet_node, i * 2 - (self.doppelganger_num - 1),
                              j * 2 - (self.doppelganger_num - 1)))
 
-        if self.gui:
-            wx = base.win.get_x_size()
-            wy = base.win.get_y_size()
-            bar_start = -0.8
-            gui_bar = DirectFrame(frameColor=(0, 0, 0, 0.8),
-                                  frameSize=(-wx / 2, wx / 2, -1, bar_start),
-                                  pos=(0, -1, 0))
-            # Each width unit seems to be a 2/scale'th of a screen on a rectangular aspect ratio
-            scale = 0.05
-            self.text_field = DirectEntry(text="", scale=scale, command=self.player_say, parent=gui_bar,
-                                          text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=30,
-                                          pos=(-15 * scale, 0, (bar_start - 0.95) / 2),
-                                          initialText="Press Enter to start talking", numLines=3, focus=0,
-                                          focusInCommand=self.focus_in_text_field_initial)
+        self.gui = DefaultGUI(text_input_func=self.player_say)
 
         self.camera.reparent_to(self.player.lower_torso)
 
@@ -274,8 +254,6 @@ class MyApp(ShowBase):
         self.accept("wheel_down", cam_control.wheel_down)
         self.accept("wheel_up", cam_control.wheel_up)
 
-        self.accept('f1', self.toggle_wireframe)
-        self.accept('f2', self.toggle_texture)
         inputState.watch_with_modifiers('forward', 'w')
         inputState.watch_with_modifiers('left', 'a')
         inputState.watch_with_modifiers('backward', 's')
@@ -284,37 +262,19 @@ class MyApp(ShowBase):
         inputState.watch_with_modifiers('turnright', 'e')
         inputState.watch_with_modifiers('speedup', '+')
         inputState.watch_with_modifiers('speeddown', '-')
-        # For whatever reason, we seem to need a delay, in some circumstances at least
-        taskMgr.doMethodLater(globalClock.get_dt(), self.accept, 'Set enter', extraArgs=["enter", self.focus_in_text_field_initial])
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
 
 
-    def focus_in_text_field_initial(self):
-        self.text_field.enterText('')
-        self.focus_in_text_field()
-
-
     def player_say(self, text):
-        self.text_field.enterText('')
+        self.gui.text_field.enterText('')
         logger.debug(f"The player said: {text}")
         self.player.say(text)
         you_say = f"You say: \"{text}\""
         if self.nlp:
             self.nlp_manager.new_speech_task(self.npc1, you_say)
-        self.focus_out_text_field()
-
-
-    def focus_in_text_field(self):
-        self.text_field['focus'] = True
-        self.ignore("enter")
-
-
-    def focus_out_text_field(self):
-        self.text_field['focus'] = False
-        # If we don't delay, it will just focus back in again right then and there.
-        taskMgr.doMethodLater(globalClock.get_dt(), self.accept, 'Set enter', extraArgs=["enter", self.focus_in_text_field])
+        self.gui.focus_out_text_field()
 
 
     # Everything that needs to be done every frame goes here.
@@ -325,7 +285,7 @@ class MyApp(ShowBase):
         self.world.do_physics(dt, 5, 1.0 / 80.0)
 
         # Define controls
-        if self.text_field['focus']:
+        if self.gui.text_field['focus']:
             direction = -999
         else:
             dx = dy = 1

@@ -1,37 +1,15 @@
 import gc
 import os
-import random
-import struct
-from math import sqrt, radians
 from pathlib import Path
 from time import sleep
 
 import torch
-from direct.gui.DirectGui import DirectFrame, DirectEntry
-from direct.gui.OnscreenText import OnscreenText
-from direct.showbase.InputStateGlobal import inputState
-from direct.showbase.ShowBase import ShowBase
-from direct.stdpy import thread, threading
-from direct.task import Task
-from panda3d.bullet import BulletDebugNode
-from panda3d.bullet import BulletHeightfieldShape
-from panda3d.bullet import BulletRigidBodyNode
-from panda3d.bullet import BulletWorld
-from panda3d.bullet import ZUp
-from panda3d.bullet import get_bullet_version
-from panda3d.core import BitMask32
+from direct.stdpy import threading
 from panda3d.core import PNMImage, Filename
-from panda3d.core import SamplerState, TextNode
-from panda3d.core import Vec3, load_prc_file_data, PStatClient, CullBinManager
 
-from src.camera import CameraControl
-from src.getconfig import settings, logger
-from src.humanoid import Humanoid
+from src.getconfig import settings
 from src.language_processing.gpt2generator import GPT2Generator
-from src.language_processing.nlp_manager import NLPManager
 from src.menu import Menu
-from src.utils import create_or_load_walk_map, create_shader_terrain_mesh
-from multiprocessing.pool import ThreadPool
 
 
 def load_language_model(notice_text_obj, menu_img, return_value):
@@ -60,7 +38,8 @@ def load_language_model(notice_text_obj, menu_img, return_value):
                     menu.change_select_style(PNMImage(Filename("textures/select.png")), aspect_ratio_keeping_scale=2)
 
                     for i in range(len(models)):
-                        menu.add_button(models[i].name, _nlp_model_chosen, args=[models[i], notice_text_obj, return_value], y=-0.1 + 0.1 * i)
+                        menu.add_button(models[i].name, _nlp_model_chosen, args=[models[i], notice_text_obj, return_value],
+                                        y=-0.1 + 0.1 * i)
                     menu.add_button("(Exit)", exit, y=0.5)
                     menu.show_menu()
                     return
@@ -73,7 +52,7 @@ def load_language_model(notice_text_obj, menu_img, return_value):
         except OSError:
             if len(models) == 0:
                 notice_text_obj.text = "fYou do not seem to have any models installed. Place a model in the '{model_dir}' " \
-                                            "subfolder"
+                                       "subfolder"
                 base.graphicsEngine.render_frame()
                 # Scan for models again
                 models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
