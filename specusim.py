@@ -11,7 +11,7 @@ from direct.gui.DirectGui import DirectFrame, DirectEntry
 from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.InputStateGlobal import inputState
 from direct.showbase.ShowBase import ShowBase
-from direct.stdpy import thread
+from direct.stdpy import thread, threading
 from direct.task import Task
 from panda3d.bullet import BulletDebugNode
 from panda3d.bullet import BulletHeightfieldShape
@@ -29,15 +29,12 @@ from src.getconfig import settings, logger
 from src.humanoid import Humanoid
 from src.language_processing.gpt2generator import GPT2Generator
 from src.language_processing.nlp_manager import NLPManager
+from src.language_processing.load_model import load_language_model
 from src.menu import Menu
 from src.utils import create_or_load_walk_map, create_shader_terrain_mesh
 
 
 # from src.weapons.sword import Sword
-
-
-def timediff(time1, time2):
-    return time1 - time2
 
 
 # Function to put instructions on the screen.
@@ -99,7 +96,6 @@ class MyApp(ShowBase):
             base.set_frame_rate_meter(True)
             PStatClient.connect()
 
-        self.terrain_loaded = False
         self.menu_img = PNMImage(Filename("textures/menu.jpg"))
 
         self.main_menu = Menu(self.menu_img, aspect_ratio_keeping_scale=1)
@@ -154,99 +150,31 @@ class MyApp(ShowBase):
 
         self.nlp = False
 
-        thread.start_new_thread(self.initialize_terrain, args=())
+        self.terrain_init_thread = threading.Thread(target=self.initialize_terrain, args=())
+        self.terrain_init_thread.start()
 
 
     def start_without_nlp(self):
+        self.terrain_init_thread.join()
         self.start_game()
 
 
     def start_with_nlp(self):
         self.main_menu.hide_menu()
+        self.terrain_init_thread.join()
         self.nlp = True
-
-        model_dir = "language_models"
-        models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
-        failed_env_load = False
-        while True:
-            try:
-                transformers_pretrained = os.environ.get("TRANSFORMERS_PRETRAINED_MODEL", False)
-                if transformers_pretrained and not failed_env_load:
-                    # Keep it as a string, so that transformers library will load the generic model
-                    model = transformers_pretrained
-                    assert isinstance(model, str)
-                else:
-                    # Convert to path, so that transformers library will load the model from our folder
-                    if not models:
-                        raise FileNotFoundError(
-                            'There are no models in the models directory! You must download a pytorch compatible model!')
-                    if os.environ.get("MODEL_FOLDER", False) and not failed_env_load:
-                        model = Path(model_dir + os.environ.get("MODEL_FOLDER", False))
-                    elif len(models) > 1:
-                        self.notice_text_obj.text = "You have multiple models in your models folder. Please select one to load:"
-
-                        menu = Menu(self.menu_img, aspect_ratio_keeping_scale=1, hide_afterwards=True)
-                        menu.change_button_style(PNMImage(Filename("textures/empty_button_52.png")), aspect_ratio_keeping_scale=2)
-                        menu.change_select_style(PNMImage(Filename("textures/select.png")), aspect_ratio_keeping_scale=2)
-
-                        for i in range(len(models)):
-                            menu.add_button(models[i].name, self.nlp_model_chosen, args=[models[i]], y=-0.1 + 0.1 * i)
-                        menu.add_button("(Exit)", exit, y=0.5)
-                        menu.show_menu()
-                        return
-                    else:
-                        model = models[0]
-                        print("Using model: " + str(model))
-                    assert isinstance(model, Path)
-                self.nlp_model_chosen(model)
-                break
-            except OSError:
-                if len(models) == 0:
-                    self.notice_text_obj.text = "fYou do not seem to have any models installed. Place a model in the '{model_dir}' " \
-                                                "subfolder"
-                    base.graphicsEngine.render_frame()
-                    # Scan for models again
-                    models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
-                else:
-                    failed_env_load = True
-                    self.notice_text_obj.text = "Model could not be loaded. Please try another model."
-                continue
-            except KeyboardInterrupt:
-                print("Model load cancelled. ")
-                exit(0)
+        self.generator_load_return = []
+        load_language_model(self.notice_text_obj, self.menu_img, self.generator_load_return)
+        taskMgr.add(self.wait_nlp_initialized, "nlp-init")
 
 
-    def nlp_model_chosen(self, model):
-        self.notice_text_obj.text = "Loading language model. This may take a few minutes."
-
-        assert isinstance(model, Path)
-        thread.start_new_thread(self.load_generator, args=(), kwargs={
-            "model_path": model,
-            "generate_num": settings.getint("generate-num"),
-            "temperature": settings.getfloat("temp"),
-            "repetition_penalty": settings.getfloat("rep-pen")})
-
-        while not hasattr(self, 'generator'):
-            base.graphicsEngine.render_frame()
-            sleep(0.05)
-
-        # May be needed to avoid out of mem
-        gc.collect()
-        torch.cuda.empty_cache()
-
-        while not self.terrain_loaded:
-            self.notice_text_obj.text = "Loading terrain."
-            base.graphicsEngine.render_frame()
-            sleep(0.05)
-
+    def wait_nlp_initialized(self, task):
+        if not self.generator_load_return:
+            return task.cont
         self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
-        self.nlp_manager = NLPManager(self.generator, self.nlp_debug)
+        self.nlp_manager = NLPManager(self.generator_load_return[0], self.nlp_debug)
         self.start_game()
-
-
-    def load_generator(self, **kwargs):
-        self.generator = GPT2Generator(**kwargs)
-
+        return task.done
 
     def initialize_terrain(self):
         # Some terrain manipulations which weren't done at startup yet
@@ -290,7 +218,6 @@ class MyApp(ShowBase):
         self.terrain_np = render.attach_new_node(self.terrain_bullet_node)
         self.terrain_np.set_collide_mask(BitMask32.bit(0))
         self.world.attach(self.terrain_np.node())
-        self.terrain_loaded = True
 
         return Task.done
 
@@ -299,9 +226,6 @@ class MyApp(ShowBase):
         self.main_menu.hide_menu()
 
         self.notice_text_obj.text = "Loading terrain"
-        while not self.terrain_loaded:
-            base.graphicsEngine.render_frame()
-            sleep(0.01)
         self.notice_text_obj.hide()
 
         self.inst1 = add_instructions(0.06, "[WASD]: Move")
@@ -367,8 +291,6 @@ class MyApp(ShowBase):
         taskMgr.add(self.update, "update")
 
 
-    #        render.analyze()
-
     def focus_in_text_field_initial(self):
         self.text_field.enterText('')
         self.focus_in_text_field()
@@ -381,8 +303,6 @@ class MyApp(ShowBase):
         you_say = f"You say: \"{text}\""
         if self.nlp:
             self.nlp_manager.new_speech_task(self.npc1, you_say)
-            for doppelganger in random.sample(self.doppelgangers, len(self.doppelgangers)):
-                self.nlp_manager.new_speech_task(doppelganger, you_say)
         self.focus_out_text_field()
 
 
