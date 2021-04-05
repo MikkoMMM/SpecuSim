@@ -7,7 +7,7 @@ settings = config["Settings"]
 debug = config["Debug"]
 
 logger = logging.getLogger(__name__)
-logLevel = settings.getint("log-level")
+logLevel = debug.getint("log-level")
 oneLevelUp = 20
 
 # I don't know if this will work before loading the transformers module?
@@ -25,15 +25,18 @@ logger.setLevel(logLevel)
 
 """
 Settings descriptions and their default values keyed by their name.
-These settings, their descriptions, and their defaults appear in the settings menu and the /help prompt.
 """
 setting_info = {
     "temp":             ["Higher values make the AI more random.", 0.4],
     "rep-pen":          ["Controls how repetitive the AI is allowed to be.", 1.2],
     "force-cpu":        ["Whether to force CPU instead of GPU usage in language processing", 0],
     "generate-num":     ["Approximate number of words to generate.", 60],
+    "enable-fps-meter": ["Show a frames per second counter", 1],
+}
+
+debug_info = {
     "log-level":        ["Development log level. <30 is for developers.", 30],
     "enable-pstats":    ["Enable PStats performance analysis support", 0],
-    "enable-fps":       ["Enable an FPS meter", 1],
-    "debug-joints":     ["Visually debug joints"],
+    "debug-joints":     ["Visually debug joints", 0],
+    "nlp-debug":        ["Stuff that makes debugging natural language processing faster", 0],
 }

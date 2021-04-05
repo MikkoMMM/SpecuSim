@@ -2,7 +2,6 @@
 
 import math
 
-from direct.task import Task
 from panda3d.core import KeyboardButton, MouseButton
 from panda3d.core import LPoint3, LVector3f
 from panda3d.core import Quat
@@ -121,4 +120,4 @@ class CameraControl:
         self.node.set_pos(node_pos)
         self.node.look_at(self.focus_node)
 
-        return Task.cont
+        return task.cont

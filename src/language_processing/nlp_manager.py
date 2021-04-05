@@ -7,10 +7,10 @@ from queue import PriorityQueue
 
 from direct.stdpy import thread, threading
 
-from src.getconfig import settings
+from src.getconfig import settings, debug
 
 
-def act(generator, tokens, output=None, debug=True):
+def act(generator, tokens, output=None):
     temperature = settings.getfloat('temp')
     repetition_penalty = settings.getfloat('rep-pen')
     try:
@@ -27,7 +27,7 @@ def act(generator, tokens, output=None, debug=True):
         traceback.print_exc()
         print(e)
 
-        if debug:
+        if debug.getboolean("nlp-debug"):
             # Probably a bad idea, but for now hastens the debugging process
             _exit(1)
         return ""
@@ -70,10 +70,9 @@ class NLPManager:
     talking_speed = 5  # How long (in characters per second) the speech bubble should stay visible
 
 
-    def __init__(self, generator, debug=False):
+    def __init__(self, generator):
         self.queue = PriorityQueue()
         self.wait_queue = []
-        self.debug = debug
         self.generator = generator
         for _ in range(4):
             thread.start_new_thread(self.thread_loop, args=())
@@ -88,7 +87,7 @@ class NLPManager:
 
             result = act(self.generator, self.generator.memory_merge(context, speech_task.speaker.short_term_memory, speech_task.text,
                                                                      prompt),
-                         output=speech_task.speaker.speech_field, debug=self.debug)
+                         output=speech_task.speaker.speech_field)
 
             on_screen_time = max(30.0 / self.talking_speed, len(result) / self.talking_speed)
             with self.lock:
