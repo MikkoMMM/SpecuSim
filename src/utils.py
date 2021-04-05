@@ -97,3 +97,20 @@ def create_shader_terrain_mesh(elevation_img, height):
     terrain.set_shader_input("camera", base.camera)
 
     return terrain
+
+
+def create_and_texture_terrain(elevation_img, height, texture_img):
+    terrain = create_shader_terrain_mesh(elevation_img, height)
+
+    # Wait for there to be a texture loader
+    while not hasattr(base, 'loader'):
+        sleep(0.01)
+
+    # Set some texture on the terrain
+    terrain_tex = Texture("terrain texture")
+    terrain_tex.load(texture_img)
+    terrain_tex.set_minfilter(SamplerState.FT_linear_mipmap_linear)
+    terrain_tex.set_anisotropic_degree(16)
+    terrain.set_texture(terrain_tex)
+
+    return terrain

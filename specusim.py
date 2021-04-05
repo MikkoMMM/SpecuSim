@@ -67,14 +67,20 @@ class MyApp(ShowBase):
 
     def debug_mode(self):
         self.main_menu.hide_menu()
+        # noinspection PyUnresolvedReferences
+        import game_modes.debug_mode.init
 
 
     def pvp(self):
         self.main_menu.hide_menu()
+        # noinspection PyUnresolvedReferences
+        import game_modes.pvp.init
 
 
     def main_game(self):
         self.main_menu.hide_menu()
+        # noinspection PyUnresolvedReferences
+        import game_modes.main.init
 
 
 app = MyApp()

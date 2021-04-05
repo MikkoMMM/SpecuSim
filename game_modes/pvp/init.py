@@ -18,7 +18,7 @@ from src.default_controls import setup_controls, interpret_controls
 from src.default_gui import DefaultGUI
 from src.getconfig import debug
 from src.humanoid import Humanoid
-from src.utils import create_or_load_walk_map, create_shader_terrain_mesh
+from src.utils import create_or_load_walk_map, create_and_texture_terrain
 
 
 class Game:
@@ -69,23 +69,11 @@ class Game:
 
 
     def initialize_terrain(self):
-        # Some terrain manipulations which weren't done at startup yet
-
         # Set a heightfield, the heightfield should be a 16-bit png and
         # have a quadratic size of a power of two.
         elevation_img = PNMImage(Filename("worldmaps/seed_16783_grayscale.png"))
-
-        terrain = create_shader_terrain_mesh(elevation_img, self.terrain_height)
-
-        # Wait for there to be a texture loader
-        while not hasattr(base, 'loader'):
-            sleep(0.01)
-
-        # Set some texture on the terrain
-        terrain_tex = base.loader.loadTexture("worldmaps/seed_16783_satellite.png")
-        terrain_tex.set_minfilter(SamplerState.FT_linear_mipmap_linear)
-        terrain_tex.set_anisotropic_degree(16)
-        terrain.set_texture(terrain_tex)
+        texture_img = PNMImage(Filename("worldmaps/seed_16783_satellite.png"))
+        create_and_texture_terrain(elevation_img, self.terrain_height, texture_img)
 
         # Collision detection for the terrain
         terrain_colshape = BulletHeightfieldShape(
