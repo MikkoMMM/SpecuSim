@@ -1,9 +1,9 @@
 import struct
 from time import sleep
 
+from direct.gui.DirectGui import DirectFrame, DirectEntry, DirectButton
 from direct.gui.OnscreenText import OnscreenText
 from direct.stdpy import threading
-from direct.task import Task
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.bullet import BulletWorld
@@ -26,6 +26,8 @@ class Game:
         # Increase camera FOV as well as the far plane
         base.camLens.set_fov(90)
         base.camLens.set_near_far(0.1, 50000)
+        self.ip_addr = ""
+        self.port = "5005"
 
         # Heightfield's height
         self.terrain_height = 25.0
@@ -52,20 +54,84 @@ class Game:
 
         # To set Direct2D objects in front of others
         cull_manager = CullBinManager.getGlobalPtr()
-        # According to the manual page linked-to below,
-        # the highest-order standard bin has order 50,
-        # so I'm assigning our new bin a sort order of 60.
+        # The highest-order standard bin has a sort order of 50
         cull_manager.addBin("frontBin", cull_manager.BTFixed, 60)
-
-        self.notice_text_obj = OnscreenText(text="", style=1, fg=(1, 1, 1, 1), scale=.05,
-                                            shadow=(0, 0, 0, 1), parent=base.aspect2d,
-                                            pos=(0.0, 0.3), align=TextNode.ACenter)
-        self.notice_text_obj.setBin("frontBin", 1)
 
         self.terrain_init_thread = threading.Thread(target=self.initialize_terrain, args=())
         self.terrain_init_thread.start()
+
+        self.connect_dialog = DirectFrame(frameColor=(0, 0, 0, 0.8),
+                                     frameSize=(-0.7, 0.7, -0.3, 0.3),
+                                     pos=(0, -1, 0))
+        scale = 0.05
+        self.ip_field = DirectEntry(scale=scale, command=self.focus_in_port, parent=self.connect_dialog,
+                                    text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=12,
+                                    pos=(-0.2, 0, 0.04),
+                                    initialText="", numLines=1, focus=1)
+
+        self.port_field = DirectEntry(scale=scale, command=self.focus_in_connect, parent=self.connect_dialog,
+                                      text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=3,
+                                      pos=(-0.2, 0, -0.04),
+                                      initialText="5005", numLines=1, focus=0)
+
+        self.notice_text_obj = OnscreenText(text="Enter the IP address of the other player", style=1, fg=(1, 1, 1, 1), scale=.05,
+                                            shadow=(0, 0, 0, 1), parent=self.connect_dialog,
+                                            pos=(0.0, 0.2), align=TextNode.ACenter)
+        self.notice_text_obj.setBin("frontBin", 1)
+
+        self.ip_question = OnscreenText(text="IP:", style=1, fg=(1, 1, 1, 1), scale=scale,
+                                        shadow=(0, 0, 0, 1), parent=self.connect_dialog,
+                                        pos=(-0.4, 0.04), align=TextNode.ACenter)
+        self.ip_question.setBin("frontBin", 1)
+
+        self.port_question = OnscreenText(text="Port:", style=1, fg=(1, 1, 1, 1), scale=scale,
+                                          shadow=(0, 0, 0, 1), parent=self.connect_dialog,
+                                          pos=(-0.4, -0.04), align=TextNode.ACenter)
+        self.port_question.setBin("frontBin", 1)
+
+        DirectButton(text="Quit",
+                     scale=scale, command=exit, parent=self.connect_dialog,
+                     pos=(-0.2, 0, -0.2))
+
+        self.connect_button = DirectButton(text="Connect",
+                                           scale=scale, command=self.set_ip_addr, parent=self.connect_dialog,
+                                           pos=(0.2, 0, -0.2))
+
+        taskMgr.add(self.wait_for_connection, "pvp-init")
+
+
+    def focus_in_port(self, ignore_me):
+        self.ip_field['focus'] = False
+        self.port_field['focus'] = True
+
+
+    def focus_in_connect(self, ignore_me):
+        # IMPLEMENT ME
+        self.set_ip_addr()
+
+
+    def wait_for_connection(self, task):
+        while not self.ip_addr:
+            return task.cont
+        while not self.port:
+            return task.cont
+
+        self.connect_dialog.destroy()
         self.terrain_init_thread.join()
         self.start_game()
+
+
+    def set_ip_addr(self):
+        self.ip_addr = self.ip_field.get()
+        self.port = self.port_field.get()
+
+        if not self.ip_addr:
+            self.ip_field['focus'] = True
+            self.port_field['focus'] = False
+            return
+        if not self.port:
+            self.ip_field['focus'] = False
+            self.port_field['focus'] = True
 
 
     def initialize_terrain(self):
@@ -86,12 +152,8 @@ class Game:
         self.terrain_np.set_collide_mask(BitMask32.bit(0))
         self.world.attach(self.terrain_np.node())
 
-        return Task.done
-
 
     def start_game(self):
-        self.notice_text_obj.hide()
-
         self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=debug.getboolean("debug-joints"))
 
         self.gui = DefaultGUI(text_input_func=self.player_say)
@@ -114,6 +176,7 @@ class Game:
 
     def player_say(self, text):
         self.gui.text_field.enterText('Disabled for multiplayer')
+        self.gui.focus_out_text_field()
 
 
     # Everything that needs to be done every frame goes here.

@@ -3,7 +3,6 @@ from time import sleep
 
 from direct.gui.OnscreenText import OnscreenText
 from direct.stdpy import threading
-from direct.task import Task
 from panda3d.bullet import BulletHeightfieldShape
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.bullet import BulletWorld
@@ -54,9 +53,7 @@ class Game:
 
         # To set Direct2D objects in front of others
         cull_manager = CullBinManager.getGlobalPtr()
-        # According to the manual page linked-to below,
-        # the highest-order standard bin has order 50,
-        # so I'm assigning our new bin a sort order of 60.
+        # The highest-order standard bin has a sort order of 50
         cull_manager.addBin("frontBin", cull_manager.BTFixed, 60)
 
         self.notice_text_obj = OnscreenText(text="", style=1, fg=(1, 1, 1, 1), scale=.05,
@@ -99,8 +96,6 @@ class Game:
         self.terrain_np = render.attach_new_node(self.terrain_bullet_node)
         self.terrain_np.set_collide_mask(BitMask32.bit(0))
         self.world.attach(self.terrain_np.node())
-
-        return Task.done
 
 
     def start_game(self):

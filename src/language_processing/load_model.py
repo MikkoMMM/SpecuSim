@@ -13,6 +13,7 @@ from src.menu import Menu
 
 
 def load_language_model(notice_text_obj, menu_img, return_value):
+    # TODO: The menu should probably be destroyed afterwards instead of just hidden
     model_dir = "language_models"
     models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
     failed_env_load = False
