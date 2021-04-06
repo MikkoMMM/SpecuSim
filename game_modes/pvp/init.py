@@ -32,6 +32,7 @@ class Game:
         base.camLens.set_near_far(0.1, 50000)
         self.ip_addr = ""
         self.port = 5005
+        self.lag = 0
 
         # Heightfield's height
         self.terrain_height = 25.0
@@ -101,6 +102,10 @@ class Game:
                                            scale=scale, command=self.set_ip_addr, parent=self.connect_dialog,
                                            pos=(0.2, 0, -0.2))
 
+        self.lag_meter = OnscreenText(text="", style=1, fg=(1, 1, 1, 1), scale=.05,
+                                            shadow=(0, 0, 0, 1), pos=(-1.0, 0.9), align=TextNode.ACenter)
+        self.lag_meter.setBin("frontBin", 1)
+
         self.sock = socket.socket(socket.AF_INET,  # Internet
                                   socket.SOCK_DGRAM)  # UDP
         self.sock.bind(("", self.port))
@@ -109,7 +114,7 @@ class Game:
 
         self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=debug.getboolean("debug-joints"))
         self.opponent = Humanoid(self.world, self.terrain_bullet_node, 2, 0, debug=debug.getboolean("debug-joints"))
-        self.player_start_time = time()
+        self.player_start_time = time() % 10
         self.opponent_start_time = -1
         self.network_listen_thread = threading.Thread(target=self.network_listen_initial, args=())
         self.network_listen_thread.start()
@@ -237,21 +242,29 @@ class Game:
         while True:
             game_state_packet = self.sock.recv(100)  # buffer size
             uncompressed = struct.unpack(self.packet_format(), game_state_packet)
+            opponent_time = uncompressed[0]
+            cur_time = time() % 10
+            if opponent_time > cur_time:
+                self.lag = cur_time + 10 - opponent_time
+            else:
+                self.lag = cur_time - opponent_time
             self.opponent_new_state = uncompressed[1:]
 
 
     # Everything that needs to be done every frame goes here.
     # Physics updates and movement and stuff.
     def update(self, task):
+        self.lag_meter.setText(f"Lag: {str(round(self.lag*1000))} ms")
         dt = globalClock.get_dt()
         self.opponent.set_state(*self.opponent_new_state)
+        self.opponent.stand_still()
 
         self.world.do_physics(dt, 5, 1.0 / 80.0)
 
         # Define controls
         interpret_controls(self.player)
 
-        game_state_packet = struct.pack("f", time()) + self.player.get_compressed_state()
+        game_state_packet = struct.pack("f", time() % 10) + self.player.get_compressed_state()
         self.sock.sendto(game_state_packet, (self.ip_addr, self.port))
         return task.cont
 
