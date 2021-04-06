@@ -70,7 +70,7 @@ class Game:
                                      pos=(0, -1, 0))
         scale = 0.05
         self.ip_field = DirectEntry(scale=scale, command=self.focus_in_port, parent=self.connect_dialog,
-                                    text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=12,
+                                    text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=22,
                                     pos=(-0.2, 0, 0.04),
                                     initialText="", numLines=1, focus=1)
 
