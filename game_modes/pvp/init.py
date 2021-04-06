@@ -120,18 +120,9 @@ class Game:
             with self.ip_lock:
                 try:
                     data, addr = self.sock.recvfrom(100)  # buffer size
-                    uncompressed = self.struct.unpack(self.packet_format(), data)
+                    uncompressed = struct.unpack(self.packet_format(), data)
                     self.opponent_start_time = uncompressed[0]
-                    if self.opponent_start_time < self.player_start_time:
-                        body = self.player.get_body()
-                        body.set_x(20)
-                        body.set_y(20)
-                        self.opponent.set_state_shifted(uncompressed[1:], -20, -20)
-                    else:
-                        body = self.player.get_body()
-                        body.set_x(-20)
-                        body.set_y(-20)
-                        self.opponent.set_state_shifted(uncompressed[1:], 20, 20)
+                    self.opponent_new_state = uncompressed[1:]
                     if self.ip_addr:
                         return
                     if addr:
@@ -162,11 +153,22 @@ class Game:
             return task.cont
         if not self.port:
             return task.cont
-        game_state_packet = struct.pack("f", time()) + self.player.get_compressed_state()
+        game_state_packet = struct.pack("f", self.player_start_time) + self.player.get_compressed_state()
         self.sock.sendto(game_state_packet, (self.ip_addr, self.port))
 
         if self.opponent_start_time < 0:
             return task.cont
+
+        if self.opponent_start_time < self.player_start_time:
+            body = self.player.get_body()
+            body.set_x(20)
+            body.set_y(20)
+            self.opponent.set_state_shifted(*self.opponent_new_state, -20, -20)
+        else:
+            body = self.player.get_body()
+            body.set_x(-20)
+            body.set_y(-20)
+            self.opponent.set_state_shifted(*self.opponent_new_state, 20, 20)
 
         self.network_listen_thread.join()
         self.sock.setblocking(True)
@@ -235,13 +237,14 @@ class Game:
         while True:
             game_state_packet = self.sock.recv(100)  # buffer size
             uncompressed = struct.unpack(self.packet_format(), game_state_packet)
-            self.opponent.set_state(uncompressed[1:])
+            self.opponent_new_state = uncompressed[1:]
 
 
     # Everything that needs to be done every frame goes here.
     # Physics updates and movement and stuff.
     def update(self, task):
         dt = globalClock.get_dt()
+        self.opponent.set_state(*self.opponent_new_state)
 
         self.world.do_physics(dt, 5, 1.0 / 80.0)
 

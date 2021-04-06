@@ -120,9 +120,6 @@ class Game:
         self.gui.text_field.enterText('')
         logger.debug(f"The player said: {text}")
         self.player.say(text)
-        you_say = f"You say: \"{text}\""
-        if self.nlp:
-            self.nlp_manager.new_speech_task(self.npc1, you_say)
         self.gui.focus_out_text_field()
 
 
