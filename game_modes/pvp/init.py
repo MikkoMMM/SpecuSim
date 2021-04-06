@@ -107,6 +107,10 @@ class Game:
         self.sock.setblocking(False)
         taskMgr.add(self.wait_connection_info, "pvp-init")
 
+        self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=debug.getboolean("debug-joints"))
+        self.opponent = Humanoid(self.world, self.terrain_bullet_node, 2, 0, debug=debug.getboolean("debug-joints"))
+        self.player_start_time = time()
+        self.opponent_start_time = -1
         self.network_listen_thread = threading.Thread(target=self.network_listen_initial, args=())
         self.network_listen_thread.start()
 
@@ -114,16 +118,33 @@ class Game:
     def network_listen_initial(self):
         while True:
             with self.ip_lock:
-                if self.ip_addr:
-                    return
                 try:
                     data, addr = self.sock.recvfrom(100)  # buffer size
+                    uncompressed = self.struct.unpack(self.packet_format(), data)
+                    self.opponent_start_time = uncompressed[0]
+                    if self.opponent_start_time < self.player_start_time:
+                        body = self.player.get_body()
+                        body.set_x(20)
+                        body.set_y(20)
+                        self.opponent.set_state_shifted(uncompressed[1:], -20, -20)
+                    else:
+                        body = self.player.get_body()
+                        body.set_x(-20)
+                        body.set_y(-20)
+                        self.opponent.set_state_shifted(uncompressed[1:], 20, 20)
+                    if self.ip_addr:
+                        return
                     if addr:
                         self.ip_addr = addr[0]
                         logger.debug(f"Connection from {self.ip_addr}")
+                        return
                 except socket.error as e:
                     pass
             sleep(0.05)
+
+
+    def packet_format(self):
+        return f"f{self.player.get_state_format()}"
 
 
     def focus_in_port(self, ignore_me):
@@ -137,17 +158,19 @@ class Game:
 
 
     def wait_connection_info(self, task):
-        while not self.ip_addr:
+        if not self.ip_addr:
             return task.cont
-        while not self.port:
+        if not self.port:
+            return task.cont
+        game_state_packet = struct.pack("f", time()) + self.player.get_compressed_state()
+        self.sock.sendto(game_state_packet, (self.ip_addr, self.port))
+
+        if self.opponent_start_time < 0:
             return task.cont
 
         self.network_listen_thread.join()
         self.sock.setblocking(True)
         self.connect_dialog.destroy()
-        self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=debug.getboolean("debug-joints"))
-        self.opponent = Humanoid(self.world, self.terrain_bullet_node, 2, 0, debug=debug.getboolean("debug-joints"))
-        self.player_start_time = time()
         self.network_listen_thread = threading.Thread(target=self.network_listen, args=())
         self.network_listen_thread.start()
         self.terrain_init_thread.join()
@@ -211,7 +234,8 @@ class Game:
     def network_listen(self):
         while True:
             game_state_packet = self.sock.recv(100)  # buffer size
-            uncompressed = struct.unpack(self.player.get_state_format(), game_state_packet)
+            uncompressed = struct.unpack(self.packet_format(), game_state_packet)
+            self.opponent.set_state(uncompressed[1:])
 
 
     # Everything that needs to be done every frame goes here.
@@ -224,7 +248,7 @@ class Game:
         # Define controls
         interpret_controls(self.player)
 
-        game_state_packet = self.player.get_compressed_state()
+        game_state_packet = struct.pack("f", time()) + self.player.get_compressed_state()
         self.sock.sendto(game_state_packet, (self.ip_addr, self.port))
         return task.cont
 

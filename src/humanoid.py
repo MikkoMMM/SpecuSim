@@ -341,7 +341,7 @@ class Humanoid(Animal):
 
     def set_state(self, x, y, heading, v_x, v_y):
         body = self.get_body()
-        body.set_x(x + 2)
+        body.set_x(x)
         body.set_y(y)
         body.set_h(heading)
         body.node().set_linear_velocity(Vec3(v_x, v_y, body.node().get_linear_velocity().get_z()))
