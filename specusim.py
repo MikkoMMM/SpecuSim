@@ -55,7 +55,7 @@ class MyApp(ShowBase):
 
         self.menu_img = PNMImage(Filename("textures/menu.jpg"))
 
-        self.main_menu = Menu(self.menu_img, aspect_ratio_keeping_scale=1)
+        self.main_menu = Menu(self.menu_img, aspect_ratio_keeping_scale=1, destroy_afterwards=True)
         self.main_menu.change_button_style(PNMImage(Filename("textures/empty_button_52.png")), aspect_ratio_keeping_scale=2)
         self.main_menu.change_select_style(PNMImage(Filename("textures/select.png")), aspect_ratio_keeping_scale=2)
         self.main_menu.add_button("Main Game", self.main_game, y=-0.1)
@@ -66,19 +66,16 @@ class MyApp(ShowBase):
 
 
     def debug_mode(self):
-        self.main_menu.hide_menu()
         # noinspection PyUnresolvedReferences
         import game_modes.debug_mode.init
 
 
     def pvp(self):
-        self.main_menu.hide_menu()
         # noinspection PyUnresolvedReferences
         import game_modes.pvp.init
 
 
     def main_game(self):
-        self.main_menu.hide_menu()
         # noinspection PyUnresolvedReferences
         import game_modes.main.init
 

@@ -1,5 +1,6 @@
 import struct
-from time import sleep
+import socket
+from time import sleep, time
 
 from direct.gui.DirectGui import DirectFrame, DirectEntry, DirectButton
 from direct.gui.OnscreenText import OnscreenText
@@ -16,18 +17,21 @@ from panda3d.core import Vec3, CullBinManager
 from src.camera import CameraControl
 from src.default_controls import setup_controls, interpret_controls
 from src.default_gui import DefaultGUI
-from src.getconfig import debug
+from src.getconfig import debug, logger
 from src.humanoid import Humanoid
 from src.utils import create_or_load_walk_map, create_and_texture_terrain
 
 
 class Game:
+    ip_lock = threading.Lock()  # Just in case
+
+
     def __init__(self):
         # Increase camera FOV as well as the far plane
         base.camLens.set_fov(90)
         base.camLens.set_near_far(0.1, 50000)
         self.ip_addr = ""
-        self.port = "5005"
+        self.port = 5005
 
         # Heightfield's height
         self.terrain_height = 25.0
@@ -97,7 +101,29 @@ class Game:
                                            scale=scale, command=self.set_ip_addr, parent=self.connect_dialog,
                                            pos=(0.2, 0, -0.2))
 
-        taskMgr.add(self.wait_for_connection, "pvp-init")
+        self.sock = socket.socket(socket.AF_INET,  # Internet
+                                  socket.SOCK_DGRAM)  # UDP
+        self.sock.bind(("", self.port))
+        self.sock.setblocking(False)
+        taskMgr.add(self.wait_connection_info, "pvp-init")
+
+        self.network_listen_thread = threading.Thread(target=self.network_listen_initial, args=())
+        self.network_listen_thread.start()
+
+
+    def network_listen_initial(self):
+        while True:
+            with self.ip_lock:
+                if self.ip_addr:
+                    return
+                try:
+                    data, addr = self.sock.recvfrom(100)  # buffer size
+                    if addr:
+                        self.ip_addr = addr[0]
+                        logger.debug(f"Connection from {self.ip_addr}")
+                except socket.error as e:
+                    pass
+            sleep(0.05)
 
 
     def focus_in_port(self, ignore_me):
@@ -106,29 +132,39 @@ class Game:
 
 
     def focus_in_connect(self, ignore_me):
-        # IMPLEMENT ME
+        # TODO: IMPLEMENT ME
         self.set_ip_addr()
 
 
-    def wait_for_connection(self, task):
+    def wait_connection_info(self, task):
         while not self.ip_addr:
             return task.cont
         while not self.port:
             return task.cont
 
+        self.network_listen_thread.join()
+        self.sock.setblocking(True)
         self.connect_dialog.destroy()
+        self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=debug.getboolean("debug-joints"))
+        self.opponent = Humanoid(self.world, self.terrain_bullet_node, 2, 0, debug=debug.getboolean("debug-joints"))
+        self.player_start_time = time()
+        self.network_listen_thread = threading.Thread(target=self.network_listen, args=())
+        self.network_listen_thread.start()
         self.terrain_init_thread.join()
+
         self.start_game()
+        return task.done
 
 
     def set_ip_addr(self):
-        self.ip_addr = self.ip_field.get()
-        self.port = self.port_field.get()
+        with self.ip_lock:
+            self.ip_addr = self.ip_field.get()
 
-        if not self.ip_addr:
-            self.ip_field['focus'] = True
-            self.port_field['focus'] = False
-            return
+            if not self.ip_addr:
+                self.ip_field['focus'] = True
+                self.port_field['focus'] = False
+                return
+        self.port = int(self.port_field.get())
         if not self.port:
             self.ip_field['focus'] = False
             self.port_field['focus'] = True
@@ -154,9 +190,7 @@ class Game:
 
 
     def start_game(self):
-        self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=debug.getboolean("debug-joints"))
-
-        self.gui = DefaultGUI(text_input_func=self.player_say)
+        self.gui = DefaultGUI(enable_text_field=False)  # Chat is currently not implemented, due to various concerns
 
         base.camera.reparent_to(self.player.lower_torso)
 
@@ -174,9 +208,10 @@ class Game:
         taskMgr.add(self.update, "update")
 
 
-    def player_say(self, text):
-        self.gui.text_field.enterText('Disabled for multiplayer')
-        self.gui.focus_out_text_field()
+    def network_listen(self):
+        while True:
+            game_state_packet = self.sock.recv(100)  # buffer size
+            uncompressed = struct.unpack(self.player.get_state_format(), game_state_packet)
 
 
     # Everything that needs to be done every frame goes here.
@@ -187,14 +222,10 @@ class Game:
         self.world.do_physics(dt, 5, 1.0 / 80.0)
 
         # Define controls
-        if self.gui.text_field['focus']:
-            interpret_controls(self.player, stand_still=True)
-        else:
-            interpret_controls(self.player)
+        interpret_controls(self.player)
 
-        data = self.player.get_compressed_state()
-        uncompressed = struct.unpack(self.player.get_state_format(), data)
-
+        game_state_packet = self.player.get_compressed_state()
+        self.sock.sendto(game_state_packet, (self.ip_addr, self.port))
         return task.cont
 
 

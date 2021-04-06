@@ -327,7 +327,7 @@ class Humanoid(Animal):
 
     def get_state_format(self):
         # https://docs.python.org/3/library/struct.html#format-characters
-        return "fffff"
+        return "ffeee"
 
 
     def get_compressed_state(self):

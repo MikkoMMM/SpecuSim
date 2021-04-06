@@ -10,9 +10,11 @@ from panda3d.core import TextNode, Texture
 
 
 class Menu:
-    def __init__(self, menu_tex_img, aspect_ratio_keeping_scale=None, use_keyboard=True, hide_afterwards=False, **keywords):
+    def __init__(self, menu_tex_img, aspect_ratio_keeping_scale=None, use_keyboard=True, hide_afterwards=False,
+                 destroy_afterwards=False, **keywords):
         self.use_keyboard = use_keyboard
         self.auto_hide = hide_afterwards
+        self.auto_destroy = destroy_afterwards
 
         kx = menu_tex_img.get_x_size()
         ky = menu_tex_img.get_y_size()
@@ -132,12 +134,15 @@ class Menu:
 
 
     def exec_selection(self, entry=None):
+        # Because we ignore keystrokes, it's best to do these before executing the command to avoid potential keypress problems
+        if self.auto_hide:
+            self.hide_menu()
+        if self.auto_destroy:
+            self.destroy_menu()
         if entry is None:
             self.funcs[self.active_entry](*self.args[self.active_entry])
         else:
             self.funcs[entry](*self.args[entry])
-        if self.auto_hide:
-            self.hide_menu()
 
 
     def select_down(self):
@@ -168,6 +173,12 @@ class Menu:
         self.clear_keys()
         self.menu_frame.hide()
         self.select_frame.hide()
+
+
+    def destroy_menu(self):
+        self.clear_keys()
+        self.menu_frame.destroy()
+        self.select_frame.destroy()
 
 
     def show_menu(self):

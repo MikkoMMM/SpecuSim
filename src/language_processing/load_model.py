@@ -13,7 +13,6 @@ from src.menu import Menu
 
 
 def load_language_model(notice_text_obj, menu_img, return_value):
-    # TODO: The menu should probably be destroyed afterwards instead of just hidden
     model_dir = "language_models"
     models = [x for x in Path(model_dir).iterdir() if x.is_dir()]
     failed_env_load = False
@@ -34,7 +33,7 @@ def load_language_model(notice_text_obj, menu_img, return_value):
                 elif len(models) > 1:
                     notice_text_obj.text = "You have multiple models in your models folder. Please select one to load:"
 
-                    menu = Menu(menu_img, aspect_ratio_keeping_scale=1, hide_afterwards=True)
+                    menu = Menu(menu_img, aspect_ratio_keeping_scale=1, destroy_afterwards=True)
                     menu.change_button_style(PNMImage(Filename("textures/empty_button_52.png")), aspect_ratio_keeping_scale=2)
                     menu.change_select_style(PNMImage(Filename("textures/select.png")), aspect_ratio_keeping_scale=2)
 

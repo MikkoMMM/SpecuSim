@@ -74,3 +74,5 @@
 2.4.2021 Contemplating the possibility of two player peer-to-peer multiplayer and its cyber security implications.
 3.4.2021 Experimented with UDP networking, and made preparations for sending and receiving game state information. Made a "new" upper torso (except for arms) that's not physics-driven.
 4.4.2021 Refactoring.
+5.4.2021 The main executable's code was split into so-called "game modes". Now it works pretty much just as a launcher. Also, a connection dialog for PvP, and some work on its networking.
+6.4.2021 More work on multiplayer.
