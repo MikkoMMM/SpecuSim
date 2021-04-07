@@ -2,3 +2,4 @@ panda3d
 torch
 transformers==2.3.0
 numpy
+pyperclip

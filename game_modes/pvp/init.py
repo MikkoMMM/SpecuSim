@@ -106,7 +106,7 @@ class Game:
                                             shadow=(0, 0, 0, 1), pos=(-1.0, 0.9), align=TextNode.ACenter)
         self.lag_meter.setBin("frontBin", 1)
 
-        self.sock = socket.socket(socket.AF_INET6,  # Internet
+        self.sock = socket.socket(socket.AF_INET,  # Internet
                                   socket.SOCK_DGRAM)  # UDP
         self.sock.bind(("", self.port))
         self.sock.setblocking(False)
