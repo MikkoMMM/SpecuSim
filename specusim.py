@@ -14,6 +14,11 @@ class MyApp(ShowBase):
         load_prc_file_data("", """
             window-title SpecuSim - An Early Prototype
 
+            # For shader compatibility with Intel graphics we are going to force a higher OpenGL version than it might report
+            # It requests a forward-compatible context, but disables the use of the compatibility profile,
+            # so requires the use of custom shaders
+            gl-version 3 2
+
             # Specify whether textures should automatically be constrained to dimensions which are a power of 2 when they are loaded
             textures-power-2 none
             # If using a lot of shaders, apparently this is better
@@ -34,6 +39,9 @@ class MyApp(ShowBase):
 
             bullet-filter-algorithm groups-mask
         """)
+
+        if debug.getint("log-level") <= 10:
+            load_prc_file_data("", "gl-debug 1")
 
         # Initialize the showbase
         ShowBase.__init__(self)

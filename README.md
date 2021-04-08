@@ -2,7 +2,7 @@
 ## Hardware
 * 5 GB Graphics Memory (or 1 GB if not using natural language processing)
 * The GPU should preferably be NVIDIA's, but AMD may work with the ROCm version of PyTorch, too (no guarantees).
-* OpenGL 4.3 capable GPU (and drivers)
+* OpenGL 3.2 capable GPU (and drivers)
 
 ### Motion controller
 Currently these options are supported:

@@ -76,3 +76,4 @@
 4.4.2021 Refactoring.
 5.4.2021 The main executable's code was split into so-called "game modes". Now it works pretty much just as a launcher. Also, a connection dialog for PvP, and some work on its networking.
 6.4.2021 More work on multiplayer.
+7.4.2021 More testing on multiplayer and troubleshooting GLSL version support.
