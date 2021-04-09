@@ -126,13 +126,10 @@ class Humanoid(Animal):
 
             # Place the hip
             rootJoint = au.createJoint("root" + str(i))
-#            leg_root = self.lower_torso.attach_new_node("LegRoot")
-#            leg_root.setPosHpr(Vec3(horizontal_placement * self.pelvis_width / 4, 0, -self.lower_torso_height / 2), Vec3(0, -90, 0))
-#            self.leg.append(IKChain(leg_root))
 
             # Hip:
             self.thigh.append(au.createJoint( "upperLeg" + str(i), parentJoint=rootJoint,
-                translate=Vec3(horizontal_placement * self.pelvis_width / 4, 0, -self.lower_torso_height / 2), rotAxis=LVector3f.unitY(),
+                translate=Vec3(horizontal_placement * self.pelvis_width / 4, 0, -self.lower_torso_height / 2), rotAxis=LVector3f.unitX(),
                                               rotAngRad=-math.pi*0.5 ))
 
             lower_leg.append(au.createJoint("lowerLeg" + str(i), parentJoint=self.thigh[i], translate=LVector3f.unitY() * self.thigh_length))
@@ -153,8 +150,9 @@ class Humanoid(Animal):
             bone = self.leg[i].addJoint(lower_leg[i], au.getControlNode(lower_leg[i].getName()), parentBone=bone)
             bone = self.leg[i].addJoint(foot_joint, au.getControlNode(foot_joint.getName()), parentBone=bone)
 
-            #        self.ikChainLegLeft.setStatic( hipL.getName() )
-            self.leg[i].setHingeConstraint(lower_leg[i].getName(), LVector3f.unitZ(), minAng=0, maxAng=math.pi * 0.5)
+            self.leg[i].setBallConstraint(self.thigh[i].getName(), minAng=-math.pi * 0.2, maxAng=math.pi * 0.2)
+            self.leg[i].setHingeConstraint(lower_leg[i].getName(), LVector3f.unitX(), minAng=-math.pi * 0.7, maxAng=0)
+            self.leg[i].setBallConstraint(foot_joint.getName(), minAng=0, maxAng=math.pi * 0.6)
 
             if self.debug:
                 self.leg[i].debugDisplay()
