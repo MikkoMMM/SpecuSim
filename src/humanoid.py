@@ -129,11 +129,11 @@ class Humanoid(Animal):
 
             # Hip:
             self.thigh.append(au.createJoint( "upperLeg" + str(i), parentJoint=rootJoint,
-                translate=Vec3(horizontal_placement * self.pelvis_width / 4, 0, -self.lower_torso_height / 2), rotAxis=LVector3f.unitY(),
-                                              rotAngRad=-math.pi*0.5 ))
+                translate=Vec3(horizontal_placement * self.pelvis_width / 4, 0, -self.lower_torso_height / 2) ))
 
-            lower_leg.append(au.createJoint("lowerLeg" + str(i), parentJoint=self.thigh[i], translate=LVector3f.unitY() * self.thigh_length))
-            foot_joint = au.createJoint("foot" + str(i), parentJoint=lower_leg[i], translate=LVector3f.unitY() * self.lower_leg_length)
+            lower_leg.append(au.createJoint("lowerLeg" + str(i), parentJoint=self.thigh[i], translate=-LVector3f.unitZ() *
+                                                                                                      self.thigh_length))
+            foot_joint = au.createJoint("foot" + str(i), parentJoint=lower_leg[i], translate=-LVector3f.unitZ() * self.lower_leg_length)
 
             # IMPORTANT! Let the ArmatureUtils create the actor and set up control nodes:
             au.finalize()
@@ -141,7 +141,7 @@ class Humanoid(Animal):
             au.getActor().reparentTo(self.lower_torso)
 
             self.foot.append(au.getControlNode( foot_joint.getName() ).attach_new_node("Foot"))
-            self.foot[i].set_pos_hpr(Vec3(0, self.foot_height / 2, lower_leg_diameter / 2), Vec3(0, -90, 0))
+            self.foot[i].set_pos_hpr(Vec3(0, self.foot_height / 2, 0), Vec3(0, 0, 0))
 
             self.leg.append(IKChain(au.getActor()))
 
@@ -184,15 +184,13 @@ class Humanoid(Animal):
             visual.set_scale(Vec3(thigh_diameter, thigh_diameter, self.thigh_length))
             visual.reparent_to(au.getControlNode(self.thigh[i].getName()))
 #            visual.set_pos((visual.get_pos() + lower_leg[i].offset) / 2)
-            visual.set_pos((visual.get_pos() + LVector3f.unitY() * self.thigh_length) / 2)
-            visual.set_hpr(0, -90, 0)
+            visual.set_pos((visual.get_pos() - LVector3f.unitZ() * self.thigh_length) / 2)
 
             visual = loader.load_model("3d-assets/unit_cylinder.bam")
             visual.set_scale(Vec3(lower_leg_diameter, lower_leg_diameter, self.lower_leg_length))
             visual.reparent_to(au.getControlNode(lower_leg[i].getName()))
 #            visual.set_pos((visual.get_pos() + bone.offset) / 2)
-            visual.set_pos((visual.get_pos() + LVector3f.unitY() * self.lower_leg_length) / 2)
-            visual.set_hpr(0, -90, 0)
+            visual.set_pos((visual.get_pos() - LVector3f.unitZ() * self.lower_leg_length) / 2)
 
             foot_visual = loader.load_model("3d-assets/unit_cube.bam")
             foot_visual.reparent_to(self.foot[i])

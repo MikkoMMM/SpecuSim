@@ -66,32 +66,32 @@ class Game:
         self.terrain_init_thread.start()
 
         self.connect_dialog = DirectFrame(frameColor=(0, 0, 0, 0.8),
-                                     frameSize=(-0.7, 0.7, -0.3, 0.3),
+                                     frameSize=(-0.8, 0.8, -0.3, 0.3),
                                      pos=(0, -1, 0))
         scale = 0.05
         self.ip_field = DirectEntry(scale=scale, command=self.focus_in_port, parent=self.connect_dialog,
                                     text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=22,
-                                    pos=(-0.2, 0, 0.04),
+                                    pos=(-0.4, 0, 0.04),
                                     initialText="", numLines=1, focus=1)
 
         self.port_field = DirectEntry(scale=scale, command=self.focus_in_connect, parent=self.connect_dialog,
                                       text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=3,
-                                      pos=(-0.2, 0, -0.04),
+                                      pos=(-0.4, 0, -0.04),
                                       initialText="5005", numLines=1, focus=0)
 
-        self.notice_text_obj = OnscreenText(text="Enter the IP address of the other player", style=1, fg=(1, 1, 1, 1), scale=.05,
+        self.notice_text_obj = OnscreenText(text="Enter the IPv4 address of the other player", style=1, fg=(1, 1, 1, 1), scale=.05,
                                             shadow=(0, 0, 0, 1), parent=self.connect_dialog,
                                             pos=(0.0, 0.2), align=TextNode.ACenter)
         self.notice_text_obj.setBin("frontBin", 1)
 
         self.ip_question = OnscreenText(text="IP:", style=1, fg=(1, 1, 1, 1), scale=scale,
                                         shadow=(0, 0, 0, 1), parent=self.connect_dialog,
-                                        pos=(-0.4, 0.04), align=TextNode.ACenter)
+                                        pos=(-0.6, 0.04), align=TextNode.ACenter)
         self.ip_question.setBin("frontBin", 1)
 
         self.port_question = OnscreenText(text="Port:", style=1, fg=(1, 1, 1, 1), scale=scale,
                                           shadow=(0, 0, 0, 1), parent=self.connect_dialog,
-                                          pos=(-0.4, -0.04), align=TextNode.ACenter)
+                                          pos=(-0.6, -0.04), align=TextNode.ACenter)
         self.port_question.setBin("frontBin", 1)
 
         DirectButton(text="Quit",
