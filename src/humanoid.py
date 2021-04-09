@@ -129,7 +129,7 @@ class Humanoid(Animal):
 
             # Hip:
             self.thigh.append(au.createJoint( "upperLeg" + str(i), parentJoint=rootJoint,
-                translate=Vec3(horizontal_placement * self.pelvis_width / 4, 0, -self.lower_torso_height / 2), rotAxis=LVector3f.unitX(),
+                translate=Vec3(horizontal_placement * self.pelvis_width / 4, 0, -self.lower_torso_height / 2), rotAxis=LVector3f.unitY(),
                                               rotAngRad=-math.pi*0.5 ))
 
             lower_leg.append(au.createJoint("lowerLeg" + str(i), parentJoint=self.thigh[i], translate=LVector3f.unitY() * self.thigh_length))
