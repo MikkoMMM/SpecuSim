@@ -17,7 +17,7 @@ Nothing. All support is currently on halt. But you should have a mouse instead.
 
 # Installation
 First, you need to install the required Python modules:
-pip install -r requirements.txt 
+pip3 install -r requirements.txt 
 
 ## AI models
 You'll also need an AI model to use the natural language processing features. It's to be placed in the language_models directory. The PyTorch version of the original AID2 model is being distributed by bittorrent:
@@ -43,7 +43,7 @@ Once downloaded your language_models folder should look like this:
 ## Starting the game
 To play, go to the root directory of SpecuSim and run:
 ```
-python specusim.py
+python3 specusim.py
 ```
 
 # Contributing

@@ -5,6 +5,7 @@ from src.animal import Animal
 from src.inverse_kinematics.IKChain import IKChain
 from src.inverse_kinematics.Utils import *
 from src.inverse_kinematics.WalkCycle import WalkCycle
+from src.inverse_kinematics.ArmatureUtils import ArmatureUtils
 from src.shapes import create_rounded_box
 from src.speech_bubble import SpeechBubble
 from src.utils import angle_diff, normalize_angle, get_ground_z_pos
@@ -113,6 +114,45 @@ class Humanoid(Animal):
         self.foot_target = []
         self.planned_foot_target = []
 
+        ##################################
+        # Set up Armature and Joints:
+        au = ArmatureUtils()
+
+        rootJoint = au.createJoint("root")
+
+        ###############
+        # Left leg:
+        hipL = au.createJoint("hipL", parentJoint=rootJoint)
+
+        # First, rotate 90 degrees outwards:
+        upperLegL = au.createJoint("upperLegL", parentJoint=hipL,
+                                   translate=-LVector3f.unitX() * 0.13, rotAxis=LVector3f.unitY(), rotAngRad=math.pi * 0.5)
+
+        lowerLegL = au.createJoint("lowerLegL", parentJoint=upperLegL,
+                                   translate=LVector3f.unitY() * 0.45)
+
+        footL = au.createJoint("footL", parentJoint=lowerLegL,
+                               translate=LVector3f.unitY() * 0.6)
+
+        ###############
+        # Right leg:
+        hipR = au.createJoint("hipR", parentJoint=rootJoint)
+        # First, rotate 90 degrees outwards:
+        upperLegR = au.createJoint("upperLegR", parentJoint=hipR,
+                                   translate=LVector3f.unitX() * 0.13, rotAxis=LVector3f.unitY(), rotAngRad=math.pi * 0.5)
+
+        lowerLegR = au.createJoint("lowerLegR", parentJoint=upperLegR,
+                                   translate=LVector3f.unitY() * 0.45)
+
+        footR = au.createJoint("footR", parentJoint=lowerLegR,
+                               translate=LVector3f.unitY() * 0.6)
+
+        ## IMPORTANT! Let the ArmatureUtils create the actor and set up control nodes:
+        au.finalize()
+
+        ## IMPORTANT! Attach the created actor to the scene, otherwise you won't see anything!
+        au.getActor().reparentTo(self.lower_torso)
+
         for i in range(2):
             if i == 0:
                 horizontal_placement = -1
@@ -122,39 +162,25 @@ class Humanoid(Animal):
             # Place the hip
             leg_root_left = self.lower_torso.attach_new_node("LegRootLeft")
             leg_root_left.setPosHpr(Vec3(horizontal_placement * self.pelvis_width / 4, 0, -self.lower_torso_height / 2), Vec3(0, -90, 0))
-            self.leg.append(IKChain(leg_root_left))
+            self.leg.append(IKChain(au.getActor()))
 
-            # Hip:
-            self.thigh.append(self.leg[i].addBone(offset=LVector3f.zero(),
-                                                  minAng=-math.pi * 0.2,
-                                                  maxAng=math.pi * 0.2,
-                                                  rotAxis=None
-                                                  ))
+            bone = self.leg[i].addJoint(hipL, au.getControlNode(hipL.getName()))
+            self.thigh.append(self.leg[i].addJoint(upperLegL, au.getControlNode(upperLegL.getName()),
+                                                parentBone=bone))
+            lower_leg.append(self.leg[i].addJoint(lowerLegL, au.getControlNode(lowerLegL.getName()),
+                                                parentBone=self.thigh[i]))
+            bone = self.leg[i].addJoint(footL, au.getControlNode(footL.getName()),
+                                                parentBone=lower_leg[i])
 
-            # Knee:
-            lower_leg.append(self.leg[i].addBone(offset=LVector3f.unitY() * self.thigh_length,
-                                                 minAng=-math.pi * 0.7,
-                                                 maxAng=0,
-                                                 rotAxis=LVector3f.unitX(),
-                                                 parentBone=self.thigh[i]
-                                                 ))
+            self.leg[i].setStatic(hipL.getName())
+            self.leg[i].setHingeConstraint(lowerLegL.getName(),
+                                                   LVector3f.unitZ(), minAng=0, maxAng=math.pi * 0.5)
 
-            # End of the lower leg:
-            bone = self.leg[i].addBone(offset=LVector3f.unitY() * self.lower_leg_length,
-                                       minAng=0,
-                                       maxAng=math.pi * 0.6,
-                                       rotAxis=None,
-                                       parentBone=lower_leg[i]
-                                       )
-
-            self.leg[i].finalize()
-            self.foot.append(bone.ikNode.attach_new_node("Foot"))
+            self.foot.append(bone.controlNode.attach_new_node("Foot"))
             self.foot[i].set_pos_hpr(Vec3(0, self.foot_height / 2, lower_leg_diameter / 2), Vec3(0, -90, 0))
 
             if self.debug:
                 self.leg[i].debugDisplay()
-
-            self.leg[i].updateIK()
 
             #################################################
             # Foot targets:
@@ -178,7 +204,7 @@ class Humanoid(Animal):
                 self.planned_foot_target[i].attach_new_node(geom)
 
             # Add visuals to the bones. These MUST be after finalize().
-
+            '''
             visual = loader.load_model("3d-assets/unit_cylinder.bam")
             visual.set_scale(Vec3(thigh_diameter, thigh_diameter, self.thigh_length))
             visual.reparent_to(self.thigh[i].ikNode)
@@ -194,6 +220,7 @@ class Humanoid(Animal):
             foot_visual = loader.load_model("3d-assets/unit_cube.bam")
             foot_visual.reparent_to(self.foot[i])
             foot_visual.set_scale(Vec3(lower_leg_diameter, self.foot_length, self.foot_height))
+            '''
 
         self.lower_torso.node().set_gravity(Vec3(0, 0, 0))
 
