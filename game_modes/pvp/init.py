@@ -261,8 +261,8 @@ class Game:
 
         # Define controls
         interpret_controls(self.player)
-        self.opponent.set_state(*self.opponent_new_state)
         self.opponent.stand_still()
+        self.opponent.set_state(*self.opponent_new_state)
 
         game_state_packet = struct.pack("f", time() % 10) + self.player.get_compressed_state()
         self.sock.sendto(game_state_packet, (self.ip_addr, self.port))
