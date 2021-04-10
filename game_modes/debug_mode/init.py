@@ -7,14 +7,13 @@ from panda3d.bullet import ZUp
 from panda3d.core import BitMask32
 from panda3d.core import PNMImage, Filename
 from panda3d.core import Vec3
-# from panda3d.core import SamplerState
 
 from src.camera import CameraControl
 from src.default_controls import setup_controls, interpret_controls
 from src.default_gui import DefaultGUI
 from src.getconfig import logger, debug
 from src.humanoid import Humanoid
-# from src.utils import create_shader_terrain_mesh
+from src.utils import create_and_texture_terrain, create_or_load_walk_map
 
 
 class Game:
@@ -85,8 +84,7 @@ class Game:
 
 
     def initialize_terrain(self):
-        # We have to use a smaller heightfield image for debugging
-        elevation_img = PNMImage(Filename("worldmaps/debug_heightmap.png"))
+        # This is what we came here to do, right? Visual debugging stuff.
         self.world_np = render.attach_new_node('World')
         self.debug_np = self.world_np.attach_new_node(BulletDebugNode('Debug'))
         self.debug_np.node().show_normals(True)
@@ -95,22 +93,16 @@ class Game:
         self.debug_np.show()
         self.world.set_debug_node(self.debug_np.node())
 
-        '''
-        terrain = create_shader_terrain_mesh(elevation_img, self.terrain_height)
+        # Set a heightfield, the heightfield should be a 16-bit png and
+        # have a quadratic size of a power of two.
+        elevation_img = PNMImage(Filename("worldmaps/debug_heightmap.png"))
+        texture_img = PNMImage(Filename("worldmaps/seed_16783_satellite.png"))
+        create_and_texture_terrain(elevation_img, self.terrain_height, texture_img)
 
-        # Wait for there to be a texture loader
-        while not hasattr(base, 'loader'):
-            sleep(0.01)
-
-        # Set some texture on the terrain
-        terrain_tex = base.loader.loadTexture("worldmaps/seed_16783_satellite.png")
-        terrain_tex.set_minfilter(SamplerState.FT_linear_mipmap_linear)
-        terrain_tex.set_anisotropic_degree(16)
-        terrain.set_texture(terrain_tex)
-        '''
-
-        # Collision detection for the terrain
-        terrain_colshape = BulletHeightfieldShape(elevation_img, self.terrain_height, ZUp)
+        # Collision detection for the terrain. Preferably the image should have a size 1 pixel taller and wider than elevation_img.
+        terrain_colshape = BulletHeightfieldShape(
+            create_or_load_walk_map("worldmaps/debug_heightmap.png", "worldmaps/debug_ocean.png"),
+            self.terrain_height, ZUp)
         terrain_colshape.set_use_diamond_subdivision(True)
 
         self.terrain_bullet_node.add_shape(terrain_colshape)

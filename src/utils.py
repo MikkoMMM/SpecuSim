@@ -3,6 +3,7 @@ from panda3d.core import Point3, BitMask32, TransformState
 from panda3d.core import SamplerState
 from panda3d.core import ShaderTerrainMesh, Shader
 from panda3d.core import Texture
+from PIL import Image
 
 
 # TODO: compare speed to angleDeg in Panda's Vec3
@@ -50,18 +51,34 @@ def normalize_angle(angle):
 
 
 def create_or_load_walk_map(file_name_prefix, ocean_map_file):
-    file_name = file_name_prefix + ".walk"
-    new_file = Filename(file_name)
+    walk_map_file_name = file_name_prefix + ".walk"
+    new_file = Filename(walk_map_file_name)
     if new_file.exists():
         return PNMImage(new_file)
-    image = PNMImage(Filename(file_name_prefix))
-    ocean_map = PNMImage(Filename(ocean_map_file))
+    ocean_resized_file = ocean_map_file + "_tmp"
+
+    with Image.open(ocean_map_file) as im:
+        if im.width % 2 == 0:
+            # Resize to quadratic + 1
+            (width, height) = (im.width + 1, im.height + 1)
+            im_resized = im.resize((width, height), Image.NEAREST)
+            im_resized.save(ocean_resized_file, format="PNG", optimize=True)
+    with Image.open(file_name_prefix) as im:
+        if im.width % 2 == 0:
+            # Resize to quadratic + 1
+            (width, height) = (im.width + 1, im.height + 1)
+            im_resized = im.resize((width, height), Image.BILINEAR)
+            im_resized.save(walk_map_file_name, format="PNG", optimize=True)
+
+    image = PNMImage(Filename(walk_map_file_name))
+    ocean_map = PNMImage(Filename(ocean_resized_file))
     for x in range(ocean_map.get_x_size()):
         for y in range(ocean_map.get_y_size()):
             if ocean_map.get_green(x, y) == 0:
                 image.set_gray(x, y, 1)
     png_type = PNMFileTypeRegistry.get_global_ptr().get_type_from_extension('.png')
     image.write(new_file, png_type)
+    Filename(ocean_resized_file).unlink() # Remove the temporary file
     return image
 
 
