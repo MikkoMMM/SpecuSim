@@ -256,13 +256,13 @@ class Game:
     def update(self, task):
         self.lag_meter.setText(f"Lag: {str(round(self.lag*1000))} ms")
         dt = globalClock.get_dt()
-        self.opponent.set_state(*self.opponent_new_state)
-        self.opponent.stand_still()
 
         self.world.do_physics(dt, 5, 1.0 / 80.0)
 
         # Define controls
         interpret_controls(self.player)
+        self.opponent.set_state(*self.opponent_new_state)
+        self.opponent.stand_still()
 
         game_state_packet = struct.pack("f", time() % 10) + self.player.get_compressed_state()
         self.sock.sendto(game_state_packet, (self.ip_addr, self.port))

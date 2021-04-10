@@ -131,6 +131,9 @@ class Game:
         self.world.do_physics(dt, 5, 1.0 / 80.0)
 
         # Define controls
+        interpret_controls(self.player)
+        for doppelganger in self.doppelgangers:
+            interpret_controls(doppelganger)
         if self.gui.text_field['focus']:
             interpret_controls(self.player, stand_still=True)
             for doppelganger in self.doppelgangers:
