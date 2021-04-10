@@ -3,7 +3,6 @@ from panda3d.core import Point3, BitMask32, TransformState
 from panda3d.core import SamplerState
 from panda3d.core import ShaderTerrainMesh, Shader
 from panda3d.core import Texture
-from PIL import Image
 
 
 # TODO: compare speed to angleDeg in Panda's Vec3
@@ -55,31 +54,33 @@ def create_or_load_walk_map(file_name_prefix, ocean_map_file):
     new_file = Filename(walk_map_file_name)
     if new_file.exists():
         return PNMImage(new_file)
-    ocean_resized_file = ocean_map_file + "_tmp"
 
-    with Image.open(ocean_map_file) as im:
-        if im.width % 2 == 0:
-            # Resize to quadratic + 1
-            (width, height) = (im.width + 1, im.height + 1)
-            im_resized = im.resize((width, height), Image.NEAREST)
-            im_resized.save(ocean_resized_file, format="PNG", optimize=True)
-    with Image.open(file_name_prefix) as im:
-        if im.width % 2 == 0:
-            # Resize to quadratic + 1
-            (width, height) = (im.width + 1, im.height + 1)
-            im_resized = im.resize((width, height), Image.BILINEAR)
-            im_resized.save(walk_map_file_name, format="PNG", optimize=True)
+    ocean_map = PNMImage(Filename(ocean_map_file))
+    if ocean_map.get_x_size() % 2 == 0:
+        # Resize to quadratic + 1
+        ocean_resized = PNMImage(ocean_map.get_x_size() + 1, ocean_map.get_y_size() + 1, ocean_map.get_num_channels(),
+                                 ocean_map.get_maxval(), ocean_map.get_type(), ocean_map.get_color_space())
+        ocean_resized.unfiltered_stretch_from(ocean_map)
+    else:
+        ocean_resized = ocean_map
 
-    image = PNMImage(Filename(walk_map_file_name))
-    ocean_map = PNMImage(Filename(ocean_resized_file))
-    for x in range(ocean_map.get_x_size()):
-        for y in range(ocean_map.get_y_size()):
-            if ocean_map.get_green(x, y) == 0:
-                image.set_gray(x, y, 1)
+    old_heightfield = PNMImage(Filename(file_name_prefix))
+    if old_heightfield.get_x_size() % 2 == 0:
+        # Resize to quadratic + 1
+        resized_heightfield = PNMImage(old_heightfield.get_x_size() + 1, old_heightfield.get_y_size() + 1,
+                                       old_heightfield.get_num_channels(), old_heightfield.get_maxval(), old_heightfield.get_type(),
+                                       old_heightfield.get_color_space())
+        resized_heightfield.quick_filter_from(old_heightfield)
+    else:
+        resized_heightfield = old_heightfield
+
+    for x in range(ocean_resized.get_x_size()):
+        for y in range(ocean_resized.get_y_size()):
+            if ocean_resized.get_green(x, y) == 0:
+                resized_heightfield.set_gray(x, y, 1)
     png_type = PNMFileTypeRegistry.get_global_ptr().get_type_from_extension('.png')
-    image.write(new_file, png_type)
-    Filename(ocean_resized_file).unlink() # Remove the temporary file
-    return image
+    resized_heightfield.write(new_file, png_type)
+    return resized_heightfield
 
 
 def create_shader_terrain_mesh(elevation_img, height):
