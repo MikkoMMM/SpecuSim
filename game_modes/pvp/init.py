@@ -112,6 +112,8 @@ class Game:
         self.sock.setblocking(False)
         taskMgr.add(self.wait_connection_info, "pvp-init")
 
+        # Characters must be created only after the terrain_bullet_node has been finalized
+        self.terrain_init_thread.join()
         self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=debug.getboolean("debug-joints"))
         self.opponent = Humanoid(self.world, self.terrain_bullet_node, 2, 0, debug=debug.getboolean("debug-joints"))
         self.player_start_time = time() % 10
@@ -180,7 +182,6 @@ class Game:
         self.connect_dialog.destroy()
         self.network_listen_thread = threading.Thread(target=self.network_listen, args=())
         self.network_listen_thread.start()
-        self.terrain_init_thread.join()
 
         self.start_game()
         return task.done

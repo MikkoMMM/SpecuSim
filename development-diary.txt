@@ -79,4 +79,4 @@
 7.4.2021 More testing on multiplayer and troubleshooting GLSL version support.
 8.4.2021 Some work on integrating the new changes from the IK library. Thinking about how crowdfunding the project could work with Finland's taxation.
 9.4.2021 More work on integrating the new changes to IK library.
-10.4.2021 Looking into the Monster Mash tool. Thinking about more efficient Z position determining. Some network testing.
+10.4.2021 Looking into the Monster Mash tool. Thinking about more efficient Z position determining. Some network testing. Asking for help on ShaderTerrainMesh and BulletHeightfieldShape not matching in shape.

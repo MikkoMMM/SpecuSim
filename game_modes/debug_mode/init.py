@@ -7,12 +7,14 @@ from panda3d.bullet import ZUp
 from panda3d.core import BitMask32
 from panda3d.core import PNMImage, Filename
 from panda3d.core import Vec3
+# from panda3d.core import SamplerState
 
 from src.camera import CameraControl
 from src.default_controls import setup_controls, interpret_controls
 from src.default_gui import DefaultGUI
 from src.getconfig import logger, debug
 from src.humanoid import Humanoid
+# from src.utils import create_shader_terrain_mesh
 
 
 class Game:
@@ -48,8 +50,9 @@ class Game:
 
         self.terrain_init_thread = threading.Thread(target=self.initialize_terrain, args=())
         self.terrain_init_thread.start()
-        self.terrain_init_thread.join()
 
+        # Characters must be created only after the terrain_bullet_node has been finalized
+        self.terrain_init_thread.join()
         self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=debug.getboolean("debug-joints"))
 
         self.doppelgangers = []

@@ -72,9 +72,10 @@ class Game:
     def wait_nlp_initialized(self, task):
         if not self.generator_load_return:
             return task.cont
+        # Characters must be created only after the terrain_bullet_node has been finalized
+        self.terrain_init_thread.join()
         self.npc1 = Humanoid(self.world, self.terrain_bullet_node, -2, 2)
         self.nlp_manager = NLPManager(self.generator_load_return[0])
-        self.terrain_init_thread.join()
         self.start_game()
         return task.done
 
@@ -86,7 +87,7 @@ class Game:
         texture_img = PNMImage(Filename("worldmaps/seed_16783_satellite.png"))
         create_and_texture_terrain(elevation_img, self.terrain_height, texture_img)
 
-        # Collision detection for the terrain
+        # Collision detection for the terrain. Preferably the image should have a size 1 pixel taller and wider than elevation_img.
         terrain_colshape = BulletHeightfieldShape(
             create_or_load_walk_map("worldmaps/seed_16783_grayscale.png", "worldmaps/seed_16783_ocean.png"),
             self.terrain_height, ZUp)
