@@ -9,6 +9,7 @@ from src.inverse_kinematics.ArmatureUtils import ArmatureUtils
 from src.shapes import create_rounded_box
 from src.speech_bubble import SpeechBubble
 from src.utils import angle_diff, normalize_angle, get_ground_z_pos
+from shaders.basic_lighting import basic_lighting_shader
 
 
 class Humanoid(Animal):
@@ -56,6 +57,9 @@ class Humanoid(Animal):
         self.lower_torso.set_collide_mask(
             BitMask32.bit(0 | 3))  # Enable ground collision too, to help with avoiding ascending map boundaries
         self.world.attach(self.lower_torso.node())
+
+        # Set some default shading
+        self.lower_torso.set_shader(basic_lighting_shader)
 
         self.spine = self.lower_torso.attach_new_node("spine")
         self.spine.set_z(self.lower_torso_height / 2)

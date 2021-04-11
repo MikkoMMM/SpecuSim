@@ -1,5 +1,7 @@
 #version 150
 
+// Licensed under the MIT License with kind permission from tobspr
+
 // This is the default terrain vertex shader. Most of the time you can just copy
 // this and reuse it, and just modify the fragment shader.
 

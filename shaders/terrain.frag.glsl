@@ -1,5 +1,7 @@
 #version 150
 
+// Licensed under the MIT License with kind permission from tobspr
+
 // This is the terrain fragment shader. There is a lot of code in here
 // which is not necessary to render the terrain, but included for convenience -
 // Like generating normals from the heightmap or a simple fog effect.

@@ -20,3 +20,8 @@ The MIT License
 https://github.com/cloveranon/Clover-Edition/
 Copyright (c) 2019 Nick Walton
 The MIT License
+
+
+https://github.com/pokepetter/ursina
+Copyright (c) 2020 Petter Amland
+MIT License

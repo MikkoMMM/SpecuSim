@@ -7,6 +7,7 @@ from panda3d.bullet import ZUp
 from panda3d.core import BitMask32
 from panda3d.core import PNMImage, Filename
 from panda3d.core import Vec3
+from panda3d.core import Shader
 
 from src.camera import CameraControl
 from src.default_controls import setup_controls, interpret_controls
