@@ -3,6 +3,9 @@ from direct.gui.DirectGui import *
 from direct.showbase.ShowBase import DirectObject
 
 import pyperclip
+from tkinter import Tk
+r = Tk()
+r.withdraw()
 
 
 class InputField:
@@ -56,20 +59,25 @@ class InputField:
             relief=None,
             numLines=num_lines
             )
+        height = -num_lines+0.5
 
+        # Normally, the geoms needed for the different states of the InputField
+        # are created as external resources (e.g. using egg-texture-cards.exe), but
+        # we do have some default CardMaker ones.
+        # Note that they should be combined into a hierarchy.
         if not geoms:
 
             geoms = NodePath("input_field_geoms")
 
             cm = CardMaker("inputfield_geom_normal")
-            cm.set_frame(0., width, -.5, 1.)
+            cm.set_frame(0., width, height, 1.)
             cm.set_color(.5, .5, .5, 1.)
             cm.set_has_uvs(False)
             cm.set_has_normals(False)
             geoms.attach_new_node(cm.generate())
 
             cm = CardMaker("inputfield_geom_hilited")
-            cm.set_frame(0., width, -.5, 1.)
+            cm.set_frame(0., width, height, 1.)
             cm.set_color(.8, .8, .8, 1.)
             cm.set_has_uvs(False)
             cm.set_has_normals(False)
@@ -89,30 +97,30 @@ class InputField:
                                                 pos=pos,
                                                 scale=self._scale,
                                                 geom=self._geom_normal,
-                                                clipSize=(0., width, -.5, 1.)
+                                                clipSize=(0., width, height, 1.)
                                               )
 
         cursor_move = self._d_entry.guiItem.get_cursormove_event()
         type_text = self._d_entry.guiItem.get_type_event()
-        base.accept(cursor_move, self.__edit_entry)
-        base.accept(type_text, self.__notify_edit)
+        self._listener.accept(cursor_move, self.__edit_entry)
+        self._listener.accept(type_text, self.__notify_edit)
 
-        base.accept("escape", self.__cancel_input)
-        base.accept("control-c", self.__copy_selection)
-        base.accept("delete", self.__notify_erase, extraArgs=["delete"])
-        base.accept("backspace", self.__notify_erase, extraArgs=["backspace"])
-        base.accept("shift-delete", self.__notify_erase, extraArgs=["delete"])
-        base.accept("shift-backspace", self.__notify_erase, extraArgs=["backspace"])
-        base.accept("shift-arrow_left", self.__notify_select)
-        base.accept("shift-arrow_right", self.__notify_select)
-        base.accept("shift-arrow_left-repeat", self.__notify_select)
-        base.accept("shift-arrow_right-repeat", self.__notify_select)
-        base.accept("shift-home", self.__notify_select)
-        base.accept("shift-end", self.__notify_select)
-        base.accept("control-a", self.__select_all)
-        base.accept("control-x", self.__cut_selection)
-        base.accept("control-v", self.__paste)
-        base.accept("shift-insert", self.__paste)
+        self._listener.accept("escape", self.__cancel_input)
+        self._listener.accept("control-c", self.__copy_selection)
+        self._listener.accept("delete", self.__notify_erase, extraArgs=["delete"])
+        self._listener.accept("backspace", self.__notify_erase, extraArgs=["backspace"])
+        self._listener.accept("shift-delete", self.__notify_erase, extraArgs=["delete"])
+        self._listener.accept("shift-backspace", self.__notify_erase, extraArgs=["backspace"])
+        self._listener.accept("shift-arrow_left", self.__notify_select)
+        self._listener.accept("shift-arrow_right", self.__notify_select)
+        self._listener.accept("shift-arrow_left-repeat", self.__notify_select)
+        self._listener.accept("shift-arrow_right-repeat", self.__notify_select)
+        self._listener.accept("shift-home", self.__notify_select)
+        self._listener.accept("shift-end", self.__notify_select)
+        self._listener.accept("control-a", self.__select_all)
+        self._listener.accept("control-x", self.__cut_selection)
+        self._listener.accept("control-v", self.__paste)
+        self._listener.accept("shift-insert", self.__paste)
 
         self._d_entry.bind(DGG.B1PRESS, self.__enable_select_with_mouse)
         self._d_entry.bind(DGG.B1RELEASE, self.__disable_select_with_mouse)
@@ -175,7 +183,8 @@ class InputField:
             if ((key == "delete" and cursor_pos == len(self._d_entry.get(True)))
                     or (key == "backspace" and cursor_pos == 0)):
                 cursor_x = self._d_entry.guiItem.getCursorX()
-                self.__edit_entry(cursor_x, 0.)
+                cursor_y = self._d_entry.guiItem.getCursorY()
+                self.__edit_entry(cursor_x, cursor_y)
 
     def __edit_entry(self, cursor_x, cursor_y):
 
@@ -316,7 +325,8 @@ class InputField:
                 # force entry edit if cursor is already at end of text
                 if cursor_pos == len(selection):
                     cursor_x = entry.guiItem.getCursorX()
-                    self.__edit_entry(cursor_x, 0.)
+                    cursor_y = entry.guiItem.getCursorY()
+                    self.__edit_entry(cursor_x, cursor_y)
                 else:
                     entry.setCursorPosition(len(selection))
 
@@ -331,7 +341,8 @@ class InputField:
             pyperclip.copy(self._selection)
             self._text_was_erased = True
             cursor_x = self._d_entry.guiItem.getCursorX()
-            self.__edit_entry(cursor_x, 0.)
+            cursor_y = self._d_entry.guiItem.getCursorY()
+            self.__edit_entry(cursor_x, cursor_y)
 
     def __paste(self):
 
@@ -353,11 +364,16 @@ class InputField:
 
         tn = self._d_entry.guiItem.get_text_def(0)
         text = ""
-        char_pos = [0.]
+        char_pos = [[0.]]
+        line = 0
 
         for char in self._d_entry.get(True):
             text += char
-            char_pos.append(tn.calc_width(text))
+            if char == '\n':
+                text = ""
+                line += 1
+                char_pos.append([0.])
+            char_pos[line].append(tn.calc_width(text))
 
         return char_pos
 
@@ -373,15 +389,21 @@ class InputField:
 
         if entry_txt:
 
-            char_positions = self._char_positions[:]
-            right_edge = char_positions[-1]
             m_x = (self._mouse_watcher.get_mouse_x() * self._aspect_ratio \
                 - entry.get_x(self._screen)) / self._scale
+            m_y = (self._mouse_watcher.get_mouse_y() - entry.get_z(self._screen)) / self._scale
+            line = min(max(0, -round(m_y-0.2)), len(self._char_positions[:])-1)
+            min_pos = 0
+            for l in range(line):
+                min_pos += len(self._char_positions[l]) - 1
 
+            char_positions = self._char_positions[line][:]
+
+            right_edge = char_positions[-1]
             if m_x <= 0.:
-                cursor_pos = 0
+                cursor_pos = min_pos
             elif m_x >= right_edge:
-                cursor_pos = len(char_positions) - 1
+                cursor_pos = min_pos + len(char_positions) - 1
             else:
                 char_positions.append(m_x)
                 char_positions.sort()
@@ -389,9 +411,9 @@ class InputField:
                 pos_left = char_positions[index-1]
                 pos_right = char_positions[index+1]
                 if m_x < (pos_left + pos_right) / 2.:
-                    cursor_pos = index - 1
+                    cursor_pos = min_pos + index - 1
                 else:
-                    cursor_pos = index
+                    cursor_pos = min_pos + index
 
         else:
 
@@ -441,6 +463,8 @@ if __name__ == '__main__':
 
         def __init__(self):
             ShowBase.__init__(self)
+
+            # The mouse position can be incorrectly determined if this isn't done
             base.graphicsEngine.render_frame()
 
             # It is necessary to set up the white color text property for selected text
@@ -452,31 +476,9 @@ if __name__ == '__main__':
 
             # Define the transformation of the InputField
 
-            pos = Vec3(-.5, 0., 0.)
+            pos = Vec3(-1, 0., .5)
             scale = .1
             width = 20.
-
-            # Normally, the geoms needed for the different states of the InputField
-            # are created as external resources (e.g. using egg-texture-cards.exe), but
-            # for the sake of this example they will be created using CardMaker.
-            # Note that they should be combined into a hierarchy.
-
-            geoms = NodePath("input_field_geoms")
-
-            cm = CardMaker("inputfield_geom_normal")
-            cm.set_frame(0., width, -.5, 1.)
-            cm.set_color(.5, .5, .5, 1.)
-            cm.set_has_uvs(False)
-            cm.set_has_normals(False)
-            geoms.attach_new_node(cm.generate())
-
-            cm = CardMaker("inputfield_geom_hilited")
-            cm.set_frame(0., width, -.5, 1.)
-            cm.set_color(.8, .8, .8, 1.)
-            cm.set_has_uvs(False)
-            cm.set_has_normals(False)
-            geoms.attach_new_node(cm.generate())
-
 
             # Define a function that will be called when committing the entry text
 
@@ -487,9 +489,9 @@ if __name__ == '__main__':
             on_commit = (on_commit_func, ["inputfield_1"])
             self.field1 = InputField(self, pos, scale, width, on_commit=on_commit)
 
-            pos = Vec3(-.5, 0., .5)
+            pos = Vec3(-1, 0., 0.)
             on_commit = (on_commit_func, ["inputfield_2"])
-            self.field2 = InputField(self, pos, scale, width, on_commit=on_commit)
+            self.field2 = InputField(self, pos, scale, width, on_commit=on_commit, num_lines=8)
 
 
     App().run()
