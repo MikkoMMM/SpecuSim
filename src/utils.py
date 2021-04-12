@@ -3,6 +3,7 @@ from panda3d.core import Point3, BitMask32, TransformState
 from panda3d.core import SamplerState
 from panda3d.core import ShaderTerrainMesh, Shader
 from panda3d.core import Texture
+import pyperclip
 
 
 # TODO: compare speed to angleDeg in Panda's Vec3
@@ -132,3 +133,10 @@ def create_and_texture_terrain(elevation_img, height, texture_img):
     terrain.set_texture(terrain_tex)
 
     return terrain
+
+
+def paste_into(target_entry, ):
+    before, after = target_entry.get()[:target_entry.getCursorPosition()], target_entry.get()[target_entry.getCursorPosition():]
+    paste = pyperclip.paste()
+    target_entry.set(before + paste + after)
+    target_entry.setCursorPosition(target_entry.getCursorPosition() + len(paste))

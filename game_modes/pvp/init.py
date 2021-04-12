@@ -19,7 +19,7 @@ from src.default_controls import setup_controls, interpret_controls
 from src.default_gui import DefaultGUI
 from src.getconfig import debug, logger
 from src.humanoid import Humanoid
-from src.utils import create_or_load_walk_map, create_and_texture_terrain
+from src.utils import create_or_load_walk_map, create_and_texture_terrain, paste_into
 
 
 class Game:
@@ -111,6 +111,8 @@ class Game:
         self.sock.bind(("", self.port))
         self.sock.setblocking(False)
         taskMgr.add(self.wait_connection_info, "pvp-init")
+        base.accept("control-v", self.paste)
+        base.accept("shift-insert", self.paste)
 
         # Characters must be created only after the terrain_bullet_node has been finalized
         self.terrain_init_thread.join()
@@ -120,6 +122,14 @@ class Game:
         self.opponent_start_time = -1
         self.network_listen_thread = threading.Thread(target=self.network_listen_initial, args=())
         self.network_listen_thread.start()
+
+
+    def paste(self):
+        logger.debug(f"Attempted pasting.")
+        if self.ip_field['focus']:
+            paste_into(self.ip_field)
+        elif self.port_field['focus']:
+            paste_into(self.port_field)
 
 
     def network_listen_initial(self):
@@ -165,6 +175,9 @@ class Game:
 
         if self.opponent_start_time < 0:
             return task.cont
+
+        base.ignore("control-v")
+        base.ignore("shift-insert")
 
         if self.opponent_start_time < self.player_start_time:
             body = self.player.get_body()

@@ -80,4 +80,5 @@
 8.4.2021 Some work on integrating the new changes from the IK library. Thinking about how crowdfunding the project could work with Finland's taxation.
 9.4.2021 More work on integrating the new changes to IK library.
 10.4.2021 Looking into the Monster Mash tool. Thinking about more efficient Z position determining. Some network testing. Asking for help on ShaderTerrainMesh and BulletHeightfieldShape not matching in shape, and improving the physics heightfield with that help.
-11.4.2021 A new shader for characters.
+11.4.2021 A new shader for characters. Sending a progress report to the supervisor.
+12.4.2021 Some pasting functionality.
