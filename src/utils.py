@@ -135,8 +135,13 @@ def create_and_texture_terrain(elevation_img, height, texture_img):
     return terrain
 
 
-def paste_into(target_entry, ):
+def paste_into(target_entry):
     before, after = target_entry.get()[:target_entry.getCursorPosition()], target_entry.get()[target_entry.getCursorPosition():]
     paste = pyperclip.paste()
     target_entry.set(before + paste + after)
     target_entry.setCursorPosition(target_entry.getCursorPosition() + len(paste))
+
+
+def is_focused(entry):
+    # Possible states: https://github.com/panda3d/panda3d/blob/master/direct/src/gui/DirectEntry.py#L20-L22
+    return entry.guiItem.getState() == 0

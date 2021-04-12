@@ -19,7 +19,7 @@ from src.getconfig import logger, debug
 from src.humanoid import Humanoid
 from src.language_processing.load_model import load_language_model
 from src.language_processing.nlp_manager import NLPManager
-from src.utils import create_or_load_walk_map, create_and_texture_terrain
+from src.utils import create_or_load_walk_map, create_and_texture_terrain, is_focused, paste_into
 
 
 class Game:
@@ -115,6 +115,8 @@ class Game:
 
         base.accept("wheel_down", cam_control.wheel_down)
         base.accept("wheel_up", cam_control.wheel_up)
+        base.accept("control-v", self.paste)
+        base.accept("shift-insert", self.paste)
 
         setup_controls()
 
@@ -131,6 +133,11 @@ class Game:
         self.gui.focus_out_text_field()
 
 
+    def paste(self):
+        if is_focused(self.gui.text_field):
+            paste_into(self.gui.text_field)
+
+
     # Everything that needs to be done every frame goes here.
     # Physics updates and movement and stuff.
     def update(self, task):
@@ -139,7 +146,7 @@ class Game:
         self.world.do_physics(dt, 5, 1.0 / 80.0)
 
         # Define controls
-        if self.gui.text_field['focus']:
+        if is_focused(self.gui.text_field):
             interpret_controls(self.player, stand_still=True)
         else:
             interpret_controls(self.player)
