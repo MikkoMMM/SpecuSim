@@ -143,5 +143,4 @@ def paste_into(target_entry):
 
 
 def is_focused(entry):
-    # Possible states: https://github.com/panda3d/panda3d/blob/master/direct/src/gui/DirectEntry.py#L20-L22
-    return entry.guiItem.getState() == 0
+    return entry.guiItem.get_focus()
