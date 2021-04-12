@@ -1,25 +1,59 @@
-# Requirements
-## Hardware
-* 5 GB Graphics Memory (or 1 GB if not using natural language processing)
-* The GPU should preferably be NVIDIA's, but AMD may work with the ROCm version of PyTorch, too (no guarantees).
+# Minimal installation
+With this installation you are limited to game modes that don't use natural language processing.
+
+## Requirements
+### Hardware
+* 1 GB Graphics Memory
 * OpenGL 3.2 capable GPU (and drivers)
 
-### Motion controller
+#### Motion controller
 Currently these options are supported:
 
 Nothing. All support is currently on halt. But you should have a mouse instead.
 
 
-## Software
+### Software
+* Python 3.6 or later
+
+## Installation
+Install the required Python modules:
+```
+pip3 install -r requirements_minimal.txt
+```
+
+## Starting the game
+To play, go to the root directory of SpecuSim and run:
+```
+python3 specusim.py
+```
+
+
+# Full installation
+
+## Requirements
+### Hardware
+* 5 GB Graphics Memory
+* The GPU should preferably be NVIDIA's, but AMD may work with the ROCm version of PyTorch, too (no guarantees).
+* OpenGL 3.2 capable GPU (and drivers)
+
+#### Motion controller
+Currently these options are supported:
+
+Nothing. All support is currently on halt. But you should have a mouse instead.
+
+
+### Software
 * Python 3.6 or later
 * CUDA enabled graphics driver
 
 
-# Installation
+## Installation
 First, you need to install the required Python modules:
-pip3 install -r requirements.txt 
+```
+pip3 install -r requirements_all.txt
+```
 
-## AI models
+### AI models
 You'll also need an AI model to use the natural language processing features. It's to be placed in the language_models directory. The PyTorch version of the original AID2 model is being distributed by bittorrent:
 
 [Torrent File](model.torrent) 
