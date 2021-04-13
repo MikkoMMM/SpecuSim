@@ -10,9 +10,13 @@ r.withdraw()
 
 class InputField:
 
-    def __init__(self, app, pos, scale, width, geoms=None, on_commit=None, selection_color=(.2, .4, .75, 1.), num_lines=1):
+    def __init__(self, app, pos, scale, width, geoms=None, on_commit=None, text_fg=(0, 0, 0, 1),
+                normal_color=(.5, .5, .5, 1.), hilite_color=(.8, .8, .8, 1.), selection_color=(.2, .4, .75, 1.),
+                 num_lines=1, initial_text="", parent=None):
 
         self._screen = app.aspect2d
+        if not parent:
+            parent = self._screen
         self._mouse_watcher = app.mouseWatcherNode
         self._task_mgr = app.taskMgr
         win_props = app.win.get_properties()
@@ -57,13 +61,15 @@ class InputField:
             clickSound=None,
             text_align=TextNode.ALeft,
             relief=None,
-            numLines=num_lines
+            numLines=num_lines,
+            initialText=initial_text,
+            parent=parent,
+            text_fg=text_fg
             )
         height = -num_lines+0.5
 
         # Normally, the geoms needed for the different states of the InputField
-        # are created as external resources (e.g. using egg-texture-cards.exe), but
-        # we do have some default CardMaker ones.
+        # are created as external resources (e.g. using egg-texture-cards.exe).
         # Note that they should be combined into a hierarchy.
         if not geoms:
 
@@ -71,14 +77,14 @@ class InputField:
 
             cm = CardMaker("inputfield_geom_normal")
             cm.set_frame(0., width, height, 1.)
-            cm.set_color(.5, .5, .5, 1.)
+            cm.set_color(normal_color)
             cm.set_has_uvs(False)
             cm.set_has_normals(False)
             geoms.attach_new_node(cm.generate())
 
             cm = CardMaker("inputfield_geom_hilited")
             cm.set_frame(0., width, height, 1.)
-            cm.set_color(.8, .8, .8, 1.)
+            cm.set_color(hilite_color)
             cm.set_has_uvs(False)
             cm.set_has_normals(False)
             geoms.attach_new_node(cm.generate())
@@ -97,7 +103,7 @@ class InputField:
                                                 pos=pos,
                                                 scale=self._scale,
                                                 geom=self._geom_normal,
-                                                clipSize=(0., width, height, 1.)
+                                                clipSize=(0., width, height, 1.), parent=parent
                                               )
 
         cursor_move = self._d_entry.guiItem.get_cursormove_event()
@@ -144,6 +150,9 @@ class InputField:
         self._d_entry["focusInCommand"] = self.__on_focus_in
         self._d_entry["focusOutCommand"] = self.__on_focus_out
 
+    def get(self):
+        return self._d_entry.get(True)
+
     def __clear_selection(self):
 
         self._selecting_input = False
@@ -183,10 +192,9 @@ class InputField:
             if ((key == "delete" and cursor_pos == len(self._d_entry.get(True)))
                     or (key == "backspace" and cursor_pos == 0)):
                 cursor_x = self._d_entry.guiItem.getCursorX()
-                cursor_y = self._d_entry.guiItem.getCursorY()
-                self.__edit_entry(cursor_x, cursor_y)
+                self.__edit_entry(cursor_x)
 
-    def __edit_entry(self, cursor_x, cursor_y):
+    def __edit_entry(self, cursor_x, cursor_y=0):
 
         entry = self._d_entry
 
@@ -251,7 +259,8 @@ class InputField:
 
                 self._selecting_input = True
 
-                entry["geom"] = self._sel_bg
+                if entry["numLines"] <= 1:
+                    entry["geom"] = self._sel_bg
 
                 if self._start_select_from_current_pos:
                     self._select_start = (cursor_pos, cursor_x)
@@ -265,9 +274,10 @@ class InputField:
 
                 # Adjust the selection background
 
-                entry["geom"] = self._sel_bg
-                entry["geom_pos"] = (start_x, 0., 0.)
-                entry["geom_scale"] = (cursor_x - start_x, 1., 1.)
+                if entry["numLines"] <= 1:
+                    entry["geom"] = self._sel_bg
+                    entry["geom_pos"] = (start_x, 0., 0.)
+                    entry["geom_scale"] = (cursor_x - start_x, 1., 1.)
 
                 # Determine the new selection
 
@@ -325,8 +335,7 @@ class InputField:
                 # force entry edit if cursor is already at end of text
                 if cursor_pos == len(selection):
                     cursor_x = entry.guiItem.getCursorX()
-                    cursor_y = entry.guiItem.getCursorY()
-                    self.__edit_entry(cursor_x, cursor_y)
+                    self.__edit_entry(cursor_x)
                 else:
                     entry.setCursorPosition(len(selection))
 
@@ -341,8 +350,7 @@ class InputField:
             pyperclip.copy(self._selection)
             self._text_was_erased = True
             cursor_x = self._d_entry.guiItem.getCursorX()
-            cursor_y = self._d_entry.guiItem.getCursorY()
-            self.__edit_entry(cursor_x, cursor_y)
+            self.__edit_entry(cursor_x)
 
     def __paste(self):
 
@@ -359,6 +367,9 @@ class InputField:
 
         if self._d_entry.guiItem.get_focus():
             self._d_entry.guiItem.set_focus(False)
+
+    def focus(self):
+        self._d_entry.guiItem.set_focus(True)
 
     def __get_char_positions(self):
 

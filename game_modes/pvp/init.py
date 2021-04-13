@@ -12,7 +12,7 @@ from panda3d.bullet import ZUp
 from panda3d.core import BitMask32
 from panda3d.core import PNMImage, Filename
 from panda3d.core import SamplerState, TextNode
-from panda3d.core import Vec3, CullBinManager
+from panda3d.core import Vec3, CullBinManager, TextPropertiesManager, TextProperties
 
 from src.camera import CameraControl
 from src.default_controls import setup_controls, interpret_controls
@@ -20,6 +20,7 @@ from src.default_gui import DefaultGUI
 from src.getconfig import debug, logger
 from src.humanoid import Humanoid
 from src.utils import create_or_load_walk_map, create_and_texture_terrain, paste_into, is_focused
+from src.inputfield import InputField
 
 
 class Game:
@@ -33,6 +34,14 @@ class Game:
         self.ip_addr = ""
         self.port = 5005
         self.lag = 0
+
+        # For the input fields.
+        # It is necessary to set up the white color text property for selected text
+
+        props_mgr = TextPropertiesManager.get_global_ptr()
+        col_prop = TextProperties()
+        col_prop.set_text_color((1., 1., 1., 1.))
+        props_mgr.set_properties("white", col_prop)
 
         # Heightfield's height
         self.terrain_height = 25.0
@@ -69,15 +78,23 @@ class Game:
                                      frameSize=(-0.8, 0.8, -0.3, 0.3),
                                      pos=(0, -1, 0))
         scale = 0.05
+        self.ip_field = InputField(base, (-0.4, 0, 0.04), scale, 22, on_commit=(self.focus_in_port, ()), parent=self.connect_dialog,
+                                   text_fg=(1, 1, 1, 1), normal_color=(0, 0, 0, 0.3), hilite_color=(0.3, 0.3, 0.3, 0.3))
+        '''
         self.ip_field = DirectEntry(scale=scale, command=self.focus_in_port, parent=self.connect_dialog,
                                     text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=22,
                                     pos=(-0.4, 0, 0.04),
                                     initialText="", numLines=1, focus=1)
-
+        '''
+        self.port_field = InputField(base, (-0.4, 0, -0.04), scale, 4, on_commit=(self.focus_in_connect, ()), parent=self.connect_dialog,
+                                     text_fg=(1, 1, 1, 1), normal_color=(0, 0, 0, 0.3), hilite_color=(0.3, 0.3, 0.3, 0.3),
+                                     initial_text="5005")
+        '''
         self.port_field = DirectEntry(scale=scale, command=self.focus_in_connect, parent=self.connect_dialog,
                                       text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=3,
                                       pos=(-0.4, 0, -0.04),
                                       initialText="5005", numLines=1, focus=0)
+        '''
 
         self.notice_text_obj = OnscreenText(text="Enter the IPv4 address of the other player", style=1, fg=(1, 1, 1, 1), scale=.05,
                                             shadow=(0, 0, 0, 1), parent=self.connect_dialog,
@@ -111,8 +128,6 @@ class Game:
         self.sock.bind(("", self.port))
         self.sock.setblocking(False)
         taskMgr.add(self.wait_connection_info, "pvp-init")
-        base.accept("control-v", self.paste)
-        base.accept("shift-insert", self.paste)
 
         # Characters must be created only after the terrain_bullet_node has been finalized
         self.terrain_init_thread.join()
@@ -122,13 +137,6 @@ class Game:
         self.opponent_start_time = -1
         self.network_listen_thread = threading.Thread(target=self.network_listen_initial, args=())
         self.network_listen_thread.start()
-
-
-    def paste(self):
-        if is_focused(self.ip_field):
-            paste_into(self.ip_field)
-        elif is_focused(self.port_field):
-            paste_into(self.port_field)
 
 
     def network_listen_initial(self):
@@ -155,8 +163,7 @@ class Game:
 
 
     def focus_in_port(self, ignore_me):
-        self.ip_field['focus'] = False
-        self.port_field['focus'] = True
+        self.port_field.focus()
 
 
     def focus_in_connect(self, ignore_me):
@@ -204,13 +211,11 @@ class Game:
             self.ip_addr = self.ip_field.get()
 
             if not self.ip_addr:
-                self.ip_field['focus'] = True
-                self.port_field['focus'] = False
+                self.ip_field.focus()
                 return
         self.port = int(self.port_field.get())
         if not self.port:
-            self.ip_field['focus'] = False
-            self.port_field['focus'] = True
+            self.port_field.focus()
 
 
     def initialize_terrain(self):
