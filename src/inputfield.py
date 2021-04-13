@@ -357,6 +357,11 @@ class InputField:
         entry = self._d_entry
 
         if entry.guiItem.get_focus():
+            # In case something was selected, erase it first
+            self._text_was_erased = True
+            cursor_x = self._d_entry.guiItem.getCursorX()
+            self.__edit_entry(cursor_x)
+
             before, after = entry.get()[:entry.getCursorPosition()], entry.get()[entry.getCursorPosition():]
             paste = pyperclip.paste()
             entry.set(before + paste + after)
