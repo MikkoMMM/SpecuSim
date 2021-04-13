@@ -80,14 +80,16 @@ class InputField:
             cm.set_color(normal_color)
             cm.set_has_uvs(False)
             cm.set_has_normals(False)
-            geoms.attach_new_node(cm.generate())
+            quad = geoms.attach_new_node(cm.generate())
+            quad.setTransparency(1)
 
             cm = CardMaker("inputfield_geom_hilited")
             cm.set_frame(0., width, height, 1.)
             cm.set_color(hilite_color)
             cm.set_has_uvs(False)
             cm.set_has_normals(False)
-            geoms.attach_new_node(cm.generate())
+            quad = geoms.attach_new_node(cm.generate())
+            quad.setTransparency(1)
 
         # Retrieve the geoms to be displayed for the different states of the input
         # field
