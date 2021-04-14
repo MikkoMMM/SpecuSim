@@ -78,7 +78,7 @@ class Game:
                                      frameSize=(-0.8, 0.8, -0.3, 0.3),
                                      pos=(0, -1, 0))
         scale = 0.05
-        self.ip_field = InputField(base, (-0.4, 0, 0.04), scale, 22, on_commit=(self.focus_in_port, ()), parent=self.connect_dialog,
+        self.ip_field = InputField((-0.4, 0, 0.04), scale, 22, on_commit=(self.focus_in_port, ()), parent=self.connect_dialog,
                                    text_fg=(1, 1, 1, 1), normal_color=(0, 0, 0, 0.3), hilite_color=(0.3, 0.3, 0.3, 0.3))
         '''
         self.ip_field = DirectEntry(scale=scale, command=self.focus_in_port, parent=self.connect_dialog,
@@ -86,7 +86,7 @@ class Game:
                                     pos=(-0.4, 0, 0.04),
                                     initialText="", numLines=1, focus=1)
         '''
-        self.port_field = InputField(base, (-0.4, 0, -0.04), scale, 4, on_commit=(self.focus_in_connect, ()), parent=self.connect_dialog,
+        self.port_field = InputField((-0.4, 0, -0.04), scale, 4, on_commit=(self.focus_in_connect, ()), parent=self.connect_dialog,
                                      text_fg=(1, 1, 1, 1), normal_color=(0, 0, 0, 0.3), hilite_color=(0.3, 0.3, 0.3, 0.3),
                                      initial_text="5005")
         '''
@@ -198,6 +198,8 @@ class Game:
 
         self.network_listen_thread.join()
         self.sock.setblocking(True)
+        self.ip_field.destroy()
+        self.port_field.destroy()
         self.connect_dialog.destroy()
         self.network_listen_thread = threading.Thread(target=self.network_listen, args=())
         self.network_listen_thread.start()

@@ -10,16 +10,15 @@ r.withdraw()
 
 class InputField:
 
-    def __init__(self, app, pos, scale, width, geoms=None, on_commit=None, text_fg=(0, 0, 0, 1),
+    def __init__(self, pos, scale, width, geoms=None, on_commit=None, text_fg=(0, 0, 0, 1),
                 normal_color=(.5, .5, .5, 1.), hilite_color=(.8, .8, .8, 1.), selection_color=(.2, .4, .75, 1.),
                  num_lines=1, initial_text="", parent=None):
 
-        self._screen = app.aspect2d
+        self._screen = base.aspect2d
         if not parent:
             parent = self._screen
-        self._mouse_watcher = app.mouseWatcherNode
-        self._task_mgr = app.taskMgr
-        win_props = app.win.get_properties()
+        self._mouse_watcher = base.mouseWatcherNode
+        win_props = base.win.get_properties()
         self._aspect_ratio = 1. * win_props.get_x_size() / win_props.get_y_size()
 
         self._scale = scale
@@ -27,6 +26,7 @@ class InputField:
         # Initialize the main variables
 
         self._listener = DirectObject.DirectObject()
+        self._task_mgr = self._listener
         self._selecting_input = False
         self._select_with_mouse_started = False
         self._start_select_from_current_pos = False
@@ -56,6 +56,7 @@ class InputField:
         # assigned as a geom when needed
 
         self._d_entry = DirectEntry(
+            pos=(0.25, 0, 0),
             width=1000000,
             rolloverSound=None,
             clickSound=None,
@@ -154,6 +155,14 @@ class InputField:
 
     def get(self):
         return self._d_entry.get(True)
+
+    def destroy(self):
+        self._d_entry.destroy()
+        self._scroll_frame.destroy()
+        self._geom_hilited.removeNode()
+        self._geom_normal.removeNode()
+        self._listener.ignoreAll()
+        self._task_mgr.removeAllTasks()
 
     def __clear_selection(self):
 
@@ -447,7 +456,7 @@ class InputField:
 
     def __enable_select_with_mouse(self, event_data):
 
-        self._task_mgr.add(self.__set_cursor_to_mouse_pos, "set_cursor_to_mouse_pos")
+        self._task_mgr.addTask(self.__set_cursor_to_mouse_pos, "set_cursor_to_mouse_pos")
 
         if not self._mouse_watcher.is_button_down("shift"):
             self._start_select_from_current_pos = True
@@ -456,7 +465,7 @@ class InputField:
 
     def __disable_select_with_mouse(self, event_data):
 
-        self._task_mgr.remove("set_cursor_to_mouse_pos")
+        self._task_mgr.removeTask("set_cursor_to_mouse_pos")
         self._cursor_was_moved = False
 
     def __on_focus_in(self):
@@ -505,11 +514,11 @@ if __name__ == '__main__':
 
 
             on_commit = (on_commit_func, ["inputfield_1"])
-            self.field1 = InputField(self, pos, scale, width, on_commit=on_commit)
+            self.field1 = InputField(pos, scale, width, on_commit=on_commit)
 
             pos = Vec3(-1, 0., 0.)
             on_commit = (on_commit_func, ["inputfield_2"])
-            self.field2 = InputField(self, pos, scale, width, on_commit=on_commit, num_lines=8)
+            self.field2 = InputField(pos, scale, width, on_commit=on_commit, num_lines=8)
 
 
     App().run()
