@@ -113,7 +113,7 @@ class Game:
 
 
     def player_say(self, text):
-        self.gui.text_field.enterText('')
+        self.gui._d_entry.enterText('')
         logger.debug(f"The player said: {text}")
         self.player.say(text)
         self.gui.focus_out_text_field()
@@ -130,7 +130,7 @@ class Game:
         interpret_controls(self.player)
         for doppelganger in self.doppelgangers:
             interpret_controls(doppelganger)
-        if self.gui.text_field['focus']:
+        if self.gui._d_entry['focus']:
             interpret_controls(self.player, stand_still=True)
             for doppelganger in self.doppelgangers:
                 interpret_controls(doppelganger, stand_still=True)

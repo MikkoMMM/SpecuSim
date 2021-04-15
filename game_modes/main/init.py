@@ -19,7 +19,8 @@ from src.getconfig import logger, debug
 from src.humanoid import Humanoid
 from src.language_processing.load_model import load_language_model
 from src.language_processing.nlp_manager import NLPManager
-from src.utils import create_or_load_walk_map, create_and_texture_terrain, is_focused, paste_into
+from src.utils import create_or_load_walk_map, create_and_texture_terrain
+from panda3d.core import TextPropertiesManager, TextProperties
 
 
 class Game:
@@ -46,6 +47,14 @@ class Game:
         self.world.set_group_collision_flag(3, 0, False)
         self.world.set_group_collision_flag(3, 1, False)
         self.world.set_group_collision_flag(3, 3, True)
+
+        # For the input fields.
+        # It is necessary to set up a hilite text property for selected text color
+
+        props_mgr = TextPropertiesManager.get_global_ptr()
+        col_prop = TextProperties()
+        col_prop.set_text_color((1., 1., 1., 1.))
+        props_mgr.set_properties("hilite", col_prop)
 
         base.disable_mouse()
 
@@ -115,8 +124,6 @@ class Game:
 
         base.accept("wheel_down", cam_control.wheel_down)
         base.accept("wheel_up", cam_control.wheel_up)
-        base.accept("control-v", self.paste)
-        base.accept("shift-insert", self.paste)
 
         setup_controls()
 
@@ -125,17 +132,12 @@ class Game:
 
 
     def player_say(self, text):
-        self.gui.text_field.enterText('')
+        self.gui.input_field.clear_text()
         logger.debug(f"The player said: {text}")
         self.player.say(text)
         you_say = f"You say: \"{text}\""
         self.nlp_manager.new_speech_task(self.npc1, you_say)
         self.gui.focus_out_text_field()
-
-
-    def paste(self):
-        if is_focused(self.gui.text_field):
-            paste_into(self.gui.text_field)
 
 
     # Everything that needs to be done every frame goes here.
@@ -146,7 +148,7 @@ class Game:
         self.world.do_physics(dt, 5, 1.0 / 80.0)
 
         # Define controls
-        if is_focused(self.gui.text_field):
+        if self.gui.input_field.is_focused():
             interpret_controls(self.player, stand_still=True)
         else:
             interpret_controls(self.player)

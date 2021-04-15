@@ -19,8 +19,8 @@ def act(generator, tokens, output=None):
     except Exception as e:
         print()
         print("Natural language processing has crashed!")
-        print("Context: " + context)
-        print("Action: " + action)
+        print("Tokens: " + str(tokens))
+        # print("Decoded: " + str(self.tokenizer.decode(tokens)))
         print("Temperature: " + str(temperature))
         print("Repetition penalty: " + str(repetition_penalty))
         print()

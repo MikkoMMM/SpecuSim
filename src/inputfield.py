@@ -384,6 +384,15 @@ class InputField:
     def focus(self):
         self._d_entry.guiItem.set_focus(True)
 
+    def unfocus(self):
+        self._d_entry.guiItem.set_focus(False)
+
+    def clear_text(self):
+        self._d_entry.enterText('')
+
+    def is_focused(self):
+        return self._d_entry.guiItem.get_focus()
+
     def __get_char_positions(self):
 
         tn = self._d_entry.guiItem.get_text_def(0)

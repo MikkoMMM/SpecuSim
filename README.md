@@ -1,7 +1,9 @@
 # What is SpecuSim?
 Check back in a decade when it's started to take form. SpecuSim: The World Simulator is a free and open source platform mostly intended for games that take place in a complex simulated world.
 
-The main game mode of SpecuSim: The World Simulator is a sandbox RPG, developed in a close symbiosis with this extension to the Panda3D game engine, and hence the game mode can also be referred to as "SpecuSim". It attempts to be "a Dwarf Fortress of modern times", not necessarily ever going to be super popular or a commercial success if it were to be sold (not that there are plans regarding that), but something that pushes the envelope of what's deemed possible in indie game development. In fact, it's impossible for a lot of current systems to run the full game with playable performance, because the technologies used are chosen according to not what gives decent results today, but on the basis of "what might be" in the future.
+The main game mode of SpecuSim: The World Simulator is a sandbox RPG, developed in a close symbiosis with this extension to the Panda3D game engine, and hence the game mode can also be referred to as "SpecuSim". It attempts to be "a Dwarf Fortress of modern times", not necessarily ever going to be super popular or a commercial success if it were to be sold (not that there are plans regarding that), but something that pushes the envelope of what's deemed possible in indie game development.
+
+In fact, it's impossible for a lot of current systems to run the full game with playable performance, because the technologies used are chosen according to not what gives decent results today, but on the basis of "what might be" in the future.
 
 # Minimal installation
 With this installation you are limited to game modes that don't use natural language processing.

@@ -255,7 +255,7 @@ class GPT2Generator:
             if depth < 20:
                 logger.info("Model generated empty text trying again %r", depth)
                 return self.generate(
-                    context, prompt, temperature=temperature, top_p=top_p, top_k=top_k,
+                    tokens, generate_num=generate_num, temperature=temperature, top_p=top_p, top_k=top_k,
                     repetition_penalty=repetition_penalty, depth=depth + 1, output=output
                 )
             else:

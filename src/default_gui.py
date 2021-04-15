@@ -1,4 +1,5 @@
 from direct.gui.DirectGui import DirectFrame, DirectEntry
+from src.inputfield import InputField
 
 
 class DefaultGUI:
@@ -12,27 +13,25 @@ class DefaultGUI:
         # Each width unit seems to be a 2/scale'th of a screen on a rectangular aspect ratio
         scale = 0.05
         if enable_text_field:
-            self.text_field = DirectEntry(text="", scale=scale, command=text_input_func, parent=gui_bar,
-                                          text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=30,
-                                          pos=(-15 * scale, 0, (bar_start - 0.95) / 2),
-                                          initialText="Press Enter to start talking", numLines=3, focus=0,
-                                          focusInCommand=self.focus_in_text_field_initial)
+            self.input_field = InputField((-15 * scale, 0, (bar_start - 0.95) / 2), scale, 30, on_commit=(text_input_func, ()),
+                                          parent=gui_bar, text_fg=(1, 1, 1, 1), normal_bg=(0, 0, 0, 0.3), hilite_bg=(0.3, 0.3, 0.3, 0.3),
+                                          num_lines=3, initial_text="Press Enter to start talking")
 
             # For whatever reason, we seem to need a delay, in some circumstances at least
             taskMgr.doMethodLater(globalClock.get_dt(), base.accept, 'Set enter', extraArgs=["enter", self.focus_in_text_field_initial])
 
 
     def focus_in_text_field_initial(self):
-        self.text_field.enterText('')
+        self.input_field.clear_text()
         self.focus_in_text_field()
 
 
     def focus_in_text_field(self):
-        self.text_field['focus'] = True
+        self.input_field.focus()
         base.ignore("enter")
 
 
     def focus_out_text_field(self):
-        self.text_field['focus'] = False
+        self.input_field.unfocus()
         # If we don't delay, it will just focus back in again right then and there.
-        taskMgr.doMethodLater(globalClock.get_dt(), base.accept, 'Set enter', extraArgs=["enter", self.focus_in_text_field])
+        taskMgr.doMethodLater(globalClock.get_dt()*2, base.accept, 'Set enter', extraArgs=["enter", self.focus_in_text_field])
