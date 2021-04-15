@@ -3,15 +3,12 @@ from direct.gui.DirectGui import *
 from direct.showbase.ShowBase import DirectObject
 
 import pyperclip
-from tkinter import Tk
-r = Tk()
-r.withdraw()
 
 
 class InputField:
 
     def __init__(self, pos, scale, width, geoms=None, on_commit=None, text_fg=(0, 0, 0, 1),
-                normal_color=(.5, .5, .5, 1.), hilite_color=(.8, .8, .8, 1.), selection_color=(.2, .4, .75, 1.),
+                 normal_bg=(.5, .5, .5, 1.), hilite_bg=(.8, .8, .8, 1.), selection_bg=(.2, .4, .75, 1.),
                  num_lines=1, initial_text="", parent=None):
 
         self._screen = base.aspect2d
@@ -47,7 +44,7 @@ class InputField:
 
         cm = CardMaker("text_selection_bg")
         cm.set_frame(0., 1., -.5, 1.)
-        cm.set_color(selection_color)
+        cm.set_color(selection_bg)
         cm.set_has_uvs(False)
         cm.set_has_normals(False)
         self._sel_bg = NodePath(cm.generate())
@@ -78,7 +75,7 @@ class InputField:
 
             cm = CardMaker("inputfield_geom_normal")
             cm.set_frame(0., width, height, 1.)
-            cm.set_color(normal_color)
+            cm.set_color(normal_bg)
             cm.set_has_uvs(False)
             cm.set_has_normals(False)
             quad = geoms.attach_new_node(cm.generate())
@@ -86,7 +83,7 @@ class InputField:
 
             cm = CardMaker("inputfield_geom_hilited")
             cm.set_frame(0., width, height, 1.)
-            cm.set_color(hilite_color)
+            cm.set_color(hilite_bg)
             cm.set_has_uvs(False)
             cm.set_has_normals(False)
             quad = geoms.attach_new_node(cm.generate())
@@ -295,10 +292,10 @@ class InputField:
                 start, end = sorted([start_pos, cursor_pos])
                 self._selection = entry.get(True)[start:end]
 
-                # Set the selection color to white
+                # Set the selection color to the highlight color
 
                 entry_txt = entry.get(True)
-                entry_txt = entry_txt[:start] + "\1white\1" + self._selection \
+                entry_txt = entry_txt[:start] + "\1hilite\1" + self._selection \
                             + "\2" + entry_txt[end:]
                 entry.set(entry_txt)
                 self._ignore_set_text = True
@@ -494,12 +491,12 @@ if __name__ == '__main__':
             # The mouse position can be incorrectly determined if this isn't done
             base.graphicsEngine.render_frame()
 
-            # It is necessary to set up the white color text property for selected text
+            # It is necessary to set up a hilite text property for selected text color
 
             props_mgr = TextPropertiesManager.get_global_ptr()
             col_prop = TextProperties()
             col_prop.set_text_color((1., 1., 1., 1.))
-            props_mgr.set_properties("white", col_prop)
+            props_mgr.set_properties("hilite", col_prop)
 
             # Define the transformation of the InputField
 

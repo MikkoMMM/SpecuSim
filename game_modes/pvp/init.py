@@ -36,12 +36,12 @@ class Game:
         self.lag = 0
 
         # For the input fields.
-        # It is necessary to set up the white color text property for selected text
+        # It is necessary to set up a hilite text property for selected text color
 
         props_mgr = TextPropertiesManager.get_global_ptr()
         col_prop = TextProperties()
         col_prop.set_text_color((1., 1., 1., 1.))
-        props_mgr.set_properties("white", col_prop)
+        props_mgr.set_properties("hilite", col_prop)
 
         # Heightfield's height
         self.terrain_height = 25.0
@@ -79,37 +79,20 @@ class Game:
                                      pos=(0, -1, 0))
         scale = 0.05
         self.ip_field = InputField((-0.4, 0, 0.04), scale, 22, on_commit=(self.focus_in_port, ()), parent=self.connect_dialog,
-                                   text_fg=(1, 1, 1, 1), normal_color=(0, 0, 0, 0.3), hilite_color=(0.3, 0.3, 0.3, 0.3))
-        '''
-        self.ip_field = DirectEntry(scale=scale, command=self.focus_in_port, parent=self.connect_dialog,
-                                    text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=22,
-                                    pos=(-0.4, 0, 0.04),
-                                    initialText="", numLines=1, focus=1)
-        '''
+                                   text_fg=(1, 1, 1, 1), normal_bg=(0, 0, 0, 0.3), hilite_bg=(0.3, 0.3, 0.3, 0.3))
+        self.ip_field.focus()
         self.port_field = InputField((-0.4, 0, -0.04), scale, 4, on_commit=(self.focus_in_connect, ()), parent=self.connect_dialog,
-                                     text_fg=(1, 1, 1, 1), normal_color=(0, 0, 0, 0.3), hilite_color=(0.3, 0.3, 0.3, 0.3),
+                                     text_fg=(1, 1, 1, 1), normal_bg=(0, 0, 0, 0.3), hilite_bg=(0.3, 0.3, 0.3, 0.3),
                                      initial_text="5005")
-        '''
-        self.port_field = DirectEntry(scale=scale, command=self.focus_in_connect, parent=self.connect_dialog,
-                                      text_fg=(1, 1, 1, 1), frameColor=(0, 0, 0, 0.3), width=3,
-                                      pos=(-0.4, 0, -0.04),
-                                      initialText="5005", numLines=1, focus=0)
-        '''
 
         self.notice_text_obj = OnscreenText(text="Enter the IPv4 address of the other player", style=1, fg=(1, 1, 1, 1), scale=.05,
-                                            shadow=(0, 0, 0, 1), parent=self.connect_dialog,
-                                            pos=(0.0, 0.2), align=TextNode.ACenter)
-        self.notice_text_obj.setBin("frontBin", 1)
+                                            shadow=(0, 0, 0, 1), parent=self.connect_dialog, pos=(0.0, 0.2), align=TextNode.ACenter)
 
         self.ip_question = OnscreenText(text="IP:", style=1, fg=(1, 1, 1, 1), scale=scale,
-                                        shadow=(0, 0, 0, 1), parent=self.connect_dialog,
-                                        pos=(-0.6, 0.04), align=TextNode.ACenter)
-        self.ip_question.setBin("frontBin", 1)
+                                        shadow=(0, 0, 0, 1), parent=self.connect_dialog, pos=(-0.6, 0.04), align=TextNode.ACenter)
 
         self.port_question = OnscreenText(text="Port:", style=1, fg=(1, 1, 1, 1), scale=scale,
-                                          shadow=(0, 0, 0, 1), parent=self.connect_dialog,
-                                          pos=(-0.6, -0.04), align=TextNode.ACenter)
-        self.port_question.setBin("frontBin", 1)
+                                          shadow=(0, 0, 0, 1), parent=self.connect_dialog, pos=(-0.6, -0.04), align=TextNode.ACenter)
 
         DirectButton(text="Quit",
                      scale=scale, command=exit, parent=self.connect_dialog,
