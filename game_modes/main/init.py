@@ -132,6 +132,9 @@ class Game:
 
 
     def player_say(self, text):
+        if not text:
+            self.gui.focus_out_text_field()
+            return
         self.gui.input_field.clear_text()
         logger.debug(f"The player said: {text}")
         self.player.say(text)

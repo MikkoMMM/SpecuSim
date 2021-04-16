@@ -84,6 +84,9 @@ def sample_sequence(
     pasts = None
     formatted_text = ""
     disallowed_start_len = len(max(disallowed_starts, key=len, default=""))
+    if debug.getboolean("nlp-debug"):
+        print("\n")
+        print("Token probabilities:")
     with torch.no_grad():
         for j in range(length):
             input_ids_next = next_token
@@ -105,14 +108,15 @@ def sample_sequence(
                 next_token = torch.argmax(logits, dim=-1).unsqueeze(-1)
             else:
                 tokens = F.softmax(logits, dim=-1)
+                if debug.getboolean("nlp-debug"):
+                    for t, token in enumerate(tokens):
+                        if token.item() > 0.001:
+                            print(f"{tokenizer.decode([t])}, {token.item()}")
+                    print("------------------")
+
                 next_token = torch.multinomial(
                     tokens, num_samples=1
                 )
-                if debug.getint("log-level") < 10:
-                    for t, token in enumerate(tokens):
-                        if token.item() > 0.001:
-                            logger.debug(f"{tokenizer.decode([t])}, {token.item()}")
-                    logger.debug("------------------")
 
             generated = torch.cat((generated, next_token), dim=-1)
             # Decode into plain text

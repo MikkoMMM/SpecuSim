@@ -82,8 +82,8 @@ class NLPManager:
         while True:
             speech_task = self.queue.get(block=True)
             # talking_started = datetime.now()
-            context = "You are speaking to a person."
-            prompt = f"They answer: \""
+            context = "You are speaking to a person called Tabula Rasa."
+            prompt = f"Tabula Rasa answers: \""
 
             result = act(self.generator, self.generator.memory_merge(context, speech_task.speaker.short_term_memory, speech_task.text,
                                                                      prompt),
