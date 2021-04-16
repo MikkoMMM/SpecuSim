@@ -53,7 +53,7 @@ class Game:
 
         props_mgr = TextPropertiesManager.get_global_ptr()
         col_prop = TextProperties()
-        col_prop.set_text_color((1., 1., 1., 1.))
+        col_prop.set_text_color((0.5, 0.5, 1., 1.))
         props_mgr.set_properties("hilite", col_prop)
 
         base.disable_mouse()

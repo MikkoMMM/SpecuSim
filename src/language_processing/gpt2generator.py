@@ -11,7 +11,7 @@ import torch
 import torch.nn.functional as F
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
-from src.getconfig import settings, logger
+from src.getconfig import settings, logger, debug
 from .utils import format_result
 
 if not settings.getboolean('force-cpu') and not torch.cuda.is_available():
@@ -83,7 +83,7 @@ def sample_sequence(
     next_token = context
     pasts = None
     formatted_text = ""
-    disallowed_start_len = len(max(disallowed_starts, default=""))
+    disallowed_start_len = len(max(disallowed_starts, key=len, default=""))
     with torch.no_grad():
         for j in range(length):
             input_ids_next = next_token
@@ -104,9 +104,16 @@ def sample_sequence(
             if temperature == 0:  # greedy sampling:
                 next_token = torch.argmax(logits, dim=-1).unsqueeze(-1)
             else:
+                tokens = F.softmax(logits, dim=-1)
                 next_token = torch.multinomial(
-                    F.softmax(logits, dim=-1), num_samples=1
+                    tokens, num_samples=1
                 )
+                if debug.getint("log-level") < 10:
+                    for t, token in enumerate(tokens):
+                        if token.item() > 0.001:
+                            logger.debug(f"{tokenizer.decode([t])}, {token.item()}")
+                    logger.debug("------------------")
+
             generated = torch.cat((generated, next_token), dim=-1)
             # Decode into plain text
             o = generated[len(context_tokens):].tolist()

@@ -1,4 +1,4 @@
-from direct.gui.DirectGui import DirectFrame, DirectEntry
+from direct.gui.DirectGui import DirectFrame
 from src.inputfield import InputField
 
 
