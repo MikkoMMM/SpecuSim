@@ -2,6 +2,10 @@ from direct.gui.DirectGui import DirectFrame
 from src.inputfield import InputField
 
 
+def ignore_enter():
+    base.ignore("enter")
+
+
 class DefaultGUI:
     def __init__(self, enable_text_field=True, text_input_func=print):
         wx = base.win.get_x_size()
@@ -15,23 +19,13 @@ class DefaultGUI:
         if enable_text_field:
             self.input_field = InputField((-15 * scale, 0, (bar_start - 0.95) / 2), scale, 30, on_commit=(text_input_func, ()),
                                           parent=gui_bar, text_fg=(1, 1, 1, 1), normal_bg=(0, 0, 0, 0.3), hilite_bg=(0.3, 0.3, 0.3, 0.3),
-                                          num_lines=3, initial_text="Press Enter to start talking")
+                                          num_lines=3, initial_text="Press Enter to start talking", clear_initial=True,
+                                          focus_in_cmd=ignore_enter)
 
-            # For whatever reason, we seem to need a delay, in some circumstances at least
-            taskMgr.doMethodLater(globalClock.get_dt(), base.accept, 'Set enter', extraArgs=["enter", self.focus_in_text_field_initial])
-
-
-    def focus_in_text_field_initial(self):
-        self.input_field.clear_text()
-        self.focus_in_text_field()
-
-
-    def focus_in_text_field(self):
-        self.input_field.focus()
-        base.ignore("enter")
+            base.accept("enter", self.input_field.focus)
 
 
     def focus_out_text_field(self):
         self.input_field.unfocus()
         # If we don't delay, it will just focus back in again right then and there.
-        taskMgr.doMethodLater(globalClock.get_dt()*2, base.accept, 'Set enter', extraArgs=["enter", self.focus_in_text_field])
+        taskMgr.doMethodLater(globalClock.get_dt()*2, base.accept, 'Set enter', extraArgs=["enter", self.input_field.focus])

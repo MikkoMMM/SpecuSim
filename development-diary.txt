@@ -86,3 +86,4 @@
 14.4.2021 More work on the new input fields.
 15.4.2021 Integrated the new input field into the main game mode. Fixing black speech bubbles, refactoring, writing an introduction in README.
 16.4.2021 Reading up on logit bias.
+17.4.2021 Some presentational changes.

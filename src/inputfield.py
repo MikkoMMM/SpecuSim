@@ -9,7 +9,7 @@ class InputField:
 
     def __init__(self, pos, scale, width, geoms=None, on_commit=None, text_fg=(0, 0, 0, 1),
                  normal_bg=(.5, .5, .5, 1.), hilite_bg=(.8, .8, .8, 1.), selection_bg=(.2, .4, .75, 1.),
-                 num_lines=1, initial_text="", parent=None):
+                 num_lines=1, initial_text="", clear_initial=False, parent=None, focus_in_cmd=None):
 
         self._screen = base.aspect2d
         if not parent:
@@ -17,6 +17,8 @@ class InputField:
         self._mouse_watcher = base.mouseWatcherNode
         win_props = base.win.get_properties()
         self._aspect_ratio = 1. * win_props.get_x_size() / win_props.get_y_size()
+        self.clear_initial = clear_initial
+        self.focus_in_cmd = focus_in_cmd
 
         self._scale = scale
 
@@ -477,6 +479,11 @@ class InputField:
     def __on_focus_in(self):
 
         self._scroll_frame["geom"] = self._geom_hilited
+        if self.clear_initial:
+            self.clear_text()
+            self.clear_initial = False
+        if self.focus_in_cmd:
+            self.focus_in_cmd()
 
     def __on_focus_out(self):
 

@@ -48,9 +48,6 @@ class MyApp(ShowBase):
         # In case window size would be at first detected incorrectly, buy a bit of time.
         base.graphicsEngine.render_frame()
 
-        self.physics_debug = False
-        self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
-
         logger.debug(f"Using Bullet Physics version {get_bullet_version()}")
 
         if debug.getboolean("enable-pstats"):

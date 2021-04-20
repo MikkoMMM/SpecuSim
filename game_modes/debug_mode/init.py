@@ -130,7 +130,7 @@ class Game:
         interpret_controls(self.player)
         for doppelganger in self.doppelgangers:
             interpret_controls(doppelganger)
-        if self.gui._d_entry['focus']:
+        if self.gui.input_field.is_focused():
             interpret_controls(self.player, stand_still=True)
             for doppelganger in self.doppelgangers:
                 interpret_controls(doppelganger, stand_still=True)
