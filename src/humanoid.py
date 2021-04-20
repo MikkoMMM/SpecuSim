@@ -211,7 +211,7 @@ class Humanoid(Animal):
         self.desired_heading = self.lower_torso.getH()
 
         super().__init__(world, terrain_bullet_node, body_node=self.lower_torso, feet=self.foot, slope_difficult=20, slope_max=50,
-                         debug_text_node=debug_text_node)
+                         debug_text_node=debug_text_node, ground_offset=self.foot_height)
 
         # Humanoids automatically come equipped with a speaking capability. Neat, huh?
         self.set_speech_field(

@@ -29,10 +29,11 @@ class Animal:
 
 
     def __init__(self, world, terrain_bullet_node, body_node, feet, slope_difficult, slope_max,
-                 slope_linear_damping=0.6, negligible_speed=0.2, debug_text_node=None):
+                 slope_linear_damping=0.6, negligible_speed=0.2, ground_offset=0, debug_text_node=None):
         self.world = world
         self.terrain_bullet_node = terrain_bullet_node
         self.body = body_node
+        self.ground_offset = ground_offset
         self.slope_difficult = radians(slope_difficult)
         self.slope_max = radians(slope_max)
         self.negligible_speed = negligible_speed
@@ -114,7 +115,7 @@ class Animal:
             average_z += foot.getZ(render)
         average_z /= len(self.feet)
 
-        average_z -= get_ground_z_pos(self.body.getX() + offset_x, self.body.getY() + offset_y, self.world,
+        average_z -= self.ground_offset + get_ground_z_pos(self.body.getX() + offset_x, self.body.getY() + offset_y, self.world,
                                       self.terrain_bullet_node)
         return average_z
 
