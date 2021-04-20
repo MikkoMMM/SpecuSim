@@ -4,7 +4,7 @@ from panda3d.core import PNMImage, Filename
 from panda3d.core import load_prc_file_data, PStatClient
 
 from src.getconfig import logger, settings, debug
-from src.menu import Menu
+from src.gui.menu import Menu
 
 
 class MyApp(ShowBase):

@@ -9,7 +9,7 @@ from panda3d.core import PNMImage, Filename
 
 from src.getconfig import settings
 from src.language_processing.gpt2generator import GPT2Generator
-from src.menu import Menu
+from src.gui.menu import Menu
 
 
 def load_language_model(notice_text_obj, menu_img, return_value):

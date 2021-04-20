@@ -14,7 +14,7 @@ from panda3d.core import Vec3, CullBinManager
 
 from src.camera import CameraControl
 from src.default_controls import setup_controls, interpret_controls
-from src.default_gui import DefaultGUI
+from src.gui.default_gui import DefaultGUI
 from src.getconfig import logger, debug
 from src.humanoid import Humanoid
 from src.language_processing.load_model import load_language_model

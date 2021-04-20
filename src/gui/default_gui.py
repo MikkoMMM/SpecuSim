@@ -1,5 +1,5 @@
 from direct.gui.DirectGui import DirectFrame
-from src.inputfield import InputField
+from src.gui.inputfield import InputField
 
 
 def ignore_enter():

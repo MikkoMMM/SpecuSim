@@ -16,11 +16,11 @@ from panda3d.core import Vec3, CullBinManager, TextPropertiesManager, TextProper
 
 from src.camera import CameraControl
 from src.default_controls import setup_controls, interpret_controls
-from src.default_gui import DefaultGUI
+from src.gui.default_gui import DefaultGUI
 from src.getconfig import debug, logger
 from src.humanoid import Humanoid
 from src.utils import create_or_load_walk_map, create_and_texture_terrain, paste_into, is_focused
-from src.inputfield import InputField
+from src.gui.inputfield import InputField
 
 
 class Game:

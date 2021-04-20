@@ -11,7 +11,7 @@ from panda3d.core import Shader
 
 from src.camera import CameraControl
 from src.default_controls import setup_controls, interpret_controls
-from src.default_gui import DefaultGUI
+from src.gui.default_gui import DefaultGUI
 from src.getconfig import logger, debug
 from src.humanoid import Humanoid
 from src.utils import create_and_texture_terrain, create_or_load_walk_map
@@ -113,7 +113,10 @@ class Game:
 
 
     def player_say(self, text):
-        self.gui._d_entry.enterText('')
+        if not text:
+            self.gui.focus_out_text_field()
+            return
+        self.gui.input_field.clear_text()
         logger.debug(f"The player said: {text}")
         self.player.say(text)
         self.gui.focus_out_text_field()
@@ -127,9 +130,6 @@ class Game:
         self.world.do_physics(dt, 5, 1.0 / 80.0)
 
         # Define controls
-        interpret_controls(self.player)
-        for doppelganger in self.doppelgangers:
-            interpret_controls(doppelganger)
         if self.gui.input_field.is_focused():
             interpret_controls(self.player, stand_still=True)
             for doppelganger in self.doppelgangers:
