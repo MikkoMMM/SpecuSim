@@ -48,14 +48,6 @@ class Game:
         self.world.set_group_collision_flag(3, 1, False)
         self.world.set_group_collision_flag(3, 3, True)
 
-        # For the input fields.
-        # It is necessary to set up a hilite text property for selected text color
-
-        props_mgr = TextPropertiesManager.get_global_ptr()
-        col_prop = TextProperties()
-        col_prop.set_text_color((0.5, 0.5, 1., 1.))
-        props_mgr.set_properties("hilite", col_prop)
-
         base.disable_mouse()
 
         self.terrain_bullet_node = BulletRigidBodyNode("terrainBodyNode")

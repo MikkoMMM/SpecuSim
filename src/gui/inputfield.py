@@ -479,6 +479,7 @@ class InputField:
     def __on_focus_in(self):
 
         self._scroll_frame["geom"] = self._geom_hilited
+        self._d_entry.setCursorPosition(len(self._d_entry.get()))
         if self.clear_initial:
             self.clear_text()
             self.clear_initial = False
