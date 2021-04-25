@@ -1,11 +1,13 @@
 from math import radians
 
 from direct.showbase.InputStateGlobal import inputState
+from src.inverse_kinematics.Utils import createAxes
 
 dxdy_to_angle = [[radians(45), radians(90), radians(135)], [radians(0), -999, radians(180)], [radians(-45), radians(-90), radians(-135)]]
+weapon_target_node = None
 
 
-def setup_controls():
+def setup_controls(player):
     inputState.watch_with_modifiers('forward', 'w')
     inputState.watch_with_modifiers('left', 'a')
     inputState.watch_with_modifiers('backward', 's')
@@ -14,9 +16,13 @@ def setup_controls():
     inputState.watch_with_modifiers('turnright', 'e')
     inputState.watch_with_modifiers('speedup', '+')
     inputState.watch_with_modifiers('speeddown', '-')
+    global weapon_target_node
+    slant = player.attach_new_node("WTNSlant")
+    slant.setP(-90)
+    weapon_target_node = slant.attach_new_node(createAxes(2.2))
 
 
-def interpret_controls(target, stand_still=False):
+def interpret_controls(target, stand_still=False, move_weapon_target=True):
     if stand_still:
         target.stand_still()
         return
@@ -46,3 +52,12 @@ def interpret_controls(target, stand_still=False):
         target.walk_in_dir(direction)
     else:
         target.stand_still()
+
+    if base.mouseWatcherNode.has_mouse() and move_weapon_target:
+        x = min(max(-1, base.mouseWatcherNode.get_mouse_x()), 1)*2
+        y = min(max(-1, base.mouseWatcherNode.get_mouse_y()), 1)*2
+        # Some inspiration taken from a hemisphere's equation when solved for Z
+        pows = pow(x, 2)+pow(y, 2)
+        z = 1 - pows
+
+        weapon_target_node.set_pos(x * 5, y * 5, z * 5)

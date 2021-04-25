@@ -88,3 +88,7 @@
 16.4.2021 Reading up on logit bias.
 17.4.2021 Some presentational changes.
 20.4.2021 Small fixes here and there.
+21.4.2021 Small tweaks and fixes.
+22.4.2021 A demonstration of progress to the supervisor
+23.4.–24.4.2021 Planning the modified project schedule
+25.4.2021 A mouse controlled target for weapon aiming

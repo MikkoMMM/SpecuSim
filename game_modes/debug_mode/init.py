@@ -78,7 +78,7 @@ class Game:
         base.accept('f1', base.toggle_wireframe)
         base.accept('f2', base.toggle_texture)
 
-        setup_controls()
+        setup_controls(self.player.get_body())
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")

@@ -117,7 +117,7 @@ class Game:
         base.accept("wheel_down", cam_control.wheel_down)
         base.accept("wheel_up", cam_control.wheel_up)
 
-        setup_controls()
+        setup_controls(self.player.get_body())
 
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
