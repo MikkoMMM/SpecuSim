@@ -118,6 +118,7 @@ class Humanoid(Animal):
         self.upper_arm = []
         forearm = []
         self.arm = []
+        self.arm_target = []
 
         for i in range(2):
             if i == 0:
@@ -152,6 +153,20 @@ class Humanoid(Animal):
 
             if self.debug:
                 self.arm[i].debugDisplay()
+
+            #################################################
+            # Arm targets:
+
+            # Set up a target that the arm should reach:
+            slant = self.chest.attach_new_node("WTNSlant")
+            slant.setP(-90)
+            slant.setShaderOff()
+            self.arm_target.append(slant.attach_new_node("ArmTarget"))
+            self.arm[i].setTarget(self.arm_target[i])
+
+            if self.debug:
+                geom = createAxes(0.4)
+                self.arm_target[i].attach_new_node(geom)
 
             # Add visuals to the bones. These MUST be after finalize().
 
@@ -273,6 +288,11 @@ class Humanoid(Animal):
         # Humanoids automatically come equipped with a speaking capability. Neat, huh?
         self.set_speech_field(
             SpeechBubble(self.get_body(), self.lower_torso_height + self.chest_height + self.head_height + self.height * 0.2))
+
+
+    def swing_arm(self, arm, x, y, z):
+        self.arm_target[arm].set_pos(x * 5, y * 5, z * 5)
+        self.arm[arm].updateIK()
 
 
     def speed_up(self):
