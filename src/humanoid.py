@@ -64,15 +64,19 @@ class Humanoid(Animal):
         self.spine = self.lower_torso.attach_new_node("spine")
         self.spine.set_z(self.lower_torso_height / 2)
 
-        self.chest = loader.load_model("3d-assets/unit_cylinder.bam")
-        self.chest.set_scale(Vec3(self.chest_width, 0.2, self.chest_height))
+        self.chest = NodePath("Chest")
         self.chest.reparent_to(self.spine)
         self.chest.set_z(self.chest_height / 2)
+        chest = loader.load_model("3d-assets/unit_cylinder.bam")
+        chest.set_scale(Vec3(self.chest_width, 0.2, self.chest_height))
+        chest.reparent_to(self.chest)
 
-        self.head = loader.load_model("3d-assets/unit_sphere.bam")
+        self.head = NodePath("Head")
         self.head.reparent_to(self.chest)
-        self.head.set_scale(render, self.head_height)
-        self.head.set_z((self.lower_torso_height + self.head_height) / 2 / self.lower_torso_height)
+        self.head.set_z((self.lower_torso_height + self.head_height) / 2)
+        head = loader.load_model("3d-assets/unit_sphere.bam")
+        head.reparent_to(self.head)
+        head.set_scale(self.head_height)
 
         '''
         self.left_arm = HumanoidArm(self.world, self.arm_height, upper_arm_diameter,
@@ -107,7 +111,62 @@ class Humanoid(Animal):
         '''
 
         ##################################
-        # Set up Armature and Joints:
+        # Set up Armature and Joints for arms:
+        au = ArmatureUtils()
+
+        # Set up information needed by inverse kinematics
+        self.upper_arm = []
+        forearm = []
+        self.arm = []
+
+        for i in range(2):
+            if i == 0:
+                horizontal_placement = -1
+            else:
+                horizontal_placement = 1
+
+            # Place the hip
+            rootJoint = au.createJoint("root" + str(i))
+
+            # Hip:
+            self.upper_arm.append(au.createJoint( "upperArm" + str(i), parentJoint=rootJoint,
+                translate=Vec3(horizontal_placement * (self.chest_width/2 + upper_arm_diameter / 2), 0,
+                               self.chest_height/2 - upper_arm_diameter / 8) ))
+
+            forearm.append(au.createJoint("forearm" + str(i), parentJoint=self.upper_arm[i], translate=-LVector3f.unitZ() *
+                                                                                                      self.upper_arm_length))
+
+            # IMPORTANT! Let the ArmatureUtils create the actor and set up control nodes:
+            au.finalize()
+            # IMPORTANT! Attach the created actor to the scene, otherwise you won't see anything!
+            au.getActor().reparentTo(self.chest)
+
+            self.arm.append(IKChain(au.getActor()))
+
+            #        bone = self.ikChainLegLeft.addJoint( hipL, au.getControlNode( hipL.getName() ) )
+            bone = self.arm[i].addJoint(self.upper_arm[i], au.getControlNode(self.upper_arm[i].getName()))
+            bone = self.arm[i].addJoint(forearm[i], au.getControlNode(forearm[i].getName()), parentBone=bone)
+
+            self.arm[i].setBallConstraint(self.upper_arm[i].getName(), minAng=-math.pi * 0.2, maxAng=math.pi * 0.2)
+            self.arm[i].setHingeConstraint(forearm[i].getName(), LVector3f.unitX(), minAng=-math.pi * 0.7, maxAng=0)
+
+            if self.debug:
+                self.arm[i].debugDisplay()
+
+            # Add visuals to the bones. These MUST be after finalize().
+
+            visual = loader.load_model("3d-assets/unit_cylinder.bam")
+            visual.set_scale(Vec3(upper_arm_diameter, upper_arm_diameter, self.upper_arm_length))
+            visual.reparent_to(au.getControlNode(self.upper_arm[i].getName()))
+            visual.set_pos((visual.get_pos() - LVector3f.unitZ() * self.upper_arm_length) / 2)
+
+            visual = loader.load_model("3d-assets/unit_cylinder.bam")
+            visual.set_scale(Vec3(forearm_diameter, forearm_diameter, self.forearm_length))
+            visual.reparent_to(au.getControlNode(forearm[i].getName()))
+            visual.set_pos((visual.get_pos() - LVector3f.unitZ() * self.forearm_length) / 2)
+
+        ##################################
+        # Set up Armature and Joints for legs:
         au = ArmatureUtils()
 
         ##################################
@@ -187,13 +246,11 @@ class Humanoid(Animal):
             visual = loader.load_model("3d-assets/unit_cylinder.bam")
             visual.set_scale(Vec3(thigh_diameter, thigh_diameter, self.thigh_length))
             visual.reparent_to(au.getControlNode(self.thigh[i].getName()))
-#            visual.set_pos((visual.get_pos() + lower_leg[i].offset) / 2)
             visual.set_pos((visual.get_pos() - LVector3f.unitZ() * self.thigh_length) / 2)
 
             visual = loader.load_model("3d-assets/unit_cylinder.bam")
             visual.set_scale(Vec3(lower_leg_diameter, lower_leg_diameter, self.lower_leg_length))
             visual.reparent_to(au.getControlNode(lower_leg[i].getName()))
-#            visual.set_pos((visual.get_pos() + bone.offset) / 2)
             visual.set_pos((visual.get_pos() - LVector3f.unitZ() * self.lower_leg_length) / 2)
 
             foot_visual = loader.load_model("3d-assets/unit_cube.bam")
