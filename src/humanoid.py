@@ -115,6 +115,7 @@ class Humanoid(Animal):
         au = ArmatureUtils()
 
         # Set up information needed by inverse kinematics
+        shoulder = []
         self.upper_arm = []
         forearm = []
         self.arm = []
@@ -126,11 +127,12 @@ class Humanoid(Animal):
             else:
                 horizontal_placement = 1
 
-            # Place the hip
+            # Place the shoulder
             rootJoint = au.createJoint("root" + str(i))
 
-            # Hip:
-            self.upper_arm.append(au.createJoint( "upperArm" + str(i), parentJoint=rootJoint,
+            # Shoulder:
+            shoulder.append(au.createJoint( "shoulder" + str(i), parentJoint=rootJoint))
+            self.upper_arm.append(au.createJoint( "upperArm" + str(i), parentJoint=shoulder[i],
                 translate=Vec3(horizontal_placement * (self.chest_width/2 + upper_arm_diameter / 2), 0,
                                self.chest_height/2 - upper_arm_diameter / 8) ))
 
@@ -145,10 +147,14 @@ class Humanoid(Animal):
             self.arm.append(IKChain(au.getActor()))
 
             #        bone = self.ikChainLegLeft.addJoint( hipL, au.getControlNode( hipL.getName() ) )
+            bone = self.arm[i].addJoint(shoulder[i], au.getControlNode(shoulder[i].getName()))
             bone = self.arm[i].addJoint(self.upper_arm[i], au.getControlNode(self.upper_arm[i].getName()))
             bone = self.arm[i].addJoint(forearm[i], au.getControlNode(forearm[i].getName()), parentBone=bone)
 
-            self.arm[i].setBallConstraint(self.upper_arm[i].getName(), minAng=-math.pi * 0.2, maxAng=math.pi * 0.2)
+            if i == 1:
+                self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=0, maxAng=math.pi * 0.5)
+                self.arm[i].setHingeConstraint(self.upper_arm[i].getName(), axis=LVector3.unitX(), minAng=-0.5*math.pi,
+                                               maxAng = 0.5*math.pi )
             self.arm[i].setHingeConstraint(forearm[i].getName(), LVector3f.unitX(), minAng=-math.pi * 0.7, maxAng=0)
 
             if self.debug:

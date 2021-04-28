@@ -93,3 +93,4 @@
 23.4.–24.4.2021 Planning the modified project schedule
 25.4.2021 A mouse controlled target for weapon aiming
 26.4.2021 Arms, again.
+27.4.2021 Small adjustments to the aiming of arms.

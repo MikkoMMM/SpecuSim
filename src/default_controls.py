@@ -50,9 +50,9 @@ def interpret_controls(target, stand_still=False, move_weapon_target=True):
 
     if base.mouseWatcherNode.has_mouse() and move_weapon_target:
         x = min(max(-1, base.mouseWatcherNode.get_mouse_x()), 1)*2
-        y = min(max(-1, base.mouseWatcherNode.get_mouse_y()), 1)*2
+        y = -min(max(-1, base.mouseWatcherNode.get_mouse_y()), 1)*2
         # Some inspiration taken from a hemisphere's equation when solved for Z
         pows = pow(x, 2)+pow(y, 2)
         z = 1 - pows
 
-        target.swing_arm(1, x * 5, y * 5, z * 5)
+        target.swing_arm(1, x * 2, y * 2, z * 2)
