@@ -131,10 +131,10 @@ class Humanoid(Animal):
             rootJoint = au.createJoint("root" + str(i))
 
             # Shoulder:
-            shoulder.append(au.createJoint( "shoulder" + str(i), parentJoint=rootJoint))
-            self.upper_arm.append(au.createJoint( "upperArm" + str(i), parentJoint=shoulder[i],
+            shoulder.append(au.createJoint( "shoulder" + str(i), parentJoint=rootJoint,
                 translate=Vec3(horizontal_placement * (self.chest_width/2 + upper_arm_diameter / 2), 0,
                                self.chest_height/2 - upper_arm_diameter / 8) ))
+            self.upper_arm.append(au.createJoint( "upperArm" + str(i), parentJoint=shoulder[i]))
 
             forearm.append(au.createJoint("forearm" + str(i), parentJoint=self.upper_arm[i], translate=-LVector3f.unitZ() *
                                                                                                       self.upper_arm_length))
@@ -148,13 +148,14 @@ class Humanoid(Animal):
 
             #        bone = self.ikChainLegLeft.addJoint( hipL, au.getControlNode( hipL.getName() ) )
             bone = self.arm[i].addJoint(shoulder[i], au.getControlNode(shoulder[i].getName()))
-            bone = self.arm[i].addJoint(self.upper_arm[i], au.getControlNode(self.upper_arm[i].getName()))
+            bone = self.arm[i].addJoint(self.upper_arm[i], au.getControlNode(self.upper_arm[i].getName()), parentBone=bone)
             bone = self.arm[i].addJoint(forearm[i], au.getControlNode(forearm[i].getName()), parentBone=bone)
 
-            if i == 1:
+            if i == 0:
                 self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=0, maxAng=math.pi * 0.5)
-                self.arm[i].setHingeConstraint(self.upper_arm[i].getName(), axis=LVector3.unitX(), minAng=-0.5*math.pi,
-                                               maxAng = 0.5*math.pi )
+            if i == 1:
+                self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=-math.pi * 0.5, maxAng=0)
+            self.arm[i].setHingeConstraint(self.upper_arm[i].getName(), axis=LVector3.unitX(), minAng=-0.2*math.pi, maxAng = 1.2*math.pi )
             self.arm[i].setHingeConstraint(forearm[i].getName(), LVector3f.unitX(), minAng=-math.pi * 0.7, maxAng=0)
 
             if self.debug:
