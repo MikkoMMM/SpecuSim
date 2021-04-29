@@ -85,6 +85,7 @@ class Humanoid(Animal):
         # Set up information needed by inverse kinematics
         shoulder = []
         self.upper_arm = []
+        forearm_twist = []
         forearm = []
         hand = []
         self.arm = []
@@ -102,8 +103,9 @@ class Humanoid(Animal):
             shoulder.append(au.createJoint( "shoulder" + str(i), parentJoint=root_joint))
             self.upper_arm.append(au.createJoint( "upperArm" + str(i), parentJoint=shoulder[i]))
 
-            forearm.append(au.createJoint("forearm" + str(i), parentJoint=self.upper_arm[i],
+            forearm_twist.append(au.createJoint("forearmTwist" + str(i), parentJoint=self.upper_arm[i],
                                           translate=-LVector3f.unitZ() * self.upper_arm_length))
+            forearm.append(au.createJoint("forearm" + str(i), parentJoint=forearm_twist[i]))
             hand.append(au.createJoint("hand" + str(i), parentJoint=forearm[i], translate=-LVector3f.unitZ() * self.forearm_length))
 
             # IMPORTANT! Let the ArmatureUtils create the actor and set up control nodes:
@@ -117,9 +119,9 @@ class Humanoid(Animal):
 
             self.arm.append(IKChain(au.getActor()))
 
-            #        bone = self.ikChainLegLeft.addJoint( hipL, au.getControlNode( hipL.getName() ) )
             bone = self.arm[i].addJoint(shoulder[i], au.getControlNode(shoulder[i].getName()))
             bone = self.arm[i].addJoint(self.upper_arm[i], au.getControlNode(self.upper_arm[i].getName()), parentBone=bone)
+            bone = self.arm[i].addJoint(forearm_twist[i], au.getControlNode(forearm_twist[i].getName()), parentBone=bone)
             bone = self.arm[i].addJoint(forearm[i], au.getControlNode(forearm[i].getName()), parentBone=bone)
             bone = self.arm[i].addJoint(hand[i], au.getControlNode(hand[i].getName()), parentBone=bone)
 
@@ -127,11 +129,12 @@ class Humanoid(Animal):
             if i == 0:
                 self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=0, maxAng=math.pi * 0.5)
             if i == 1:
-                self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=-math.pi * 0.5, maxAng=math.pi * 0.4)
+                self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=-math.pi * 0.45, maxAng=math.pi * 0.35)
             # Up and down shoulder constraint
             self.arm[i].setHingeConstraint(self.upper_arm[i].getName(), axis=LVector3.unitX(), minAng=-0.5*math.pi, maxAng = 0.5*math.pi )
 
-            self.arm[i].setHingeConstraint(forearm[i].getName(), LVector3f.unitX(), minAng=0, maxAng=math.pi * 0.7)
+            self.arm[i].setHingeConstraint(forearm[i].getName(), LVector3f.unitX(), minAng=0, maxAng=math.pi * 0.5)
+            self.arm[i].setHingeConstraint(forearm_twist[i].getName(), LVector3f.unitY(), minAng=-math.pi*0.0, maxAng=math.pi * 0.35)
 
             if self.debug:
                 self.arm[i].debugDisplay()
@@ -206,7 +209,6 @@ class Humanoid(Animal):
 
             self.leg.append(IKChain(au.getActor()))
 
-            #        bone = self.ikChainLegLeft.addJoint( hipL, au.getControlNode( hipL.getName() ) )
             bone = self.leg[i].addJoint(self.thigh[i], au.getControlNode(self.thigh[i].getName()))
             bone = self.leg[i].addJoint(lower_leg[i], au.getControlNode(lower_leg[i].getName()), parentBone=bone)
             bone = self.leg[i].addJoint(foot_joint, au.getControlNode(foot_joint.getName()), parentBone=bone)
