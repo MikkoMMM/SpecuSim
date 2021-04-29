@@ -38,11 +38,11 @@ class Humanoid(Animal):
         self.foot_height = self.leg_height - self.thigh_length - self.lower_leg_length
         self.foot_length = lower_leg_diameter * 2.2
 
-        self.arm_height = self.leg_height * 1
-        self.upper_arm_length = self.arm_height * 50 / 100
+        self.arm_length = self.leg_height * 1
+        self.upper_arm_length = self.arm_length * 50 / 100
         upper_arm_diameter = self.chest_width / 3 - 0.01
-        self.forearm_length = self.arm_height * 50 / 100
-        forearm_diameter = (self.chest_width / 3 - 0.01) * self.arm_height
+        self.forearm_length = self.arm_length * 50 / 100
+        forearm_diameter = (self.chest_width / 3 - 0.01) * self.arm_length
 
         self.target_height = self.leg_height + self.lower_torso_height / 2
 
@@ -78,38 +78,6 @@ class Humanoid(Animal):
         head.reparent_to(self.head)
         head.set_scale(self.head_height)
 
-        '''
-        self.left_arm = HumanoidArm(self.world, self.arm_height, upper_arm_diameter,
-                                    forearm_diameter, False, start_position, start_heading)
-
-        frame_a = TransformState.make_pos_hpr(Point3(-self.chest_width / 2 - self.left_arm.upper_arm_diameter / 2, 0,
-                                                     self.chest_height / 2 - self.left_arm.upper_arm_diameter / 8), Vec3(0, 0, 0))
-        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.left_arm.upper_arm_length / 2), Vec3(0, -90, 0))
-
-        self.left_arm_constraint = BulletGenericConstraint(self.chest.node(), self.left_arm.upper_arm.node(), frame_a, frame_b, True)
-        self.left_arm_constraint.set_debug_draw_size(0.5)
-        self.left_arm_constraint.set_angular_limit(0, -95, 135)  # Front and back
-        self.left_arm_constraint.set_angular_limit(1, 0, 0)  # Rotation, handled in the elbow joint because here it glitches.
-        self.left_arm_constraint.set_angular_limit(2, -120, 35)  # Left and right
-        self.left_arm.upper_arm.node().set_angular_factor(Vec3(0.2, 0.2, 0.2))
-        self.world.attach_constraint(self.left_arm_constraint, linked_collision=True)
-
-        self.right_arm = HumanoidArm(self.world, self.arm_height, upper_arm_diameter,
-                                     forearm_diameter, True, start_position, start_heading)
-
-        frame_a = TransformState.make_pos_hpr(Point3(self.chest_width / 2 + self.right_arm.upper_arm_diameter / 2, 0,
-                                                     self.chest_height / 2 - self.right_arm.upper_arm_diameter / 8), Vec3(0, 0, 0))
-        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.right_arm.upper_arm_length / 2), Vec3(0, -90, 0))
-
-        self.right_arm_constraint = BulletGenericConstraint(self.chest.node(), self.right_arm.upper_arm.node(), frame_a, frame_b, True)
-        self.right_arm_constraint.set_debug_draw_size(0.5)
-        self.right_arm_constraint.set_angular_limit(0, -95, 135)  # Front and back
-        self.right_arm_constraint.set_angular_limit(1, 0, 0)  # Rotation, handled in the elbow joint because here it glitches.
-        self.right_arm_constraint.set_angular_limit(2, -35, 120)  # Left and right
-        self.right_arm.upper_arm.node().set_angular_factor(Vec3(0.2, 0.2, 0.2))
-        self.world.attach_constraint(self.right_arm_constraint, linked_collision=True)
-        '''
-
         ##################################
         # Set up Armature and Joints for arms:
         au = ArmatureUtils()
@@ -118,6 +86,7 @@ class Humanoid(Animal):
         shoulder = []
         self.upper_arm = []
         forearm = []
+        hand = []
         self.arm = []
         self.arm_target = []
 
@@ -126,11 +95,6 @@ class Humanoid(Animal):
                 horizontal_placement = -1
             else:
                 horizontal_placement = 1
-            self.root_root_joint = NodePath("rootRoot")
-            self.root_root_joint.reparentTo(self.chest)
-            self.root_root_joint.set_pos(Vec3(horizontal_placement * (self.chest_width/2 + upper_arm_diameter / 2), 0,
-                               self.chest_height/2 - upper_arm_diameter / 8) )
-            self.root_root_joint.set_p(90)
             # Place the shoulder
             root_joint = au.createJoint("root" + str(i))
 
@@ -138,13 +102,18 @@ class Humanoid(Animal):
             shoulder.append(au.createJoint( "shoulder" + str(i), parentJoint=root_joint))
             self.upper_arm.append(au.createJoint( "upperArm" + str(i), parentJoint=shoulder[i]))
 
-            forearm.append(au.createJoint("forearm" + str(i), parentJoint=self.upper_arm[i], translate=-LVector3f.unitZ() *
-                                                                                                      self.upper_arm_length))
+            forearm.append(au.createJoint("forearm" + str(i), parentJoint=self.upper_arm[i],
+                                          translate=-LVector3f.unitZ() * self.upper_arm_length))
+            hand.append(au.createJoint("hand" + str(i), parentJoint=forearm[i], translate=-LVector3f.unitZ() * self.forearm_length))
 
             # IMPORTANT! Let the ArmatureUtils create the actor and set up control nodes:
             au.finalize()
             # IMPORTANT! Attach the created actor to the scene, otherwise you won't see anything!
-            au.getActor().reparentTo(self.root_root_joint)
+            au.getActor().reparentTo(self.chest)
+            au.getActor().set_pos(self.chest, horizontal_placement * (self.chest_width/2 + upper_arm_diameter / 2), 0,
+                               self.chest_height/2 - upper_arm_diameter / 8)
+            au.getActor().set_p(90)
+            au.getActor().set_h(-20)
 
             self.arm.append(IKChain(au.getActor()))
 
@@ -152,28 +121,30 @@ class Humanoid(Animal):
             bone = self.arm[i].addJoint(shoulder[i], au.getControlNode(shoulder[i].getName()))
             bone = self.arm[i].addJoint(self.upper_arm[i], au.getControlNode(self.upper_arm[i].getName()), parentBone=bone)
             bone = self.arm[i].addJoint(forearm[i], au.getControlNode(forearm[i].getName()), parentBone=bone)
+            bone = self.arm[i].addJoint(hand[i], au.getControlNode(hand[i].getName()), parentBone=bone)
 
             # Right and left shoulder constraints
             if i == 0:
                 self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=0, maxAng=math.pi * 0.5)
             if i == 1:
-                self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=-math.pi * 0.4, maxAng=math.pi * 0.3)
+                self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=-math.pi * 0.5, maxAng=math.pi * 0.4)
             # Up and down shoulder constraint
             self.arm[i].setHingeConstraint(self.upper_arm[i].getName(), axis=LVector3.unitX(), minAng=-0.5*math.pi, maxAng = 0.5*math.pi )
 
-            self.arm[i].setHingeConstraint(forearm[i].getName(), LVector3f.unitX(), minAng=-math.pi * 0.7, maxAng=0)
+            self.arm[i].setHingeConstraint(forearm[i].getName(), LVector3f.unitX(), minAng=0, maxAng=math.pi * 0.7)
 
             if self.debug:
                 self.arm[i].debugDisplay()
 
             #################################################
             # Arm targets:
+            slant = au.getActor().attach_new_node("Slant")
+            slant.set_h(self.chest, 0)
+            slant.set_p(self.chest, -90)
 
             # Set up a target that the arm should reach:
-            slant = self.chest.attach_new_node("WTNSlant")
-            slant.setP(-90)
-            slant.setShaderOff()
             self.arm_target.append(slant.attach_new_node("ArmTarget"))
+            self.arm_target[i].setShaderOff()
             self.arm[i].setTarget(self.arm_target[i])
 
             if self.debug:
@@ -303,7 +274,7 @@ class Humanoid(Animal):
 
 
     def swing_arm(self, arm, x, y, z):
-        self.arm_target[arm].set_pos(x * 2, y * 2, z * 2)
+        self.arm_target[arm].set_pos(x * self.arm_length, y * self.arm_length, z * self.arm_length)
         self.arm[arm].updateIK()
 
 
