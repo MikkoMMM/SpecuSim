@@ -1,5 +1,5 @@
 import struct
-from math import radians
+from math import radians, degrees, atan
 
 from src.animal import Animal
 from src.inverse_kinematics.IKChain import IKChain
@@ -126,14 +126,16 @@ class Humanoid(Animal):
                 horizontal_placement = -1
             else:
                 horizontal_placement = 1
-
+            self.root_root_joint = NodePath("rootRoot")
+            self.root_root_joint.reparentTo(self.chest)
+            self.root_root_joint.set_pos(Vec3(horizontal_placement * (self.chest_width/2 + upper_arm_diameter / 2), 0,
+                               self.chest_height/2 - upper_arm_diameter / 8) )
+            self.root_root_joint.set_p(90)
             # Place the shoulder
-            rootJoint = au.createJoint("root" + str(i))
+            root_joint = au.createJoint("root" + str(i))
 
             # Shoulder:
-            shoulder.append(au.createJoint( "shoulder" + str(i), parentJoint=rootJoint,
-                translate=Vec3(horizontal_placement * (self.chest_width/2 + upper_arm_diameter / 2), 0,
-                               self.chest_height/2 - upper_arm_diameter / 8) ))
+            shoulder.append(au.createJoint( "shoulder" + str(i), parentJoint=root_joint))
             self.upper_arm.append(au.createJoint( "upperArm" + str(i), parentJoint=shoulder[i]))
 
             forearm.append(au.createJoint("forearm" + str(i), parentJoint=self.upper_arm[i], translate=-LVector3f.unitZ() *
@@ -142,7 +144,7 @@ class Humanoid(Animal):
             # IMPORTANT! Let the ArmatureUtils create the actor and set up control nodes:
             au.finalize()
             # IMPORTANT! Attach the created actor to the scene, otherwise you won't see anything!
-            au.getActor().reparentTo(self.chest)
+            au.getActor().reparentTo(self.root_root_joint)
 
             self.arm.append(IKChain(au.getActor()))
 
@@ -151,11 +153,14 @@ class Humanoid(Animal):
             bone = self.arm[i].addJoint(self.upper_arm[i], au.getControlNode(self.upper_arm[i].getName()), parentBone=bone)
             bone = self.arm[i].addJoint(forearm[i], au.getControlNode(forearm[i].getName()), parentBone=bone)
 
+            # Right and left shoulder constraints
             if i == 0:
                 self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=0, maxAng=math.pi * 0.5)
             if i == 1:
-                self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=-math.pi * 0.5, maxAng=0)
-            self.arm[i].setHingeConstraint(self.upper_arm[i].getName(), axis=LVector3.unitX(), minAng=-0.2*math.pi, maxAng = 1.2*math.pi )
+                self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=-math.pi * 0.4, maxAng=math.pi * 0.3)
+            # Up and down shoulder constraint
+            self.arm[i].setHingeConstraint(self.upper_arm[i].getName(), axis=LVector3.unitX(), minAng=-0.5*math.pi, maxAng = 0.5*math.pi )
+
             self.arm[i].setHingeConstraint(forearm[i].getName(), LVector3f.unitX(), minAng=-math.pi * 0.7, maxAng=0)
 
             if self.debug:
@@ -210,10 +215,10 @@ class Humanoid(Animal):
                 horizontal_placement = 1
 
             # Place the hip
-            rootJoint = au.createJoint("root" + str(i))
+            root_joint = au.createJoint("root" + str(i))
 
             # Hip:
-            self.thigh.append(au.createJoint( "upperLeg" + str(i), parentJoint=rootJoint,
+            self.thigh.append(au.createJoint( "upperLeg" + str(i), parentJoint=root_joint,
                 translate=Vec3(horizontal_placement * self.pelvis_width / 4, 0, -self.lower_torso_height / 2) ))
 
             lower_leg.append(au.createJoint("lowerLeg" + str(i), parentJoint=self.thigh[i], translate=-LVector3f.unitZ() *
@@ -298,7 +303,7 @@ class Humanoid(Animal):
 
 
     def swing_arm(self, arm, x, y, z):
-        self.arm_target[arm].set_pos(x * 5, y * 5, z * 5)
+        self.arm_target[arm].set_pos(x * 2, y * 2, z * 2)
         self.arm[arm].updateIK()
 
 
