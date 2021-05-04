@@ -96,3 +96,6 @@
 27.4.2021 Small adjustments to the aiming of arms.
 28.4.2021 Working on arm joints. Some work on a new weapon system and collisions for them.
 29.4.2021 More work on attempting to find a suitable way to orient the arms.
+30.4.2021 More attempting to make arm movement to work with IK, and a start on making them use forward kinematics instead
+1.5.2021 Some work on Clover Edition that might make its way to this game too.
+2.5.–4.5.2021 Still figuring out the movement of the arms

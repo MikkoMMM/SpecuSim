@@ -6,10 +6,12 @@ from src.inverse_kinematics.IKChain import IKChain
 from src.inverse_kinematics.Utils import *
 from src.inverse_kinematics.WalkCycle import WalkCycle
 from src.inverse_kinematics.ArmatureUtils import ArmatureUtils
-from src.shapes import create_rounded_box
+from src.shapes import create_rounded_box, create_physics_sphere, create_sphere
 from src.speech_bubble import SpeechBubble
 from src.utils import angle_diff, normalize_angle, get_ground_z_pos
 from shaders.basic_lighting import basic_lighting_shader
+from src.body_parts.humanoid_arm import HumanoidArm
+from panda3d.bullet import BulletGenericConstraint, BulletConeTwistConstraint, BulletHingeConstraint
 
 
 class Humanoid(Animal):
@@ -61,15 +63,30 @@ class Humanoid(Animal):
         # Set some default shading
         self.lower_torso.set_shader(basic_lighting_shader)
 
-        self.spine = self.lower_torso.attach_new_node("spine")
-        self.spine.set_z(self.lower_torso_height / 2)
+        # Organism's shape and collision boxes
+        self.chest = create_rounded_box(self.chest_width, 0.2, self.chest_height)
+        self.chest.node().set_mass(40.0)
+        self.chest.node().set_angular_factor(Vec3(0.15,0.05,0.1))
+        self.chest.node().set_linear_damping(0.5)
+        self.chest.setCollideMask(BitMask32.bit(3))
+        self.world.attach(self.chest.node())
+        chest_visual = loader.loadModel("3d-assets/unit_cylinder.bam")
+        chest_visual.setScale(Vec3(self.chest_width, 0.2, self.chest_height))
+        chest_visual.reparentTo(self.chest)
+        self.chest.node().set_angular_sleep_threshold(0.05)
 
-        self.chest = NodePath("Chest")
-        self.chest.reparent_to(self.spine)
-        self.chest.set_z(self.chest_height / 2)
-        chest = loader.load_model("3d-assets/unit_cylinder.bam")
-        chest.set_scale(Vec3(self.chest_width, 0.2, self.chest_height))
-        chest.reparent_to(self.chest)
+        frame_a = TransformState.make_pos_hpr(Point3(0, 0, -self.chest_height / 2), Vec3(0, 0, 0))
+        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.lower_torso_height / 2), Vec3(0, 0, 0))
+
+        swing1 = 10  # leaning forward/backward degrees
+        swing2 = 5  # leaning side to side degrees
+        twist = 30  # degrees
+
+        cs = BulletConeTwistConstraint(self.chest.node(), self.lower_torso.node(), frame_a, frame_b)
+        cs.set_debug_draw_size(0.5)
+        cs.set_limit(twist, swing2, swing1, softness=0.1, bias=1.0, relaxation=1.0)
+        world.attach_constraint(cs, linked_collision=True)
+
 
         self.head = NodePath("Head")
         self.head.reparent_to(self.chest)
@@ -78,93 +95,65 @@ class Humanoid(Animal):
         head.reparent_to(self.head)
         head.set_scale(self.head_height)
 
-        ##################################
-        # Set up Armature and Joints for arms:
-        au = ArmatureUtils()
+        self.arm_constraint_up = radians(-95)
+        self.arm_constraint_down = radians(135)
+        self.arm_constraint_inward = radians(-35)
+        self.arm_constraint_outward = radians(120)
+        self.arm_force = 30
 
-        # Set up information needed by inverse kinematics
-        shoulder = []
-        self.upper_arm = []
-        forearm_twist = []
-        forearm = []
-        hand = []
-        self.arm = []
-        self.arm_target = []
+        self.right_arm = HumanoidArm(self.world, self.arm_length, upper_arm_diameter,
+                                     forearm_diameter, True, start_position, start_heading)
+        '''
+        self.shoulder = create_physics_sphere(0.1)
+        self.shoulder.node().set_mass(10.0)
+        self.world.attach(self.shoulder.node())
+        axisA = Vec3(0, 0, 1)
+        pivotA = Point3(self.chest_width / 2 + upper_arm_diameter / 2, 0, self.chest_height / 2 - upper_arm_diameter / 8)
+        pivotB = Point3(0, 0, 0)
+        frame_a = TransformState.make_pos_hpr(Point3(self.chest_width / 2 + upper_arm_diameter / 2, 0,
+                                                     self.chest_height / 2 - upper_arm_diameter / 8), Vec3(90, 0, 0))
+        frame_b = TransformState.make_pos_hpr(Point3(0, 0, 0), Vec3(0, 0, 0))
+        self.right_arm_hinge_leftright = BulletHingeConstraint(self.chest.node(), self.shoulder.node(), frame_a, frame_b, False)
+        # self.right_arm_hinge_leftright = BulletHingeConstraint(self.chest.node(), self.shoulder.node(), pivotA, pivotB, axisA,
+        # axisA, False)
+        self.right_arm_hinge_leftright.set_limit(degrees(self.arm_constraint_inward), degrees(self.arm_constraint_outward), softness=0.9,
+                                                 bias=0.3, relaxation=1.0)
+        self.right_arm_hinge_leftright.enable_motor(True)
+        self.world.attachConstraint(self.right_arm_hinge_leftright, linked_collision=True)
 
-        for i in range(2):
-            if i == 0:
-                horizontal_placement = -1
-            else:
-                horizontal_placement = 1
-            # Place the shoulder
-            root_joint = au.createJoint("root" + str(i))
+        axisA = Vec3(1, 0, 0)
+        pivotA = Point3(0, 0, 0)
+        pivotB = Point3(0, 0, self.right_arm.upper_arm_length / 2)
+        frame_a = TransformState.make_pos_hpr(Point3(0, 0, 0), Vec3(0, 90, 0))
+        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.right_arm.upper_arm_length / 2), Vec3(0, 0, 90))
+        self.right_arm_hinge_updown = BulletHingeConstraint(self.shoulder.node(), self.right_arm.upper_arm.node(), frame_a, frame_b, False)
+        # self.right_arm_hinge_updown = BulletHingeConstraint(self.shoulder.node(), self.right_arm.upper_arm.node(), pivotA, pivotB, axisA,
+        # axisA, False)
+        self.right_arm_hinge_updown.set_limit(degrees(self.arm_constraint_up), degrees(self.arm_constraint_down), softness=0.9, bias=0.3,
+                                              relaxation=1.0)
+        self.right_arm_hinge_updown.enable_motor(True)
+        self.world.attachConstraint(self.right_arm_hinge_updown, linked_collision=True)
+        '''
 
-            # Shoulder:
-            shoulder.append(au.createJoint( "shoulder" + str(i), parentJoint=root_joint))
-            self.upper_arm.append(au.createJoint( "upperArm" + str(i), parentJoint=shoulder[i]))
+        frame_a = TransformState.make_pos_hpr(Point3(self.chest_width / 2 + upper_arm_diameter / 2, 0,
+                                                     self.chest_height / 2 - upper_arm_diameter / 8), Vec3(180, 180, 180))
+        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.right_arm.upper_arm_length / 2), Vec3(0, -90, 0))
+        self.right_arm_constraint = BulletGenericConstraint(self.chest.node(), self.right_arm.upper_arm.node(), frame_a, frame_b, False)
+        self.right_arm_constraint.set_debug_draw_size(0.5)
+        self.right_arm_constraint.set_angular_limit(0, degrees(self.arm_constraint_up), degrees(self.arm_constraint_down))
+        self.right_arm_constraint.set_angular_limit(1, 0, 0)
+        self.right_arm_constraint.set_angular_limit(2, degrees(self.arm_constraint_inward), degrees(self.arm_constraint_outward))
+        self.right_arm.upper_arm.node().set_angular_factor(Vec3(0.2, 0.2, 0.2))
+        self.world.attach_constraint(self.right_arm_constraint, linked_collision=True)
+        self.right_arm_motor_pitch = self.right_arm_constraint.get_rotational_limit_motor(0)
+        self.right_arm_motor_heading = self.right_arm_constraint.get_rotational_limit_motor(2)
+        self.right_arm_motor_pitch.set_motor_enabled(True)
+        self.right_arm_motor_heading.set_motor_enabled(True)
+        self.right_arm_motor_pitch.set_max_motor_force(self.arm_force)
+        self.right_arm_motor_heading.set_max_motor_force(self.arm_force)
+        self.right_arm_motor_pitch.set_max_limit_force(self.arm_force*10000)
+        self.right_arm_motor_heading.set_max_limit_force(self.arm_force*10000)
 
-            forearm_twist.append(au.createJoint("forearmTwist" + str(i), parentJoint=self.upper_arm[i],
-                                          translate=-LVector3f.unitZ() * self.upper_arm_length))
-            forearm.append(au.createJoint("forearm" + str(i), parentJoint=forearm_twist[i]))
-            hand.append(au.createJoint("hand" + str(i), parentJoint=forearm[i], translate=-LVector3f.unitZ() * self.forearm_length))
-
-            # IMPORTANT! Let the ArmatureUtils create the actor and set up control nodes:
-            au.finalize()
-            # IMPORTANT! Attach the created actor to the scene, otherwise you won't see anything!
-            au.getActor().reparentTo(self.chest)
-            au.getActor().set_pos(self.chest, horizontal_placement * (self.chest_width/2 + upper_arm_diameter / 2), 0,
-                               self.chest_height/2 - upper_arm_diameter / 8)
-            au.getActor().set_p(90)
-            au.getActor().set_h(-20)
-
-            self.arm.append(IKChain(au.getActor()))
-
-            bone = self.arm[i].addJoint(shoulder[i], au.getControlNode(shoulder[i].getName()))
-            bone = self.arm[i].addJoint(self.upper_arm[i], au.getControlNode(self.upper_arm[i].getName()), parentBone=bone)
-            bone = self.arm[i].addJoint(forearm_twist[i], au.getControlNode(forearm_twist[i].getName()), parentBone=bone)
-            bone = self.arm[i].addJoint(forearm[i], au.getControlNode(forearm[i].getName()), parentBone=bone)
-            bone = self.arm[i].addJoint(hand[i], au.getControlNode(hand[i].getName()), parentBone=bone)
-
-            # Right and left shoulder constraints
-            if i == 0:
-                self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=0, maxAng=math.pi * 0.5)
-            if i == 1:
-                self.arm[i].setHingeConstraint(shoulder[i].getName(), axis=LVector3.unitY(), minAng=-math.pi * 0.45, maxAng=math.pi * 0.35)
-            # Up and down shoulder constraint
-            self.arm[i].setHingeConstraint(self.upper_arm[i].getName(), axis=LVector3.unitX(), minAng=-0.5*math.pi, maxAng = 0.5*math.pi )
-
-            self.arm[i].setHingeConstraint(forearm[i].getName(), LVector3f.unitX(), minAng=0, maxAng=math.pi * 0.5)
-            self.arm[i].setHingeConstraint(forearm_twist[i].getName(), LVector3f.unitY(), minAng=-math.pi*0.0, maxAng=math.pi * 0.35)
-
-            if self.debug:
-                self.arm[i].debugDisplay()
-
-            #################################################
-            # Arm targets:
-            slant = au.getActor().attach_new_node("Slant")
-            slant.set_h(self.chest, 0)
-            slant.set_p(self.chest, -90)
-
-            # Set up a target that the arm should reach:
-            self.arm_target.append(slant.attach_new_node("ArmTarget"))
-            self.arm_target[i].setShaderOff()
-            self.arm[i].setTarget(self.arm_target[i])
-
-            if self.debug:
-                geom = createAxes(0.4)
-                self.arm_target[i].attach_new_node(geom)
-
-            # Add visuals to the bones. These MUST be after finalize().
-
-            visual = loader.load_model("3d-assets/unit_cylinder.bam")
-            visual.set_scale(Vec3(upper_arm_diameter, upper_arm_diameter, self.upper_arm_length))
-            visual.reparent_to(au.getControlNode(self.upper_arm[i].getName()))
-            visual.set_pos((visual.get_pos() - LVector3f.unitZ() * self.upper_arm_length) / 2)
-
-            visual = loader.load_model("3d-assets/unit_cylinder.bam")
-            visual.set_scale(Vec3(forearm_diameter, forearm_diameter, self.forearm_length))
-            visual.reparent_to(au.getControlNode(forearm[i].getName()))
-            visual.set_pos((visual.get_pos() - LVector3f.unitZ() * self.forearm_length) / 2)
 
         ##################################
         # Set up Armature and Joints for legs:
@@ -275,9 +264,38 @@ class Humanoid(Animal):
             SpeechBubble(self.get_body(), self.lower_torso_height + self.chest_height + self.head_height + self.height * 0.2))
 
 
-    def swing_arm(self, arm, x, y, z):
-        self.arm_target[arm].set_pos(x * self.arm_length, y * self.arm_length, z * self.arm_length)
-        self.arm[arm].updateIK()
+    def swing_arm(self, arm, x, y):
+        eps = 0.00001
+
+        '''
+        wantedH = degrees(min(max(self.arm_constraint_inward, x*2.5), self.arm_constraint_outward))
+        pDiff = wantedH - self.right_arm_hinge_leftright.getHingeAngle()
+        if abs(pDiff) < eps:
+            pDiff = 0
+        print(wantedH, self.right_arm_hinge_leftright.getHingeAngle(), pDiff)
+        self.right_arm_hinge_leftright.enable_angular_motor(True, self.arm_force*pDiff/10.0, 1.0)
+
+        wantedP = degrees(min(max(self.arm_constraint_up, y*2.5), self.arm_constraint_down))
+        pDiff = wantedP - self.right_arm_hinge_updown.getHingeAngle()
+        if abs(pDiff) < eps:
+            pDiff = 0
+        print(wantedP, self.right_arm_hinge_updown.getHingeAngle(), pDiff)
+        self.right_arm_hinge_updown.enable_angular_motor(True, self.arm_force*pDiff/10.0, 1.0)
+        #self.right_arm_hinge_updown.set_motor_target(wantedP, 0.5)
+        '''
+
+        wantedP = min(max(self.arm_constraint_up, y*2.5), self.arm_constraint_down)
+        pDiff = wantedP - self.right_arm_motor_pitch.getCurrentPosition()
+        if abs(pDiff) < eps:
+            pDiff = 0
+        self.right_arm_motor_pitch.set_target_velocity(self.arm_force*pDiff)
+
+        wantedH = min(max(self.arm_constraint_inward, x*2.5), self.arm_constraint_outward)
+        hDiff = wantedH - self.right_arm_motor_heading.getCurrentPosition()
+        if abs(hDiff) < eps:
+            hDiff = 0
+        self.right_arm_motor_heading.set_target_velocity(self.arm_force*hDiff)
+
 
 
     def speed_up(self):
@@ -389,7 +407,7 @@ class Humanoid(Animal):
     def _update_spine(self):
         velocity = self.get_body().node().get_linear_velocity()
         speed = Vec2(velocity.get_x(), velocity.get_y()).length()
-        self.spine.set_p(max(-5, -speed / 1.5))
+        #self.spine.set_p(max(-5, -speed / 1.5))
 
 
     def get_state_format(self):

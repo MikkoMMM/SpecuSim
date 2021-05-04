@@ -19,7 +19,7 @@ from src.utils import create_and_texture_terrain, create_or_load_walk_map
 
 class Game:
     def __init__(self):
-        self.doppelganger_num = 2  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
+        self.doppelganger_num = 0  # Actual number will be doppelganger_num^2-1 if odd and doppelganger_num^2 if even
 
         # Increase camera FOV as well as the far plane
         base.camLens.set_fov(90)

@@ -19,12 +19,14 @@ class HumanoidArm:
         self.upper_arm_diameter = upper_arm_diameter
 
         self.upper_arm = create_capsule(self.upper_arm_diameter, self.upper_arm_length)
-        self.upper_arm.node().set_mass(3.0)
+        self.upper_arm.node().set_angular_sleep_threshold(0)
+        self.upper_arm.node().set_mass(2.0)
         self.world.attach(self.upper_arm.node())
 
         self.forearm = create_capsule(forearm_diameter, self.forearm_length)
+        self.forearm.node().set_angular_sleep_threshold(0)
         self.forearm.set_collide_mask(BitMask32.bit(3))
-        self.forearm.node().set_mass(2.0)
+        self.forearm.node().set_mass(1.0)
         self.world.attach(self.forearm.node())
 
         frame_a = TransformState.make_pos_hpr(Point3(0, 0, -self.upper_arm_length / 2), Vec3(0, 0, 0))
