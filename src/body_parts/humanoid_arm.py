@@ -72,13 +72,11 @@ class HumanoidArm:
 
         self.hand = BulletGenericConstraint(self.forearm.node(), target.node(), frame_a, frame_b, True)
         self.hand.set_debug_draw_size(0.5)
-#        self.hand.set_angular_limit(0, -180, 180)
-#        self.hand.set_angular_limit(1, -180, 180)
-#        self.hand.set_angular_limit(2, -180, 180)
+
         self.hand.set_angular_limit(0, -20, -20)
         self.hand.set_angular_limit(1, 0, 0)
         self.hand.set_angular_limit(2, 0, 0)
-        self.world.attach_constraint(self.hand, linked_collision=False)
+        self.world.attach_constraint(self.hand, linked_collision=True)
 
 
     def set_pos(self, new_pos):
