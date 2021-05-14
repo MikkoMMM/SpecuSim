@@ -21,6 +21,7 @@ from src.language_processing.load_model import load_language_model
 from src.language_processing.nlp_manager import NLPManager
 from src.utils import create_or_load_walk_map, create_and_texture_terrain
 from panda3d.core import TextPropertiesManager, TextProperties
+from src.weapons.sword import Sword
 
 
 class Game:
@@ -104,6 +105,8 @@ class Game:
         self.notice_text_obj.hide()
 
         self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=debug.getboolean("debug-joints"))
+        self.weapon = Sword(self.world, self.player.lower_torso)
+        self.player.grab_right(self.weapon.getAttachmentInfo())
 
         self.gui = DefaultGUI(text_input_func=self.player_say)
 

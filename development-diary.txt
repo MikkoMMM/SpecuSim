@@ -99,3 +99,7 @@
 30.4.2021 More attempting to make arm movement to work with IK, and a start on making them use forward kinematics instead
 1.5.2021 Some work on Clover Edition that might make its way to this game too.
 2.5.–4.5.2021 Still figuring out the movement of the arms
+5.5.2021 Some work on attaching a sword (again)
+8.5.2021 Fixed the angle of the sword in place, for now anyway.
+12.5.2021 The character starts out on the ground once more.
+14.5.2021 Forearm's movement

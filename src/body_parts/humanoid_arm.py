@@ -1,3 +1,5 @@
+from math import degrees, radians
+
 from panda3d.bullet import BulletGenericConstraint
 from panda3d.core import BitMask32, Point3, TransformState
 from panda3d.core import Vec3
@@ -34,15 +36,23 @@ class HumanoidArm:
 
         self.elbow = BulletGenericConstraint(self.upper_arm.node(), self.forearm.node(), frame_a, frame_b, True)
 
-        self.elbow.set_angular_limit(0, -165, 0)
         if right_arm:
-            self.elbow.set_angular_limit(1, -30, 0)
+            self.elbow_heading_limit = radians(-70)
+            self.elbow.set_angular_limit(1, degrees(self.elbow_heading_limit), 0)
         else:
-            self.elbow.set_angular_limit(1, 0, 30)
+            self.elbow_heading_limit = radians(70)
+            self.elbow.set_angular_limit(1, 0, degrees(self.elbow_heading_limit))
+
+        self.elbow.set_angular_limit(0, -150, 0)
 
         self.elbow.set_angular_limit(2, 0, 0)
         self.elbow.set_debug_draw_size(0.5)
         self.world.attach_constraint(self.elbow, linked_collision=True)
+
+        self.elbow_motor_pitch = self.elbow.get_rotational_limit_motor(0)
+        self.elbow_motor_heading = self.elbow.get_rotational_limit_motor(1)
+        self.elbow_motor_pitch.set_motor_enabled(True)
+        self.elbow_motor_heading.set_motor_enabled(True)
 
         self.upper_arm.set_pos_hpr(start_position, start_heading)
         self.forearm.set_pos_hpr(start_position, start_heading)
@@ -56,15 +66,19 @@ class HumanoidArm:
 
 
     def grab_for_real(self, target, grab_position, grab_angle=Vec3(0, 0, 0)):
+        target.set_pos(self.forearm, Vec3(0, 0, 0))
         frame_a = TransformState.make_pos_hpr(Point3(0, 0, -self.forearm_length / 2), Vec3(0, 0, 0))
         frame_b = TransformState.make_pos_hpr(grab_position, grab_angle)
 
         self.hand = BulletGenericConstraint(self.forearm.node(), target.node(), frame_a, frame_b, True)
         self.hand.set_debug_draw_size(0.5)
-        self.hand.set_angular_limit(0, -180, 180)
-        self.hand.set_angular_limit(1, -180, 180)
-        self.hand.set_angular_limit(2, -180, 180)
-        self.world.attach_constraint(self.hand, linked_collision=True)
+#        self.hand.set_angular_limit(0, -180, 180)
+#        self.hand.set_angular_limit(1, -180, 180)
+#        self.hand.set_angular_limit(2, -180, 180)
+        self.hand.set_angular_limit(0, -20, -20)
+        self.hand.set_angular_limit(1, 0, 0)
+        self.hand.set_angular_limit(2, 0, 0)
+        self.world.attach_constraint(self.hand, linked_collision=False)
 
 
     def set_pos(self, new_pos):

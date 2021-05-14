@@ -15,6 +15,7 @@ from src.gui.default_gui import DefaultGUI
 from src.getconfig import logger, debug
 from src.humanoid import Humanoid
 from src.utils import create_and_texture_terrain, create_or_load_walk_map
+from src.weapons.sword import Sword
 
 
 class Game:
@@ -54,6 +55,8 @@ class Game:
         # Characters must be created only after the terrain_bullet_node has been finalized
         self.terrain_init_thread.join()
         self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=debug.getboolean("debug-joints"))
+        self.weapon = Sword(self.world, self.player.lower_torso)
+        self.player.grab_right(self.weapon.getAttachmentInfo())
 
         self.doppelgangers = []
         for i in range(self.doppelganger_num):

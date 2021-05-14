@@ -24,6 +24,8 @@ class Humanoid(Animal):
         self.terrain_bullet_node = terrain_bullet_node
         self.debug = debug
 
+        self.in_right_hand = None
+
         # Initialize body proportions
         self.height = height
         self.head_height = self.height / 7
@@ -69,6 +71,8 @@ class Humanoid(Animal):
         self.chest.node().set_angular_factor(Vec3(0.15,0.05,0.1))
         self.chest.node().set_linear_damping(0.5)
         self.chest.setCollideMask(BitMask32.bit(3))
+        self.chest.set_pos_hpr(Vec3(start_position.get_x(), start_position.get_y(),
+                                    start_position.get_z() + self.lower_torso_height / 2 + self.chest_height), start_heading)
         self.world.attach(self.chest.node())
         chest_visual = loader.loadModel("3d-assets/unit_cylinder.bam")
         chest_visual.setScale(Vec3(self.chest_width, 0.2, self.chest_height))
@@ -90,7 +94,7 @@ class Humanoid(Animal):
 
         self.head = NodePath("Head")
         self.head.reparent_to(self.chest)
-        self.head.set_z((self.lower_torso_height + self.head_height) / 2)
+        self.head.set_z((self.chest_height + self.head_height) / 2)
         head = loader.load_model("3d-assets/unit_sphere.bam")
         head.reparent_to(self.head)
         head.set_scale(self.head_height)
@@ -153,6 +157,12 @@ class Humanoid(Animal):
         self.right_arm_motor_heading.set_max_motor_force(self.arm_force)
         self.right_arm_motor_pitch.set_max_limit_force(self.arm_force*10000)
         self.right_arm_motor_heading.set_max_limit_force(self.arm_force*10000)
+
+        self.right_arm.elbow_motor_heading.set_max_motor_force(self.arm_force)
+        self.right_arm.elbow_motor_pitch.set_max_motor_force(self.arm_force)
+        self.right_arm.elbow_motor_heading.set_max_limit_force(self.arm_force*10000)
+        self.right_arm.elbow_motor_pitch.set_max_limit_force(self.arm_force*10000)
+        self.elbow_pitch_range = radians(-60)
 
 
         ##################################
@@ -267,35 +277,33 @@ class Humanoid(Animal):
     def swing_arm(self, arm, x, y):
         eps = 0.00001
 
-        '''
-        wantedH = degrees(min(max(self.arm_constraint_inward, x*2.5), self.arm_constraint_outward))
-        pDiff = wantedH - self.right_arm_hinge_leftright.getHingeAngle()
-        if abs(pDiff) < eps:
-            pDiff = 0
-        print(wantedH, self.right_arm_hinge_leftright.getHingeAngle(), pDiff)
-        self.right_arm_hinge_leftright.enable_angular_motor(True, self.arm_force*pDiff/10.0, 1.0)
+        # Shoulder pitch
+        wanted_ang = min(max(self.arm_constraint_up, y*2.5), self.arm_constraint_down)
+        ang_diff = wanted_ang - self.right_arm_motor_pitch.getCurrentPosition()
+        if abs(ang_diff) < eps:
+            ang_diff = 0
+        self.right_arm_motor_pitch.set_target_velocity(self.arm_force*ang_diff)
 
-        wantedP = degrees(min(max(self.arm_constraint_up, y*2.5), self.arm_constraint_down))
-        pDiff = wantedP - self.right_arm_hinge_updown.getHingeAngle()
-        if abs(pDiff) < eps:
-            pDiff = 0
-        print(wantedP, self.right_arm_hinge_updown.getHingeAngle(), pDiff)
-        self.right_arm_hinge_updown.enable_angular_motor(True, self.arm_force*pDiff/10.0, 1.0)
-        #self.right_arm_hinge_updown.set_motor_target(wantedP, 0.5)
-        '''
+        # Shoulder heading
+        wanted_ang = min(max(self.arm_constraint_inward, x*2.5), self.arm_constraint_outward)
+        ang_diff = wanted_ang - self.right_arm_motor_heading.getCurrentPosition()
+        if abs(ang_diff) < eps:
+            ang_diff = 0
+        self.right_arm_motor_heading.set_target_velocity(self.arm_force*ang_diff)
 
-        wantedP = min(max(self.arm_constraint_up, y*2.5), self.arm_constraint_down)
-        pDiff = wantedP - self.right_arm_motor_pitch.getCurrentPosition()
-        if abs(pDiff) < eps:
-            pDiff = 0
-        self.right_arm_motor_pitch.set_target_velocity(self.arm_force*pDiff)
+        # Elbow pitch
+        wanted_ang = pow(y, 2)*self.elbow_pitch_range
+        ang_diff = wanted_ang - self.right_arm.elbow_motor_pitch.getCurrentPosition()
+        if abs(ang_diff) < eps:
+            ang_diff = 0
+        self.right_arm.elbow_motor_pitch.set_target_velocity(self.arm_force*ang_diff)
 
-        wantedH = min(max(self.arm_constraint_inward, x*2.5), self.arm_constraint_outward)
-        hDiff = wantedH - self.right_arm_motor_heading.getCurrentPosition()
-        if abs(hDiff) < eps:
-            hDiff = 0
-        self.right_arm_motor_heading.set_target_velocity(self.arm_force*hDiff)
-
+        # Elbow heading
+        wanted_ang = -min(0, x)*self.right_arm.elbow_heading_limit
+        ang_diff = wanted_ang - self.right_arm.elbow_motor_heading.getCurrentPosition()
+        if abs(ang_diff) < eps:
+            ang_diff = 0
+        self.right_arm.elbow_motor_heading.set_target_velocity(self.arm_force*ang_diff)
 
 
     def speed_up(self):
@@ -327,6 +335,11 @@ class Humanoid(Animal):
         # The heading should be updated exactly once per frame, so let's do it here
         self._update_heading()
         self._update_spine()
+
+
+    def grab_right(self, attachment_info):
+        self.right_arm.grab(attachment_info)
+        self.in_right_hand = attachment_info[0]
 
 
     def _walking_visuals(self, cur_walk_dist, ang_clamped):
