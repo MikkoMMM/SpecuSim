@@ -12,6 +12,8 @@ class Sword():
         # self.root.node().set_angular_factor(Vec3(0.5,0.5,0.5))
         # self.root.node().set_linear_damping(0.5)
         self.root.set_collide_mask(BitMask32.allOn())
+        self.root.node().set_ccd_swept_sphere_radius(0.1)
+        self.root.node().set_ccd_motion_threshold(1e-7)
         world.attach(self.root.node())
 
     def getAttachmentInfo(self):

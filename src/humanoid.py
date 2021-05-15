@@ -54,7 +54,7 @@ class Humanoid(Animal):
         self.lower_torso = create_rounded_box(self.chest_width, 0.2, self.lower_torso_height)
         start_position = Vec3(x, y, self.target_height + get_ground_z_pos(x, y, self.world, self.terrain_bullet_node))
         self.lower_torso.set_pos_hpr(start_position, start_heading)
-        self.lower_torso.node().set_mass(70.0)
+        self.lower_torso.node().set_mass(35.0)
         self.lower_torso.node().set_angular_factor(Vec3(0, 0, 0.1))
         self.lower_torso.node().set_linear_damping(0.8)
         self.lower_torso.node().set_angular_sleep_threshold(0)  # Sleep would freeze the whole character if still
@@ -67,7 +67,7 @@ class Humanoid(Animal):
 
         # Organism's shape and collision boxes
         self.chest = create_rounded_box(self.chest_width, 0.2, self.chest_height)
-        self.chest.node().set_mass(40.0)
+        self.chest.node().set_mass(35.0)
         self.chest.node().set_angular_factor(Vec3(0.15,0.05,0.1))
         self.chest.node().set_linear_damping(0.5)
         self.chest.setCollideMask(BitMask32.bit(3))
@@ -107,37 +107,6 @@ class Humanoid(Animal):
 
         self.right_arm = HumanoidArm(self.world, self.arm_length, upper_arm_diameter,
                                      forearm_diameter, True, start_position, start_heading)
-        '''
-        self.shoulder = create_physics_sphere(0.1)
-        self.shoulder.node().set_mass(10.0)
-        self.world.attach(self.shoulder.node())
-        axisA = Vec3(0, 0, 1)
-        pivotA = Point3(self.chest_width / 2 + upper_arm_diameter / 2, 0, self.chest_height / 2 - upper_arm_diameter / 8)
-        pivotB = Point3(0, 0, 0)
-        frame_a = TransformState.make_pos_hpr(Point3(self.chest_width / 2 + upper_arm_diameter / 2, 0,
-                                                     self.chest_height / 2 - upper_arm_diameter / 8), Vec3(90, 0, 0))
-        frame_b = TransformState.make_pos_hpr(Point3(0, 0, 0), Vec3(0, 0, 0))
-        self.right_arm_hinge_leftright = BulletHingeConstraint(self.chest.node(), self.shoulder.node(), frame_a, frame_b, False)
-        # self.right_arm_hinge_leftright = BulletHingeConstraint(self.chest.node(), self.shoulder.node(), pivotA, pivotB, axisA,
-        # axisA, False)
-        self.right_arm_hinge_leftright.set_limit(degrees(self.arm_constraint_inward), degrees(self.arm_constraint_outward), softness=0.9,
-                                                 bias=0.3, relaxation=1.0)
-        self.right_arm_hinge_leftright.enable_motor(True)
-        self.world.attachConstraint(self.right_arm_hinge_leftright, linked_collision=True)
-
-        axisA = Vec3(1, 0, 0)
-        pivotA = Point3(0, 0, 0)
-        pivotB = Point3(0, 0, self.right_arm.upper_arm_length / 2)
-        frame_a = TransformState.make_pos_hpr(Point3(0, 0, 0), Vec3(0, 90, 0))
-        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.right_arm.upper_arm_length / 2), Vec3(0, 0, 90))
-        self.right_arm_hinge_updown = BulletHingeConstraint(self.shoulder.node(), self.right_arm.upper_arm.node(), frame_a, frame_b, False)
-        # self.right_arm_hinge_updown = BulletHingeConstraint(self.shoulder.node(), self.right_arm.upper_arm.node(), pivotA, pivotB, axisA,
-        # axisA, False)
-        self.right_arm_hinge_updown.set_limit(degrees(self.arm_constraint_up), degrees(self.arm_constraint_down), softness=0.9, bias=0.3,
-                                              relaxation=1.0)
-        self.right_arm_hinge_updown.enable_motor(True)
-        self.world.attachConstraint(self.right_arm_hinge_updown, linked_collision=True)
-        '''
 
         frame_a = TransformState.make_pos_hpr(Point3(self.chest_width / 2 + upper_arm_diameter / 2, 0,
                                                      self.chest_height / 2 - upper_arm_diameter / 8), Vec3(180, 180, 180))
@@ -163,6 +132,11 @@ class Humanoid(Animal):
         self.right_arm.elbow_motor_heading.set_max_limit_force(self.arm_force*10000)
         self.right_arm.elbow_motor_pitch.set_max_limit_force(self.arm_force*10000)
         self.elbow_pitch_range = radians(-60)
+        bounciness = 10
+        self.right_arm_motor_pitch.set_bounce(bounciness)
+        self.right_arm_motor_heading.set_bounce(bounciness)
+        self.right_arm.elbow_motor_pitch.set_bounce(bounciness/4)
+        self.right_arm.elbow_motor_heading.set_bounce(bounciness/4)
 
 
         ##################################

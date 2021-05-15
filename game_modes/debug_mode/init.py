@@ -83,6 +83,11 @@ class Game:
 
         setup_controls(self.player.get_body())
 
+        # During high loads, avoid potential
+        # AssertionError: !(pos.is_nan() || quat.is_nan() || scale.is_nan() || shear.is_nan())
+        # at line 298 of panda/src/pgraph/transformState.cxx
+        base.graphicsEngine.render_frame()
+
         # Tasks that are repeated ad infinitum
         taskMgr.add(self.update, "update")
 

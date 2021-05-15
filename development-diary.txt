@@ -102,4 +102,5 @@
 5.5.2021 Some work on attaching a sword (again)
 8.5.2021 Fixed the angle of the sword in place, for now anyway.
 12.5.2021 The character starts out on the ground once more.
-14.5.2021 Forearm's movement
+14.5.2021 Forearm's movement and improving the sword's collision detection.
+15.5.2021 Proper weapon collision, better adherence to constraints.
