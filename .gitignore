@@ -6,6 +6,22 @@ language_models
 !language_models/.gitkeep
 *.walk
 .idea
+raportti
+raportti/lahteet
+raportti/metafiles
+*.pdf
+*.synctex.gz
+*.log
+*.aux
+*.odt#
+*.bcf
+*.run.xml
+*.lof
+*.lot
+*.out
+*.toc
+*.bbl
+*.blg
 
 
 

@@ -104,3 +104,6 @@
 12.5.2021 The character starts out on the ground once more.
 14.5.2021 Forearm's movement and improving the sword's collision detection.
 15.5.2021 Proper weapon collision, better adherence to constraints.
+17.5.2021 Messaging with the supervisor.
+23.5.2021 Starting out with the longer report.
+25.5.2021 An ad for help with the combat system
