@@ -107,3 +107,8 @@
 17.5.2021 Messaging with the supervisor.
 23.5.2021 Starting out with the longer report.
 25.5.2021 An ad for help with the combat system
+26.5.2021 More considering of how combat should work, and reading up for the report.
+27.5.–29.5.2021 Reading up for the report.
+31.5.–2.6.2021 Writing the report.
+8.6.2021 Writing the report.
+15.6.2021 Added another arm, and did some testing with handling the sword using both arms

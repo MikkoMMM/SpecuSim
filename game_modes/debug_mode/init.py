@@ -57,6 +57,7 @@ class Game:
         self.player = Humanoid(self.world, self.terrain_bullet_node, 0, 0, debug=debug.getboolean("debug-joints"))
         self.weapon = Sword(self.world, self.player.lower_torso)
         self.player.grab_right(self.weapon.getAttachmentInfo())
+        # self.player.grab_both(self.weapon.getAttachmentInfo())
 
         self.doppelgangers = []
         for i in range(self.doppelganger_num):

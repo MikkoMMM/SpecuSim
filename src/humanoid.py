@@ -24,6 +24,7 @@ class Humanoid(Animal):
         self.terrain_bullet_node = terrain_bullet_node
         self.debug = debug
 
+        self.in_left_hand = None
         self.in_right_hand = None
 
         # Initialize body proportions
@@ -104,6 +105,8 @@ class Humanoid(Animal):
         self.arm_constraint_inward = radians(-35)
         self.arm_constraint_outward = radians(120)
         self.arm_force = 30
+        self.elbow_pitch_range = radians(-60)
+        bounciness = 10
 
         self.right_arm = HumanoidArm(self.world, self.arm_length, upper_arm_diameter,
                                      forearm_diameter, True, start_position, start_heading)
@@ -131,12 +134,44 @@ class Humanoid(Animal):
         self.right_arm.elbow_motor_pitch.set_max_motor_force(self.arm_force)
         self.right_arm.elbow_motor_heading.set_max_limit_force(self.arm_force*10000)
         self.right_arm.elbow_motor_pitch.set_max_limit_force(self.arm_force*10000)
-        self.elbow_pitch_range = radians(-60)
-        bounciness = 10
         self.right_arm_motor_pitch.set_bounce(bounciness)
         self.right_arm_motor_heading.set_bounce(bounciness)
         self.right_arm.elbow_motor_pitch.set_bounce(bounciness/4)
         self.right_arm.elbow_motor_heading.set_bounce(bounciness/4)
+
+
+        self.left_arm = HumanoidArm(self.world, self.arm_length, upper_arm_diameter,
+                                     forearm_diameter, False, start_position, start_heading)
+
+        frame_a = TransformState.make_pos_hpr(Point3(-self.chest_width / 2 - upper_arm_diameter / 2, 0,
+                                                     self.chest_height / 2 - upper_arm_diameter / 8), Vec3(180, 180, 180))
+        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.left_arm.upper_arm_length / 2), Vec3(0, -90, 0))
+        self.left_arm_constraint = BulletGenericConstraint(self.chest.node(), self.left_arm.upper_arm.node(), frame_a, frame_b, False)
+        self.left_arm_constraint.set_debug_draw_size(0.5)
+        self.left_arm_constraint.set_angular_limit(0, degrees(self.arm_constraint_up), degrees(self.arm_constraint_down))
+        self.left_arm_constraint.set_angular_limit(1, 0, 0)
+        self.left_arm_constraint.set_angular_limit(2, degrees(self.arm_constraint_inward), degrees(self.arm_constraint_outward))
+        self.left_arm.upper_arm.node().set_angular_factor(Vec3(0.2, 0.2, 0.2))
+        self.world.attach_constraint(self.left_arm_constraint, linked_collision=True)
+        self.left_arm_motor_pitch = self.left_arm_constraint.get_rotational_limit_motor(0)
+        self.left_arm_motor_heading = self.left_arm_constraint.get_rotational_limit_motor(2)
+        self.left_arm_motor_pitch.set_motor_enabled(True)
+        self.left_arm_motor_heading.set_motor_enabled(True)
+        self.left_arm_motor_pitch.set_max_motor_force(self.arm_force)
+        self.left_arm_motor_heading.set_max_motor_force(self.arm_force)
+        self.left_arm_motor_pitch.set_max_limit_force(self.arm_force*10000)
+        self.left_arm_motor_heading.set_max_limit_force(self.arm_force*10000)
+
+        self.left_arm.elbow_motor_heading.set_max_motor_force(self.arm_force)
+        self.left_arm.elbow_motor_pitch.set_max_motor_force(self.arm_force)
+        self.left_arm.elbow_motor_heading.set_max_limit_force(self.arm_force*10000)
+        self.left_arm.elbow_motor_pitch.set_max_limit_force(self.arm_force*10000)
+        self.left_arm_motor_pitch.set_bounce(bounciness)
+        self.left_arm_motor_heading.set_bounce(bounciness)
+        self.left_arm.elbow_motor_pitch.set_bounce(bounciness/4)
+        self.left_arm.elbow_motor_heading.set_bounce(bounciness/4)
+        # TODO: Do something smarter than force the arm to stay down using gravity
+        self.left_arm.forearm.node().set_gravity(Vec3(0, 0, -90))
 
 
         ##################################
@@ -311,9 +346,19 @@ class Humanoid(Animal):
         self._update_spine()
 
 
+    def grab_left(self, attachment_info):
+        self.left_arm.grab(attachment_info)
+        self.in_left_hand = attachment_info[0]
+
+
     def grab_right(self, attachment_info):
         self.right_arm.grab(attachment_info)
         self.in_right_hand = attachment_info[0]
+
+
+    def grab_both(self, attachment_info):
+        self.grab_right(attachment_info)
+        self.grab_left(attachment_info)
 
 
     def _walking_visuals(self, cur_walk_dist, ang_clamped):
