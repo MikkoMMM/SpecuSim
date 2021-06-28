@@ -104,74 +104,22 @@ class Humanoid(Animal):
         self.arm_constraint_down = radians(135)
         self.arm_constraint_inward = radians(-35)
         self.arm_constraint_outward = radians(120)
-        self.arm_force = 30
         self.elbow_pitch_range = radians(-60)
-        bounciness = 10
+        self.arm_force = 30
 
         self.right_arm = HumanoidArm(self.world, self.arm_length, upper_arm_diameter,
-                                     forearm_diameter, True, start_position, start_heading)
-
+                                     forearm_diameter, True, self.arm_force, start_position, start_heading)
         frame_a = TransformState.make_pos_hpr(Point3(self.chest_width / 2 + upper_arm_diameter / 2, 0,
                                                      self.chest_height / 2 - upper_arm_diameter / 8), Vec3(180, 180, 180))
-        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.right_arm.upper_arm_length / 2), Vec3(0, -90, 0))
-        self.right_arm_constraint = BulletGenericConstraint(self.chest.node(), self.right_arm.upper_arm.node(), frame_a, frame_b, False)
-        self.right_arm_constraint.set_debug_draw_size(0.5)
-        self.right_arm_constraint.set_angular_limit(0, degrees(self.arm_constraint_up), degrees(self.arm_constraint_down))
-        self.right_arm_constraint.set_angular_limit(1, 0, 0)
-        self.right_arm_constraint.set_angular_limit(2, degrees(self.arm_constraint_inward), degrees(self.arm_constraint_outward))
-        self.right_arm.upper_arm.node().set_angular_factor(Vec3(0.2, 0.2, 0.2))
-        self.world.attach_constraint(self.right_arm_constraint, linked_collision=True)
-        self.right_arm_motor_pitch = self.right_arm_constraint.get_rotational_limit_motor(0)
-        self.right_arm_motor_heading = self.right_arm_constraint.get_rotational_limit_motor(2)
-        self.right_arm_motor_pitch.set_motor_enabled(True)
-        self.right_arm_motor_heading.set_motor_enabled(True)
-        self.right_arm_motor_pitch.set_max_motor_force(self.arm_force)
-        self.right_arm_motor_heading.set_max_motor_force(self.arm_force)
-        self.right_arm_motor_pitch.set_max_limit_force(self.arm_force*10000)
-        self.right_arm_motor_heading.set_max_limit_force(self.arm_force*10000)
-
-        self.right_arm.elbow_motor_heading.set_max_motor_force(self.arm_force)
-        self.right_arm.elbow_motor_pitch.set_max_motor_force(self.arm_force)
-        self.right_arm.elbow_motor_heading.set_max_limit_force(self.arm_force*10000)
-        self.right_arm.elbow_motor_pitch.set_max_limit_force(self.arm_force*10000)
-        self.right_arm_motor_pitch.set_bounce(bounciness)
-        self.right_arm_motor_heading.set_bounce(bounciness)
-        self.right_arm.elbow_motor_pitch.set_bounce(bounciness/4)
-        self.right_arm.elbow_motor_heading.set_bounce(bounciness/4)
-
+        self.right_arm.set_shoulder(frame_a, self.chest.node(), self.arm_constraint_up, self.arm_constraint_down,
+                                    self.arm_constraint_inward, self.arm_constraint_outward, arm_force=self.arm_force)
 
         self.left_arm = HumanoidArm(self.world, self.arm_length, upper_arm_diameter,
-                                     forearm_diameter, False, start_position, start_heading)
-
+                                     forearm_diameter, False, self.arm_force, start_position, start_heading)
         frame_a = TransformState.make_pos_hpr(Point3(-self.chest_width / 2 - upper_arm_diameter / 2, 0,
                                                      self.chest_height / 2 - upper_arm_diameter / 8), Vec3(180, 180, 180))
-        frame_b = TransformState.make_pos_hpr(Point3(0, 0, self.left_arm.upper_arm_length / 2), Vec3(0, -90, 0))
-        self.left_arm_constraint = BulletGenericConstraint(self.chest.node(), self.left_arm.upper_arm.node(), frame_a, frame_b, False)
-        self.left_arm_constraint.set_debug_draw_size(0.5)
-        self.left_arm_constraint.set_angular_limit(0, degrees(self.arm_constraint_up), degrees(self.arm_constraint_down))
-        self.left_arm_constraint.set_angular_limit(1, 0, 0)
-        self.left_arm_constraint.set_angular_limit(2, degrees(self.arm_constraint_inward), degrees(self.arm_constraint_outward))
-        self.left_arm.upper_arm.node().set_angular_factor(Vec3(0.2, 0.2, 0.2))
-        self.world.attach_constraint(self.left_arm_constraint, linked_collision=True)
-        self.left_arm_motor_pitch = self.left_arm_constraint.get_rotational_limit_motor(0)
-        self.left_arm_motor_heading = self.left_arm_constraint.get_rotational_limit_motor(2)
-        self.left_arm_motor_pitch.set_motor_enabled(True)
-        self.left_arm_motor_heading.set_motor_enabled(True)
-        self.left_arm_motor_pitch.set_max_motor_force(self.arm_force)
-        self.left_arm_motor_heading.set_max_motor_force(self.arm_force)
-        self.left_arm_motor_pitch.set_max_limit_force(self.arm_force*10000)
-        self.left_arm_motor_heading.set_max_limit_force(self.arm_force*10000)
-
-        self.left_arm.elbow_motor_heading.set_max_motor_force(self.arm_force)
-        self.left_arm.elbow_motor_pitch.set_max_motor_force(self.arm_force)
-        self.left_arm.elbow_motor_heading.set_max_limit_force(self.arm_force*10000)
-        self.left_arm.elbow_motor_pitch.set_max_limit_force(self.arm_force*10000)
-        self.left_arm_motor_pitch.set_bounce(bounciness)
-        self.left_arm_motor_heading.set_bounce(bounciness)
-        self.left_arm.elbow_motor_pitch.set_bounce(bounciness/4)
-        self.left_arm.elbow_motor_heading.set_bounce(bounciness/4)
-        # TODO: Do something smarter than force the arm to stay down using gravity
-        self.left_arm.forearm.node().set_gravity(Vec3(0, 0, -90))
+        self.left_arm.set_shoulder(frame_a, self.chest.node(), self.arm_constraint_up, self.arm_constraint_down,
+                                   self.arm_constraint_inward, self.arm_constraint_outward, arm_force=self.arm_force)
 
 
         ##################################
@@ -288,17 +236,17 @@ class Humanoid(Animal):
 
         # Shoulder pitch
         wanted_ang = min(max(self.arm_constraint_up, y*2.5), self.arm_constraint_down)
-        ang_diff = wanted_ang - self.right_arm_motor_pitch.getCurrentPosition()
+        ang_diff = wanted_ang - self.right_arm.pitch_motor.getCurrentPosition()
         if abs(ang_diff) < eps:
             ang_diff = 0
-        self.right_arm_motor_pitch.set_target_velocity(self.arm_force*ang_diff)
+        self.right_arm.pitch_motor.set_target_velocity(self.arm_force*ang_diff)
 
         # Shoulder heading
         wanted_ang = min(max(self.arm_constraint_inward, x*2.5), self.arm_constraint_outward)
-        ang_diff = wanted_ang - self.right_arm_motor_heading.getCurrentPosition()
+        ang_diff = wanted_ang - self.right_arm.heading_motor.getCurrentPosition()
         if abs(ang_diff) < eps:
             ang_diff = 0
-        self.right_arm_motor_heading.set_target_velocity(self.arm_force*ang_diff)
+        self.right_arm.heading_motor.set_target_velocity(self.arm_force*ang_diff)
 
         # Elbow pitch
         wanted_ang = pow(y, 2)*self.elbow_pitch_range

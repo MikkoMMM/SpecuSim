@@ -112,3 +112,5 @@
 31.5.–2.6.2021 Writing the report.
 8.6.2021 Writing the report.
 15.6.2021 Added another arm, and did some testing with handling the sword using both arms
+17.6.2021 Refactoring.
+28.6.2021 Moved the shoulder code mostly to the arms.
